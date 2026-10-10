@@ -2,40 +2,50 @@
 
 Great work on the baseline. 4 things, in order.
 
-## 1. Push ALL your code (most important, ≈5 min)
-GitHub has your **results** but not the **code** that produced them. Anyone who clones the repo, judges included, can't run anything. Missing so far:
+## 1. Push the rest of your code (≈5 min)
+Thanks for pushing `baseline.py`, `c_tests.py`, `test_c_tests.py` and `scripts/baseline.sh`. All offline tests pass. **Still missing**, so nobody can set up from GitHub:
 
 | Missing | Referenced by |
 |---|---|
-| `scripts/` (deploy-local, install-kubectl, install-chaos, chaos, load, measure-load, baseline) | README setup, BASELINE_STUDY.md |
+| Rest of `scripts/` (deploy-local, install-kubectl, install-chaos, chaos, load, measure-load) | README setup, `baseline.sh --start-load` |
 | `deploy/` (kind.yaml, kustomization, namespace, containers.conf) | deploy-local.sh |
 | `chaos/` (values.yaml, loadgenerator-observability.yaml, experiments/*.yaml, README.md) | monitor.py needs the Locust stats patch |
-| `chaosmind/baseline.py`, `chaosmind/c_tests.py`, `chaosmind/test_c_tests.py` | BASELINE_STUDY.md, KILLSWITCH_RESULTS.md |
-| `tests/README.md` + your edited `tests/*.sh`, `COMPATIBILITY.md` | KILLSWITCH_RESULTS.md, PROJECT_HANDOFF.md |
+| `tests/README.md`, `COMPATIBILITY.md` | KILLSWITCH_RESULTS.md, PROJECT_HANDOFF.md |
 
 ```bash
 git status
 ```
-Check that `.runtime/` and `microservices-demo/` are **not** listed. If they are, add them to `.gitignore` first. Then:
+Check that `.runtime/` and `microservices-demo/` are **not** listed (add them to `.gitignore` if they are). Then:
 ```bash
-git add scripts deploy chaos chaosmind tests COMPATIBILITY.md .gitignore
+git add scripts deploy chaos tests/README.md COMPATIBILITY.md .gitignore
 ```
 ```bash
-git commit -m "Add setup scripts, chaos config and runners" && git push
+git commit -m "Add setup scripts and chaos config" && git push
 ```
-**Check:** open https://github.com/Gotha8972/FantasticFour and make sure the `scripts/`, `deploy/` and `chaos/` folders are visible.
+**Check:** the `deploy/` and `chaos/` folders show up on https://github.com/Gotha8972/FantasticFour.
 
-## 2. Accept this baseline (≈10 min)
-The 15-min study is good, but it was marked unsuitable because the rule is "zero failures". Real systems always have some background failures, and what we measure is **chaos vs normal**. Change the suitability rule in `chaosmind/baseline.py` to:
-
-- window error rate **< 1%** (ours: 0.05%)
-- **0** unhealthy services, **0** restart increases, **0** pod replacements (keep these strict)
-
-Re-evaluate the finished study **without re-running it** if your code allows (or re-run `bash scripts/baseline.sh`), so `baseline.json` is published at the repo root. Then push:
+## 2. Accept the baseline (≈2 min of edits + 16 min re-run)
+It's marked unsuitable only because of this rule in `chaosmind/baseline.py` (~line 240):
+```python
+if failures:
+    result['findings'].append(f'{failures} failed requests occurred without intentional faults.')
+```
+Any finding makes the baseline unsuitable. Real systems always have some background failures, and what we measure is chaos **vs** normal, so allow a small error rate. Change it to:
+```python
+if failures and failures / requests >= 0.01:   # >= 1% errors is not a normal steady state
+    result['findings'].append(f'{failures} failed requests occurred without intentional faults.')
+elif failures:
+    result['notes'] = [f'{failures} failed requests ({failures / requests:.2%}) without faults: background error rate.']
+```
+The unhealthy-services, restart, pod-change and gap checks stay strict. There's no re-evaluate mode, so re-run the study (it writes `baseline.json` at the root once it's suitable):
 ```bash
-git add -f baseline.json chaosmind/baseline.py && git commit -m "Accept baseline: error rate < 1% rule" && git push
+bash scripts/baseline.sh
 ```
-Keep the finding "2 checkout 500s with no faults injected" in the report. It's a real result, not something to hide.
+Then push:
+```bash
+git add -f baseline.json runs/baseline-study-* chaosmind/baseline.py && git commit -m "Baseline: allow <1% background errors" && git push
+```
+Short on time? `bash scripts/baseline.sh --duration 300` (5 min) is enough. Keep the "2 checkout 500s with no faults" result from the first study in the report; it's a real finding.
 
 ## 3. Guard limits based on the baseline (team decision, ≈5 min)
 The current limits are ~26–400× worse than normal, which is hard to defend to judges. Proposed:
