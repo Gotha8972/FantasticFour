@@ -37,8 +37,8 @@ Use real numbers from the recordings. If a number differs from this script, **sa
 | 2 | The problem | Dependency map | 11 services; failure spreads unpredictably; manual chaos is slow and unfocused |
 | 3 | How our AI thinks | 6-step loop (audit → hypothesise → inject → judge → fix → report) | Hypotheses and criteria are written *before* each run; code decides the verdict |
 | 4 | Breaking things safely | Guard timeline: breach detected at 9.6 s → fault removed 0.3 s later → healthy at 14 s | 9 safety layers; fail-safe even if our own guard crashes; AI can't loosen limits |
-| 5 | What we found | Findings 1–4 with icons | Silent data loss; cart outage; "healthy ≠ recovered" (3 s vs 34 s); latency spreads everywhere |
-| 6 | Fix → proof | Before/after table: cart 1 → 0 vs 1 → 1; score **55 → 99**; catalog **29 → 99** with 2 replicas | Fixes come from a reviewed catalog; re-run the identical experiment; keep only if the score improves |
+| 5 | What we found | Findings 1–5 with icons | Silent data loss; frontend single point of failure (found by the AI); cart outage; "healthy ≠ recovered" (3 s vs 34 s); latency spreads everywhere |
+| 6 | Fix → proof | Before/after table: cart 1 → 0 vs 1 → 1; Redis score **30 → 67** (data loss gone; one replica still slows restarts); catalog **29 → 99** with 2 replicas | Fixes come from a reviewed catalog; re-run the identical experiment; keep only if the score improves |
 | 7 | Why trust it | "AI proposes → code verifies → guard wins" | 0 unverifiable claims; tests for every safety rule; every number in reports fact-checked |
 | 8 | Measured, not guessed | "Customers hurt in **5/5** kills with 1 replica vs **0/5** with 2" + 95% intervals (57–100% vs 0–43%, no overlap) | Repeated trials → failure frequency with uncertainty; invalid runs never count as passes |
 | 9 | Impact + next | The LangGraph diagram (generated from the code) + resilience scores | Human approval gate before any fix; resumable runs; runs on any Kubernetes app; next: more fixes in the catalog, CI integration |

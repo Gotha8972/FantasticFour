@@ -56,3 +56,14 @@ Audit evidence verification, fault diversity, safety bounds, guard cleanup, inte
 ## Final catalog experiment
 
 The product catalog pod kill confirmed customer impact (score 53). Raw measurements: `{"error_rate": 0.16666666666666666, "p95_ms": 80.0, "unhealthy_count": 1, "breach": {"metric": "error_rate", "value": 0.16666666666666666, "limit": 0.05}, "recovery_s": 9.916, "service_ready_s": 3.2, "customer_recovered_s": 18.9, "users": 20, "integrity_violations": 0}`. No integrity violations occurred. Its fault was removed and health recovered. The workflow is checkpointed at a separate human gate for `productcatalog-replicas`; Redis approval does not approve this fix. Catalog remains at one replica pending that decision.
+
+## Status after review
+
+- **The after-fix Redis re-run measured part of the fix's own rollout.** Its latency hit 5,500 ms 0.6 s after the kill, too early for the kill to cause it (in the before run the same kill took 8.4 s to show). Remediation had applied the fix (which restarts Redis) and re-run immediately. **Fixed:** `remediation.settle()` now waits until customers have been within the limits for 30 s before re-running. The score change (0 → 27) holds anyway: both runs hit the error and latency caps, so the difference is exactly the removed integrity penalty.
+- **Frontend fix added** to the reviewed catalog (`frontend-replicas`, 2 replicas), so the AI can now fix what it found.
+- **Scores corrected** in README/FINDINGS from the [scoreboard](../evidence/SCOREBOARD.md), now computed for the manual Redis test from its own load-generator snapshots: Redis cart test **30 → 67** (was shown as 55 → 99, which ignored the restart latency). The frontend is a new ranked finding (#2, score 16).
+- **Next (optional, strong for the video):** `git pull`, then resume this run and approve the **catalog** fix. The re-run now waits for the rollout to settle, so it gives a clean before/after (53 → expected ~99, matching the 5-trial result):
+  ```bash
+  .venv/bin/python -m chaosmind.graph --resume runs/agents-20261010T185909Z
+  ```
+  Then push `runs/agents-20261010T185909Z/history.json`, and regenerate the scoreboard with `python3 -m chaosmind.agents.scoreboard > docs/evidence/SCOREBOARD.md`. The catalog's after-fix row fills in automatically.

@@ -11,18 +11,22 @@ from statistics import median
 
 from chaosmind.agents import facts as facts_mod, safety, score, steps, trials
 
-# (finding in FINDINGS.md, experiment, condition, evidence kind, run directory). Same experiment twice = before/after.
+# (finding in FINDINGS.md, experiment, condition, evidence kind, run[#target]). Same experiment twice = before/after.
+AI_RUN = 'runs/agents-20261010T185909Z'
 EVIDENCE = [
-    (1, 'Redis restarted', 'before fix', 'redis', 'runs/c-redis-20261010T070925.577773Z'),
-    (1, 'Redis restarted', 'after fix: PVC + append-only log', 'redis', 'runs/c-redis-20261010T102251.009037Z'),
-    (1, 'Redis pod kill, chosen and run by the AI', 'before fix', 'agent', 'runs/agents-20261010T182208Z'),
-    (1, 'Redis pod kill, chosen and run by the AI', 'after the fix the AI proposed and a human approved', 'agent-after',
-     'runs/agents-20261010T182208Z'),
-    (2, 'cartservice unavailable', '1 replica', 'guard', 'runs/test-down-20261010T062320.861245Z'),
-    (3, 'catalog pod kill, 5 trials', '1 replica', 'trials', 'runs/trials-catalog-podkill-20261010T182606Z'),
-    (3, 'catalog pod kill, 5 trials', '2 replicas', 'trials', 'runs/trials-catalog-podkill-20261010T183121Z'),
-    (4, '+500 ms delay on productcatalogservice', 'no fix', 'guard', 'runs/test-delay-20261010T062255.501508Z'),
-    (6, 'adservice unavailable', 'no fix needed', 'guard', 'runs/c-ad-health-13973e53bd-20261010T070523.440196Z'),
+    (1, 'Redis restarted (cart test)', 'before fix', 'redis', 'runs/c-redis-20261010T070925.577773Z'),
+    (1, 'Redis restarted (cart test)', 'after fix: PVC + append-only log', 'redis', 'runs/c-redis-20261010T102251.009037Z'),
+    (1, 'Redis pod kill, chosen and run by the AI', 'before fix', 'agent', f'{AI_RUN}#redis-cart'),
+    (1, 'Redis pod kill, chosen and run by the AI', 'after the fix, approved by a human', 'agent-after', f'{AI_RUN}#redis-cart'),
+    (2, 'frontend unavailable, chosen and run by the AI', '1 replica', 'agent', f'{AI_RUN}#frontend'),
+    (3, 'cartservice unavailable', '1 replica', 'guard', 'runs/test-down-20261010T062320.861245Z'),
+    (4, 'catalog pod kill, 5 trials', '1 replica', 'trials', 'runs/trials-catalog-podkill-20261010T182606Z'),
+    (4, 'catalog pod kill, 5 trials', '2 replicas', 'trials', 'runs/trials-catalog-podkill-20261010T183121Z'),
+    (4, 'catalog pod kill, chosen and run by the AI', '1 replica', 'agent', f'{AI_RUN}#productcatalogservice'),
+    (4, 'catalog pod kill, chosen and run by the AI', 'after the fix, approved by a human', 'agent-after',
+     f'{AI_RUN}#productcatalogservice'),
+    (5, '+500 ms delay on productcatalogservice', 'no fix', 'guard', 'runs/test-delay-20261010T062255.501508Z'),
+    (7, 'adservice unavailable', 'no fix needed', 'guard', 'runs/c-ad-health-13973e53bd-20261010T070523.440196Z'),
 ]
 
 
@@ -32,26 +36,37 @@ def events(run):
 
 def measurements(kind, run):
     """[(observed, recovery_s, integrity violations, target)] for one piece of evidence."""
+    run, _, only = run.partition('#')
     run = Path(run)
     if kind == 'guard':
         ev = events(run)
         obs = safety.observed(ev)
         return [(obs, obs['recovery_s'], [], next(e['target'] for e in ev if e.get('target')))]
-    if kind == 'redis':  # the cart-persistence test: its own HTTP probes, no Locust p95
+    if kind == 'redis':  # the cart-persistence test: load-generator snapshots plus the test's own cart requests
+        ev = [json.loads(line) for line in (run / 'evidence.jsonl').read_text().splitlines() if line.strip()]
+        deleted = next(e['elapsed_s'] for e in ev if e['event'] == 'REDIS_POD_DELETED')
+        after = [e for e in ev if e['elapsed_s'] >= deleted]
+        snaps = [e['details'] for e in after if e['event'] == 'SNAPSHOT']
+        probes = [e['details']['seconds'] * 1000 for e in after if e['event'] == 'HTTP']
+        healthy = next(e['elapsed_s'] for e in after if e['event'] == 'HEALTHY' and e['details'].get('value'))
         s = json.loads((run / 'summary.json').read_text())[0]
-        obs = {'error_rate': 0.0 if not s['observed_failed_http'] else 1.0, 'p95_ms': None}
-        return [(obs, s['replacement_and_cart_ready_s'], [{'check': 'cart_persistence'}] if s['cart_wiped'] else [],
-                 'redis-cart')]
-    if kind == 'agent-after':  # Remediation's re-run of the same experiment (absent until the fix is approved)
-        fixed = [h for h in json.loads((run / 'history.json').read_text())
-                 if (h.get('remediation') or {}).get('after_observed')]
-        return [(h['remediation']['after_observed'], h['remediation']['after_observed'].get('recovery_s'),
-                 h['remediation'].get('after_integrity', []), h['experiment']['target']) for h in fixed]
-    if kind == 'agent':
-        return [(h['observed'], h['observed'].get('recovery_s'),
-                 # the checkout 422 in this run was a checker defect (hyphenated card number), not the fault
-                 [v for v in h['integrity'] if v.get('actual') != 'HTTP 422'], h['experiment']['target'])
-                for h in json.loads((run / 'history.json').read_text()) if h.get('observed')]
+        obs = {'error_rate': max([x['error_rate'] for x in snaps] + [1.0 if s['observed_failed_http'] else 0.0]),
+               'p95_ms': max([x['p95_ms'] for x in snaps] + probes)}  # worst seen by shoppers or by the test
+        return [(obs, healthy - deleted, [{'check': 'cart_persistence'}] if s['cart_wiped'] else [], 'redis-cart')]
+    if kind in ('agent', 'agent-after'):
+        out = []
+        for h in json.loads((run / 'history.json').read_text()):
+            if only and h['experiment']['target'] != only:
+                continue
+            if kind == 'agent' and h.get('observed'):
+                # the checkout 422 in one early run was a checker defect (hyphenated card number), not the fault
+                out.append((h['observed'], h['observed'].get('recovery_s'),
+                            [v for v in h['integrity'] if v.get('actual') != 'HTTP 422'], h['experiment']['target']))
+            r = h.get('remediation') or {}
+            if kind == 'agent-after' and r.get('after_observed'):  # Remediation's re-run, once a human approved it
+                out.append((r['after_observed'], r['after_observed'].get('recovery_s'), r.get('after_integrity', []),
+                            h['experiment']['target']))
+        return out
     record = json.loads((run / 'trials.json').read_text())
     return [(t['observed'], t['observed'].get('recovery_s'), [{}] * (t['observed'].get('integrity_violations') or 0),
              record['experiment']['target']) for t in map(trials.reobserve, record['trials']) if t.get('observed')]
@@ -87,7 +102,7 @@ def render(table):
         spread = f" ({r['range'][0]}–{r['range'][1]}, n={r['n']})" if r['n'] > 1 else ''
         b = r['breakdown']
         lines.append(f"| {n} | **{r['score']}**{spread} | {r['experiment']} | {r['condition']} | {b['E']} | {b['L']} | "
-                     f"{b['R']} | {b['B']} | {b['I']} | #{r['finding']} | [{Path(r['run']).name}](../../{r['run']}) |")
+                     f"{b['R']} | {b['B']} | {b['I']} | #{r['finding']} | [{Path(r['run'].split('#')[0]).name}](../../{r['run'].split('#')[0]}) |")
     lines += ['', '## Fixes proven by re-running the same experiment', '',
               '| Experiment | Before | After | Change |', '|---|---|---|---|']
     for name in dict.fromkeys(r['experiment'] for r in table):

@@ -3,6 +3,7 @@ the identical experiment. The AI never writes patches; it can only choose a vett
 """
 import json
 from pathlib import Path
+import time
 
 from chaosmind import guard, inject
 from chaosmind.agents import integrity, llm, safety, score
@@ -52,6 +53,31 @@ def revert(fix):
     _kubectl_files('delete', fix.get('delete_on_revert', []))
 
 
+SETTLE_QUIET_S, SETTLE_TIMEOUT_S = 30, 300
+
+
+def settle(snapshot=None, quiet_s=SETTLE_QUIET_S, timeout_s=SETTLE_TIMEOUT_S, poll_s=5):
+    """Applying a fix rolls the deployment, which disrupts traffic by itself (the Redis fix's rollout stalled carts
+    for seconds). Wait until customers have been within the guard limits for quiet_s, otherwise the re-run measures
+    the rollout instead of the fault. False if they never settle within timeout_s."""
+    if snapshot is None:
+        from chaosmind.monitor import snapshot
+    start = calm_since = time.monotonic()
+    while time.monotonic() - start <= timeout_s:
+        try:
+            s = snapshot()
+            calm = (s['error_rate'] <= guard.LIMITS['error_rate'] and s['p95_ms'] <= guard.LIMITS['p95_ms']
+                    and not s['unhealthy_services'])
+        except RuntimeError:  # stale or absent traffic is not calm
+            calm = False
+        if not calm:
+            calm_since = time.monotonic()
+        elif time.monotonic() - calm_since >= quiet_s:
+            return True
+        time.sleep(poll_s)
+    return False
+
+
 def rerun_experiment(item):
     """The step the 'before' score was measured on: the Safety Checker's reviewed experiment (never the raw proposal),
     at that step's intensity and length. Anything else would bypass the review and compare different experiments."""
@@ -67,6 +93,9 @@ def execute(item, choice, baseline, guard_run=guard.run):
     """Apply the chosen catalog fix → re-run the identical experiment → compare scores → keep or roll back."""
     fix = next(f for f in CATALOG if f['id'] == choice['fix_id'])
     apply(fix)
+    if not settle():
+        raise RuntimeError(f"customers did not settle within {SETTLE_TIMEOUT_S} s after applying {fix['id']}; "
+                           "fix left applied, re-run skipped")
     state = integrity.prepare()
     exp = rerun_experiment(item)
     events = guard_run(exp)

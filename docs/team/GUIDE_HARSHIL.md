@@ -50,8 +50,9 @@ On our real results it gives (regenerate with `python3 -m chaosmind.agents.score
 | Nothing broken | 100 |
 | Ad service down | 90 |
 | Catalog delay | 68 |
-| Redis silent wipe | 55 (99 after the fix) |
+| Redis silent wipe | 30 (67 after the fix) |
 | Catalog pod kill, 1 replica | 29 (99 with 2 replicas) |
+| Frontend down (AI-chosen) | 16 |
 | Cart down | 18 |
 
 Decide with the team whether those rankings feel right. If you change weights, update the docstring and the sanity test in `test_day2.py`. **Be ready to explain the formula in one sentence on camera.**

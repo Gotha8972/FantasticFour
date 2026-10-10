@@ -56,12 +56,20 @@ class Day2Tests(unittest.TestCase):
                        'unhealthy_services': ['cartservice']}]
         with patch.object(llm, 'ask', return_value={'fix_id': 'cartservice-replicas'}), \
              patch.object(remediation, 'apply') as apply, patch.object(remediation, 'revert') as revert, \
+             patch.object(remediation, 'settle', return_value=True), \
              patch.object(remediation.integrity, 'prepare', return_value={}), \
              patch.object(remediation.integrity, 'verify', return_value=[]):
             out = remediation.remediate(item, BASE, guard_run=lambda exp: bad_events)
         apply.assert_called_once()
         revert.assert_called_once()
         self.assertEqual((out['verdict'], out['kept']), ('worse', False))
+
+    def test_remediation_waits_for_customers_to_settle_after_a_fix(self):
+        calm, rollout = ({'error_rate': 0.0, 'p95_ms': 23, 'unhealthy_services': []},
+                         {'error_rate': 0.0, 'p95_ms': 5500, 'unhealthy_services': []})  # the Redis fix's own rollout
+        seen = iter([rollout, calm])
+        self.assertTrue(remediation.settle(lambda: next(seen), quiet_s=0, poll_s=0))
+        self.assertFalse(remediation.settle(lambda: rollout, quiet_s=0, timeout_s=0, poll_s=0))
 
     def test_remediation_reruns_the_reviewed_step_not_the_raw_proposal(self):
         raw = {'id': 'cat', 'fault': 'network_delay', 'target': 'productcatalogservice',
@@ -110,10 +118,13 @@ class Day2Tests(unittest.TestCase):
         table = scoreboard.rows()
         by = {(r['experiment'], r['condition']): r['score'] for r in table}
         self.assertTrue(all(0 <= r['score'] <= 100 for r in table))
-        self.assertLess(by[('Redis restarted', 'before fix')], by[('Redis restarted', 'after fix: PVC + append-only log')])
+        self.assertLess(by[('Redis restarted (cart test)', 'before fix')],
+                        by[('Redis restarted (cart test)', 'after fix: PVC + append-only log')])
+        ai = 'Redis pod kill, chosen and run by the AI'
+        self.assertLess(by[(ai, 'before fix')], by[(ai, 'after the fix, approved by a human')])  # live AI loop
         self.assertLess(by[('catalog pod kill, 5 trials', '1 replica')], by[('catalog pod kill, 5 trials', '2 replicas')])
         self.assertLess(by[('cartservice unavailable', '1 replica')], by[('adservice unavailable', 'no fix needed')])
-        self.assertIn('| Redis restarted | 55 (before fix) | 99', scoreboard.render(table))
+        self.assertIn('| catalog pod kill, 5 trials | 29 (1 replica) | 99 (2 replicas) | **+70** |', scoreboard.render(table))
 
     def test_trials_wilson_and_invalid_runs(self):
         from chaosmind.agents import trials

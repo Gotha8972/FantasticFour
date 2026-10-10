@@ -1,13 +1,6 @@
 [
- {"id": "redis-persistence", "target": "redis-cart",
-  "fixes": "stateful service on emptyDir: a pod restart or kill silently wipes all carts",
-  "apply_files": ["remediation/redis-persistence-pvc.yaml"],
-  "patch": "remediation/redis-persistence-patch.json", "revert_patch": "remediation/redis-persistence-revert.json",
-  "delete_on_revert": ["remediation/redis-persistence-pvc.yaml"]},
- {"id": "cartservice-replicas", "target": "cartservice",
-  "fixes": "single replica: one pod failure takes the cart and checkout down",
-  "patch": "remediation/replicas-2.json", "revert_patch": "remediation/replicas-1.json"},
- {"id": "productcatalog-replicas", "target": "productcatalogservice",
-  "fixes": "single replica on the highest fan-in service: one pod failure or kill hurts every page",
-  "patch": "remediation/replicas-2.json", "revert_patch": "remediation/replicas-1.json"}
+ {"id": "redis-persistence", "target": "redis-cart", "fixes": "stateful service on emptyDir: a pod restart or kill silently wipes all carts", "apply_files": ["remediation/redis-persistence-pvc.yaml"], "patch": "remediation/redis-persistence-patch.json", "revert_patch": "remediation/redis-persistence-revert.json", "delete_on_revert": ["remediation/redis-persistence-pvc.yaml"]},
+ {"id": "cartservice-replicas", "target": "cartservice", "fixes": "single replica: one pod failure takes the cart and checkout down", "patch": "remediation/replicas-2.json", "revert_patch": "remediation/replicas-1.json"},
+ {"id": "productcatalog-replicas", "target": "productcatalogservice", "fixes": "single replica on the highest fan-in service: one pod failure or kill hurts every page", "patch": "remediation/replicas-2.json", "revert_patch": "remediation/replicas-1.json"},
+ {"id": "frontend-replicas", "target": "frontend", "fixes": "single replica on the only entrypoint: one pod failure takes the whole shop down", "patch": "remediation/replicas-2.json", "revert_patch": "remediation/replicas-1.json"}
 ]

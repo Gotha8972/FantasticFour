@@ -12,49 +12,56 @@ Ranked by **severity** first (silent data loss above outages, outages above slow
 
 | Rank | Weakness | Severity | Evidence | Score | Fix | Status |
 |---|---|---|---|---|---|---|
-| 1 | **Silent cart data loss** on Redis restart | 🔴 Critical | Cart **1 → 0 items** with **0 HTTP errors** | **55** → **99** after the fix (the AI's own run: 29) | PVC for `/data` + Redis append-only log + `Recreate` strategy | ✅ **Fixed and re-tested:** cart **1 → 1**, score **+44** |
-| 2 | **Cart service is a single point of failure** | 🟠 High | Cart down → errors peak 100%, p95 2,700 ms, customers recovered after ~62 s | **18** | 2 replicas + PodDisruptionBudget (in the [fix catalog](remediation/catalog.json)) | Fix ready |
-| 3 | **"Healthy" ≠ recovered** after a catalog pod kill | 🟠 High | At 100 shoppers: replacement pod up in **~3 s**, but **66 HTTP 500s**, checkout 16/179 failed, customers recovered after **~34 s**. Repeated at 20 shoppers: customers hurt in **5 of 5** kills (95% CI 57–100%) | **29** → **99** with 2 replicas (medians of 5) | 2 catalog replicas; frontend retries with backoff | ✅ **Fix measured:** 2 replicas → hurt in **0 of 5** (95% CI 0–43%), score **+70** |
-| 4 | **Catalog latency spreads to the whole site** | 🟡 Medium | +500 ms on the catalog → site p95 **3,500 ms** at 20 shoppers, **4,300 / 4,400 ms** at 100 (two identical runs) | **68** | Client-side timeouts + caching catalog reads in the frontend | Recommended |
-| 5 | **Background checkout failures** | 🟡 Medium | 3 HTTP 500s in 237 checkouts with **no fault injected** (~1.3%); 4 of 56 under host memory pressure with `paymentservice` restarts; **0 of 55** with memory headroom | n/a (no fault injected) | Resource headroom for `paymentservice` (memory limits/requests); card data ruled out | Likely cause found |
-| 6 | Ads service outage | 🟢 Low | Ad service down → **0% errors**; the frontend degrades gracefully | **90** | None needed | ✅ Resilient |
+| 1 | **Silent cart data loss** on Redis restart | 🔴 Critical | Cart **1 → 0 items**; afterwards every page answers HTTP 200 with the cart empty, so the loss is never reported. **Found, confirmed and fixed by the AI loop live** (fix approved by a human) | Cart test **30 → 67**; AI's own run **0 → 27** | PVC for `/data` + Redis append-only log + `Recreate` strategy | ✅ **Fixed and re-tested:** cart **1 → 1** both times; the data-loss penalty is gone. During a restart cart requests still take 2–6 s (one replica) |
+| 2 | **The frontend is a single point of failure** | 🔴 Critical | **Chosen and confirmed by the AI:** frontend down → **100% errors**, p95 20 s, pod back after 19.7 s, customers after 40.5 s | **16** | 2 frontend replicas + PDB (now in the [fix catalog](remediation/catalog.json)) | Fix ready |
+| 3 | **Cart service is a single point of failure** | 🟠 High | Cart down → errors peak 100%, p95 2,700 ms, customers recovered after ~62 s | **18** | 2 replicas + PodDisruptionBudget (in the [fix catalog](remediation/catalog.json)) | Fix ready |
+| 4 | **"Healthy" ≠ recovered** after a catalog pod kill | 🟠 High | At 100 shoppers: replacement pod up in **~3 s**, but **66 HTTP 500s**, checkout 16/179 failed, customers recovered after **~34 s**. Repeated at 20 shoppers: customers hurt in **5 of 5** kills (95% CI 57–100%); the AI's own kill confirmed it (17% errors) | **29** → **99** with 2 replicas (medians of 5); AI's run **53** | 2 catalog replicas; frontend retries with backoff | ✅ **Fix measured:** 2 replicas → hurt in **0 of 5** (95% CI 0–43%), score **+70** |
+| 5 | **Catalog latency spreads to the whole site** | 🟡 Medium | +500 ms on the catalog → site p95 **3,500 ms** at 20 shoppers, **4,300 / 4,400 ms** at 100 (two identical runs) | **68** | Client-side timeouts + caching catalog reads in the frontend | Recommended |
+| 6 | **Background checkout failures** | 🟡 Medium | 3 HTTP 500s in 237 checkouts with **no fault injected** (~1.3%); 4 of 56 under host memory pressure with `paymentservice` restarts; **0 of 55** with memory headroom | n/a (no fault injected) | Resource headroom for `paymentservice` (memory limits/requests); card data ruled out | Likely cause found |
+| 7 | Ads service outage | 🟢 Low | Ad service down → **0% errors**; the frontend degrades gracefully | **90** | None needed | ✅ Resilient |
 
 ## Details
 
 ### 1. Silent cart data loss: fixed ✅
-- **What we did:** added an item to a cart, then restarted the `redis-cart` pod.
-- **What happened:** the cart was empty afterwards, yet every request returned HTTP 200. The guard and error-rate monitoring saw nothing; our **integrity check** (same session: is the item still there?) caught it.
+- **What we did:** added an item to a cart, then restarted the `redis-cart` pod. Later the **AI loop chose the same experiment itself** (Redis pod kill with an integrity criterion), confirmed it live, proposed the fix, and applied it after a human approved.
+- **What happened:** the cart was empty afterwards, and every page kept answering HTTP 200 with the empty cart: nothing ever reports the loss. In the cart test the load generator saw no failed requests at all; in the AI's run the restart itself caused a short error spike (≤ 12.5%), but no error says "your cart is gone". Our **integrity check** (same session: is the item still there?) caught it both times.
 - **Root cause:** Redis is a single replica storing data on an `emptyDir` volume, which is deleted with the pod. Redis saves on shutdown, but into that temporary folder.
 - **Fix:** `bash scripts/redis-fix.sh apply`: a PersistentVolumeClaim for `/data`, `--appendonly yes` (covers crashes, not only clean shutdowns), and the `Recreate` strategy, so two Redis pods never share the disk.
-- **Proof:** same experiment after the fix: cart **1 → 1**, 0 failed requests, back in 3.3 s. Evidence: [before/after](docs/evidence/REDIS_FIX_RESULTS.md), `runs/c-redis-20261010T070925.577773Z` (before), `runs/c-redis-20261010T102251.009037Z` (after).
+- **Proof:** same experiment after the fix: cart **1 → 1**, 0 failed requests in the cart test; in the AI's run the integrity violation disappeared (score 0 → 27). Scores: cart test **30 → 67**. Evidence: [before/after](docs/evidence/REDIS_FIX_RESULTS.md), `runs/c-redis-20261010T070925.577773Z` (before), `runs/c-redis-20261010T102251.009037Z` (after), AI run `runs/agents-20261010T185909Z`.
+- **What the fix doesn't solve:** Redis is still one replica, so during a restart cart requests take 2–6 s (p95 2,000–5,800 ms) for up to ~20 s. That's the remaining score penalty. Next step: cartservice retries, or a replicated Redis.
 
-### 2. Cart service single point of failure
+### 2. The frontend is a single point of failure (found by the AI)
+- **What happened:** the AI ranked the frontend first (blast radius: all 11 services × critical) and ran `pod_failure` on it. Customers saw **100% errors** and p95 of 20 s; the kill switch removed the fault, the pod was back after 19.7 s, and customers after 40.5 s. Score **16**.
+- **Root cause:** one replica on the only entrypoint; every customer request passes through it.
+- **Fix:** 2 frontend replicas + PDB, now a reviewed fix in the catalog (`frontend-replicas`), so Remediation can apply and re-test it. Evidence: `runs/agents-20261010T185909Z`.
+
+### 3. Cart service single point of failure
 - **What we did:** `pod_failure` on `cartservice` at 20 shoppers.
 - **What happened:** the kill switch tripped on error rate (35%) at 8.1 s and removed the fault 0.38 s later. During the restart that followed, errors peaked at 100% and p95 at 2,700 ms. The service had capacity back after ~42 s; customers recovered after ~62 s.
 - **Root cause:** one replica; every cart and checkout request depends on it.
 - **Fix:** 2 replicas (+ PDB). Our Remediation agent applies this from the reviewed catalog and re-runs the identical experiment. Evidence: `runs/test-down-20261010T062320.861245Z`.
 
-### 3. "Healthy" ≠ recovered
+### 4. "Healthy" ≠ recovered
 - **What we did:** killed one `productcatalogservice` pod at 100 shoppers.
 - **What happened:** Kubernetes had a replacement Ready in ~3 s, but customers saw **66 HTTP 500s**, a checkout failure rate of 8.9% and peak p95 of 10 s, for ~34 s in total.
 - **Why it matters:** pod health alone would have reported this as a 3-second blip. Customer metrics show it was a 34-second outage.
-- **Repeated and measured:** 5 kills with 1 replica and 5 with 2 (20 shoppers, same customer limits). With **1 replica, customers were hurt every time (5/5, 95% CI 57–100%)**: errors up to 96%, p95 up to 20 s, customers recovered after 32–38 s while the pod was back in ~3 s. With **2 replicas, never (0/5, 95% CI 0–43%)**: errors stayed ≤ 2.4%. The intervals don't overlap. Evidence: `runs/trials-catalog-podkill-20261010T182606Z` (1 replica) and `runs/trials-catalog-podkill-20261010T183121Z` (2 replicas).
+- **Repeated and measured:** 5 kills with 1 replica and 5 with 2 (20 shoppers, same customer limits). With **1 replica, customers were hurt every time (5/5, 95% CI 57–100%)**: errors up to 96%, p95 up to 20 s, customers recovered after 32–38 s while the pod was back in ~3 s. With **2 replicas, never (0/5, 95% CI 0–43%)**: errors stayed ≤ 2.4%. The intervals don't overlap. The AI's own catalog kill (1 replica) also confirmed customer impact: 17% errors, score 53. Evidence: `runs/trials-catalog-podkill-20261010T182606Z` (1 replica) and `runs/trials-catalog-podkill-20261010T183121Z` (2 replicas).
 - **Fix:** 2 catalog replicas, so a single kill is absorbed (**measured above**); frontend retries with backoff. Evidence: [monitoring results](monitoring/README.md#recorded-pod-kill-results--october-10-2026), `runs/grafana-pod-kill-1a0c612c9e`.
 
-### 4. Catalog latency spreads everywhere
+### 5. Catalog latency spreads everywhere
 - **What we did:** +500 ms network delay on `productcatalogservice`.
 - **What happened:** site-wide p95 went from ~35–78 ms to 3,500 ms (20 shoppers) and 4,300 / 4,400 ms (100 shoppers). The kill switch tripped on p95 at 7.8 s and 9.6 s and removed the fault within 0.33 s; recovery took 14–15 s. **Reproducible:** two runs, near-identical numbers.
 - **Root cause:** the catalog has the most callers (frontend, checkout, recommendations), as our automatically generated dependency map predicted.
 - **Fix:** client-side timeouts and caching catalog reads. Evidence: `runs/test-delay-20261010T062255.501508Z`, `runs/grafana-stress-*`.
 
-### 5. Background checkout failures (investigating)
-3 of 237 checkouts failed with HTTP 500 across two fault-free baselines, always on `POST /cart/checkout`. We checked the load generator's source: card expiry dates are always in the future and card numbers are always valid Visa numbers, so those aren't the cause. Payment and checkout logs are being captured right after a baseline to find it.
+### 6. Background checkout failures (likely cause found)
+3 of 237 checkouts failed with HTTP 500 across two fault-free baselines, always on `POST /cart/checkout`. We checked the load generator's source: card expiry dates are always in the future and card numbers are always valid Visa numbers, so those aren't the cause. **Likely cause:** in a baseline taken under host memory pressure, `paymentservice` failed its liveness probe and restarted while 4 of 56 checkouts failed; with memory headroom, 0 of 55 failed (and 0 of 63 in the next baseline).
 
-### 6. Ads fail gracefully
+### 7. Ads fail gracefully
 With `adservice` down, customer error rate stayed at **0%**. The kill switch still tripped on service health (9.2 s) and reverted in 0.38 s. As predicted: optional features don't break the shop.
 
 ## Safety record
 Every experiment ran under the kill switch. All three triggers (error rate, latency, service health) fired live and removed the fault in **0.30–0.39 s**. The **crash fail-safe** was proven (guard killed with `kill -9`; the fault still ended on Chaos Mesh's timer), **manual abort** cleared 2 faults in 0.39 s, and **pre-flight** refused to start while another fault was active. No experiment affected anything outside the `online-boutique` namespace.
 
 ## How these were found
-The **Cartographer** audits the live configuration and ranks risks (it flagged Redis, the catalog, cart and checkout path). The **Strategist** turns each into an experiment with pass/fail criteria written in advance. The **Safety Checker** approves and ramps it through the kill switch. **Integrity checks** catch silent failures, **code** decides confirmed/refuted and the score, and **Remediation** applies a reviewed fix and re-runs the same experiment. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+The **Cartographer** audits the live configuration and ranks risks (it flagged Redis, the frontend, the catalog, cart and checkout path). The **Strategist** turns each into an experiment with pass/fail criteria written in advance. The **Safety Checker** approves and ramps it through the kill switch. **Integrity checks** catch silent failures, **code** decides confirmed/refuted and the score, and **Remediation** applies a reviewed fix and re-runs the same experiment. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
