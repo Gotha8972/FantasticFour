@@ -1,0 +1,73 @@
+{
+  "apiVersion": "chaos-mesh.org/v1alpha1",
+  "kind": "PodChaos",
+  "metadata": {
+    "annotations": {
+      "chaosmind/run-token": "2d406959-44e6-4191-9adb-8bcd58bb9296"
+    },
+    "creationTimestamp": "2026-10-10T07:06:15Z",
+    "finalizers": [
+      "chaos-mesh/records"
+    ],
+    "generation": 5,
+    "labels": {
+      "app.kubernetes.io/part-of": "chaosmind"
+    },
+    "name": "c-crash-e086f13971",
+    "namespace": "online-boutique",
+    "resourceVersion": "9328",
+    "uid": "0cf58610-e3ae-4ef8-a108-55be37c3ce10"
+  },
+  "spec": {
+    "action": "pod-failure",
+    "duration": "60s",
+    "mode": "one",
+    "selector": {
+      "labelSelectors": {
+        "app": "adservice"
+      },
+      "namespaces": [
+        "online-boutique"
+      ]
+    }
+  },
+  "status": {
+    "conditions": [
+      {
+        "status": "True",
+        "type": "Selected"
+      },
+      {
+        "status": "True",
+        "type": "AllInjected"
+      },
+      {
+        "status": "False",
+        "type": "AllRecovered"
+      },
+      {
+        "status": "False",
+        "type": "Paused"
+      }
+    ],
+    "experiment": {
+      "containerRecords": [
+        {
+          "events": [
+            {
+              "operation": "Apply",
+              "timestamp": "2026-10-10T07:06:15Z",
+              "type": "Succeeded"
+            }
+          ],
+          "id": "online-boutique/adservice-957f96f7d-27zjb",
+          "injectedCount": 1,
+          "phase": "Injected",
+          "recoveredCount": 0,
+          "selectorKey": "."
+        }
+      ],
+      "desiredPhase": "Run"
+    }
+  }
+}

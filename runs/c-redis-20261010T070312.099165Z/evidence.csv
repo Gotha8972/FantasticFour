@@ -1,0 +1,2 @@
+timestamp_utc,elapsed_s,test,event,details_json
+2026-10-10T07:03:12.240476+00:00,0.141,redis-cart-persistence,FAIL,"{""reason"": ""Unable to connect to the server: dial tcp 127.0.0.1:42957: socket: operation not permitted\nUnable to connect to the server: dial tcp 127.0.0.1:42957: socket: operation not permitted\nUnable to connect to the server: dial tcp 127.0.0.1:42957: socket: operation not permitted\nUnable to connect to the server: dial tcp 127.0.0.1:42957: socket: operation not permitted\n""}"

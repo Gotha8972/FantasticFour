@@ -1,0 +1,14 @@
+[
+  {
+    "test": "redis-cart-persistence",
+    "outcome": "FINDING",
+    "before_count": 1,
+    "after_count": 0,
+    "cart_wiped": true,
+    "same_session": "c-redis-43afe2afe3c64244921eb69108df5507",
+    "data_empty_dir": true,
+    "replacement_and_cart_ready_s": 4.874,
+    "first_successful_http_s": 3.707,
+    "observed_failed_http": []
+  }
+]

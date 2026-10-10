@@ -1,0 +1,5 @@
+Before: 1 item(s). After: 0. Cart wiped: True.
+Redis has one replica and /data uses emptyDir, which is lost on pod replacement.
+Use persistent Redis storage with persistence enabled; evaluate replication and recovery behavior.
+Evidence: /home/aashrith/Desktop/boschthon/runs/c-redis-20261010T070925.577773Z
+Observed failed HTTP samples: 0; this is sampled downtime, not an exact outage duration.

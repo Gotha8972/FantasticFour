@@ -1,0 +1,23 @@
+[
+  {
+    "test": "ad-service-health-trigger",
+    "outcome": "PASS",
+    "metric": "unhealthy",
+    "value": 1,
+    "limit": 0,
+    "guard_artifact_dir": "runs/c-ad-health-13973e53bd-20261010T070523.440196Z"
+  },
+  {
+    "test": "guard-sigkill-failsafe",
+    "outcome": "PASS",
+    "duration_s": 60,
+    "seconds_after_sigkill_to_recovery": 60.055,
+    "reason": "Chaos Mesh reported AllRecovered without manual deletion"
+  },
+  {
+    "test": "manual-abort",
+    "outcome": "PASS",
+    "deletion_seconds": 0.386,
+    "scope": "chaosmind-owned faults; other users experiments are preserved"
+  }
+]

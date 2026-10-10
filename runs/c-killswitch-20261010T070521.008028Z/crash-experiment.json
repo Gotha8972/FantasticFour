@@ -1,0 +1,7 @@
+{
+  "id": "c-crash-e086f13971",
+  "fault": "pod_failure",
+  "target": "adservice",
+  "duration_s": 60,
+  "_run_token": "8b955340-86d3-4925-ab2c-2c71008facb6"
+}

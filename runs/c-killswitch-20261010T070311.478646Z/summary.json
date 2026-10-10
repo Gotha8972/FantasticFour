@@ -1,0 +1,17 @@
+[
+  {
+    "test": "ad-service-health-trigger",
+    "outcome": "FAIL",
+    "reason": "Unable to connect to the server: dial tcp 127.0.0.1:42957: socket: operation not permitted\nUnable to connect to the server: dial tcp 127.0.0.1:42957: socket: operation not permitted\nUnable to connect to the server: dial tcp 127.0.0.1:42957: socket: operation not permitted\nUnable to connect to the server: dial tcp 127.0.0.1:42957: socket: operation not permitted\n"
+  },
+  {
+    "test": "guard-sigkill-failsafe",
+    "outcome": "FAIL",
+    "reason": "Unable to connect to the server: dial tcp 127.0.0.1:42957: socket: operation not permitted\nUnable to connect to the server: dial tcp 127.0.0.1:42957: socket: operation not permitted\nUnable to connect to the server: dial tcp 127.0.0.1:42957: socket: operation not permitted\nUnable to connect to the server: dial tcp 127.0.0.1:42957: socket: operation not permitted\n"
+  },
+  {
+    "test": "manual-abort",
+    "outcome": "FAIL",
+    "reason": "Unable to connect to the server: dial tcp 127.0.0.1:42957: socket: operation not permitted\nUnable to connect to the server: dial tcp 127.0.0.1:42957: socket: operation not permitted\nUnable to connect to the server: dial tcp 127.0.0.1:42957: socket: operation not permitted\nUnable to connect to the server: dial tcp 127.0.0.1:42957: socket: operation not permitted\n"
+  }
+]

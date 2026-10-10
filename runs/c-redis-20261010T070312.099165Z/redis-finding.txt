@@ -1,0 +1,7 @@
+Redis checkpoint failed: Unable to connect to the server: dial tcp 127.0.0.1:42957: socket: operation not permitted
+Unable to connect to the server: dial tcp 127.0.0.1:42957: socket: operation not permitted
+Unable to connect to the server: dial tcp 127.0.0.1:42957: socket: operation not permitted
+Unable to connect to the server: dial tcp 127.0.0.1:42957: socket: operation not permitted
+
+Evidence: /home/aashrith/Desktop/boschthon/runs/c-redis-20261010T070312.099165Z
+No persistence conclusion can be drawn from this failed test.
