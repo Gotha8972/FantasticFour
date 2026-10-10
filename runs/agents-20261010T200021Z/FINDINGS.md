@@ -10,6 +10,8 @@ The paymentservice pod kill caused a critical checkout outage with a 4.5% error 
 | `v2-pod-failure-currencyservice` | pod_failure on currencyservice | confirmed | 1 of 2 | 100.0% | 140.0 ms | 30.503 s | 0 violation(s) | 47 |
 | `v4-pod-kill-checkoutservice` | pod_kill on checkoutservice | refuted | 0 of 2 | 0.0% | 150.0 ms | 1.323 s | 0 violation(s) | 97 |
 
+Scores are as computed when the run happened. `python3 -m chaosmind.agents.scoreboard` recomputes every run with the current formula.
+
 ## Paymentservice pod kill (critical)
 
 **What happened:** The paymentservice pod was killed, causing a 4.5% error rate on checkout and a 1.3‑second recovery time.
@@ -44,6 +46,8 @@ Evidence: `runs/v2-pod-failure-currencyservice-s1-20261010T200203.014787Z`
 
 **Root cause:** The single‑replica checkout orchestrator has a PodDisruptionBudget; the pod kill did not affect overall availability.
 
+> ⚠ **Contradicted by the collected config:** it mentions a PodDisruptionBudget, but the service has none.
+
 **Fix:** No fix needed; the current PDB protects checkoutservice from outages.
 
 Evidence: `runs/v4-pod-kill-checkoutservice-s1-20261010T200257.671634Z`
@@ -51,3 +55,5 @@ Evidence: `runs/v4-pod-kill-checkoutservice-s1-20261010T200257.671634Z`
 ## Fact-check
 
 Numbers not found in the measured data (treat with caution): 38
+
+1 claim(s) contradicted by the measurements or the collected config are marked above.

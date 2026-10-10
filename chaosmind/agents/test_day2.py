@@ -113,10 +113,17 @@ class Day2Tests(unittest.TestCase):
                                   'observed': {'error_rate': 0.0, 'p95_ms': 3200}, 'phases': {'during_worst': None},
                                   'recovery_s': 10, 'integrity_violations': [], 'score': {'score': 80},
                                   'remediation': {'verdict': 'not_approved'}, 'run_dir': 'runs/x', 'log_errors': []}]}
+        facts['experiments'][0]['config'] = {'pdb': False, 'volumes': ['persistentVolumeClaim']}
         reply = {'summary': 's', 'findings': [{'experiment_id': 'v2-redis', 'title': 'Redis kill causes state loss',
-                                               'what_happened': 'cart data was lost', 'root_cause': 'emptyDir'}]}
+                                               'what_happened': 'cart data was lost',
+                                               'root_cause': 'emptyDir, and its PodDisruptionBudget did not help'}]}
         text = analyst.render(facts, reply)
         self.assertIn('Contradicted by the measurements', text)
+        self.assertIn('the service has none', text)  # real gpt-oss claim: "checkout has a PodDisruptionBudget"
+        self.assertIn('mounts a persistent volume', text)
+        clean = {'summary': 's', 'findings': [{'experiment_id': 'v2-redis', 'what_happened': 'brief errors',
+                                               'root_cause': 'one replica and no PodDisruptionBudget'}]}
+        self.assertNotIn('Contradicted', analyst.render(facts, clean))
         self.assertIn('| 1 of 3 | 0.0% | 3200 ms |', text)  # same numbers as the verdict, and how many criteria held
         self.assertIn('no fix applied (not_approved)', text)
 

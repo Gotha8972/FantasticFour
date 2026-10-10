@@ -10,6 +10,8 @@ The Redis‑cart pod kill caused cart data loss and a 12.5% error rate, confirmi
 | `v1-pod-kill-redis-cart` | pod_kill on redis-cart | confirmed | 2 of 2 | 12.5% | 5800.0 ms | 16.483 s | 1 violation(s) | 0 |
 | `v5-pod-kill-productcatalogservice` | pod_kill on productcatalogservice | confirmed | 1 of 2 | 16.7% | 80.0 ms | 9.916 s | 0 violation(s) | 53 |
 
+Scores are as computed when the run happened. `python3 -m chaosmind.agents.scoreboard` recomputes every run with the current formula.
+
 ## Redis‑cart pod kill (critical)
 
 **What happened:** Killing the redis‑cart pod removed all cart items, causing a 12.5% error rate and a 5800 ms p95 latency spike.

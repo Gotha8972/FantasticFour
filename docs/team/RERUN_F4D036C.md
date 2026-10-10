@@ -46,3 +46,13 @@ Scores use the new square-root formula and should not be compared directly with 
 The Analyst generated its report successfully, but its fact check flags an unsupported rounded number (38). It also invents a checkout PDB. The live namespace has no PDB objects, and the collected checkout PDB fact is false. Full corrections and caveats are in `runs/agents-20261010T200021Z/OPERATOR_NOTES.md`; raw Analyst prose is retained for evaluation.
 
 No active new faults remain. Final sample: 20 shoppers, zero errors, p95 96 ms, no unavailable services. All deployments were ready. Existing fixes remain in place. This run is complete and has no pending approval.
+
+## Status after review
+
+- Thanks for the test fix (the rollback test reached the real cluster). Kept.
+- **The PodDisruptionBudget claim was invented because the Analyst never saw the configuration.** Its fact sheet now includes each target's config (replicas, PDB, HPA, volumes, probes), the prompt says to describe config only from it, and code marks config claims the facts contradict (a PDB that doesn't exist, emptyDir on a persistent volume) next to the data-loss check. The "38" was already caught by the number check.
+- **All three AI reports were re-rendered offline** from the saved `analyst_reply.json` (no API call): run 2 now marks "emptyDir", and run 3 marks the invented PDB. Each report notes that its scores are from run time; the [scoreboard](../evidence/SCOREBOARD.md) recomputes every run with the current formula, run 3 included.
+- **Findings:** currency is a new critical single point of failure (#3). Payment is a new honest finding (#6): its outage failed 2 of 5 checkouts while the overall error rate stayed under our kill switch's 5% limit. That's a blind spot in our own tool, documented, not fixed (feature freeze). The checkout refutation is in FINDINGS under "Hypotheses the AI got wrong".
+- Dry-run prose still says "data loss" sometimes where facts show a PVC; experiments with that prediction are dropped and corrected by code, but free-text prose in the audit isn't fully checked. That's documented as a limitation.
+
+Day 2 work on the cluster laptop is done. Remaining: the video, and the clean install on a second laptop.

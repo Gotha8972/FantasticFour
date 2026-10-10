@@ -10,6 +10,8 @@ The chaos experiments confirmed that single‑replica services are vulnerable to
 | `v2-pod-kill-redis-cart` | pod_kill on redis-cart | confirmed | 1 of 3 | 0.0% | 3200.0 ms | 10.003 s | 0 violation(s) | 69 |
 | `v3-pod-kill-cartservice` | pod_kill on cartservice | confirmed | 2 of 2 | 100.0% | 2900.0 ms | 50.583 s | 0 violation(s) | 20 |
 
+Scores are as computed when the run happened. `python3 -m chaosmind.agents.scoreboard` recomputes every run with the current formula.
+
 ## Frontend pod failure caused site outage (critical)
 
 **What happened:** The sole frontend pod crashed, making the service unhealthy and blocking all downstream traffic. Error rate spiked to 0.2045 and p95 latency reached 1100 ms during the fault.
@@ -40,6 +42,8 @@ Evidence: `runs/v3-pod-kill-cartservice-s1-20261010T193216.325334Z`
 
 **Root cause:** Redis-cart is a stateful service using an emptyDir volume; pod termination loses in‑memory state and causes latency spikes.
 
+> ⚠ **Contradicted by the collected config:** it says emptyDir, but the service mounts a persistent volume.
+
 **Fix:** Add persistent storage via a PVC (redis-persistence) to preserve cart state across pod restarts and reduce latency.
 
 **Remediation:** no fix applied (not_approved).
@@ -49,3 +53,5 @@ Evidence: `runs/v2-pod-kill-redis-cart-s1-20261010T193107.653073Z`
 ## Fact-check
 
 Every number above appears in the measured data.
+
+1 claim(s) contradicted by the measurements or the collected config are marked above.

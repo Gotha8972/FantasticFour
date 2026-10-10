@@ -14,6 +14,7 @@ from chaosmind.agents import facts as facts_mod, safety, score, steps, trials
 # (finding in FINDINGS.md, experiment, condition, evidence kind, run[#target]). Same experiment twice = before/after.
 AI_RUN = 'runs/agents-20261010T185909Z'    # first full live AI loop (Redis and catalog fixes approved)
 AI_RUN2 = 'runs/agents-20261010T192511Z'   # fresh live AI loop, Redis fix already in place (frontend and cart fixes)
+AI_RUN3 = 'runs/agents-20261010T200021Z'   # third live AI loop: payment, currency, checkout (no reviewed fixes for them)
 FIXED = 'after the fix, approved by a human'
 EVIDENCE = [
     (1, 'Redis restarted (cart test)', 'before fix', 'redis', 'runs/c-redis-20261010T070925.577773Z'),
@@ -23,15 +24,19 @@ EVIDENCE = [
     (1, 'Redis pod kill, fresh AI run', 'fix already in place', 'agent', f'{AI_RUN2}#redis-cart'),
     (2, 'frontend unavailable, chosen and run by the AI', '1 replica', 'agent', f'{AI_RUN2}#frontend'),
     (2, 'frontend unavailable, chosen and run by the AI', FIXED, 'agent-after', f'{AI_RUN2}#frontend'),
-    (3, 'cartservice unavailable', '1 replica', 'guard', 'runs/test-down-20261010T062320.861245Z'),
-    (3, 'cartservice pod kill, chosen and run by the AI', '1 replica', 'agent', f'{AI_RUN2}#cartservice'),
-    (3, 'cartservice pod kill, chosen and run by the AI', FIXED, 'agent-after', f'{AI_RUN2}#cartservice'),
-    (4, 'catalog pod kill, 5 trials', '1 replica', 'trials', 'runs/trials-catalog-podkill-20261010T182606Z'),
-    (4, 'catalog pod kill, 5 trials', '2 replicas', 'trials', 'runs/trials-catalog-podkill-20261010T183121Z'),
-    (4, 'catalog pod kill, chosen and run by the AI', '1 replica', 'agent', f'{AI_RUN}#productcatalogservice'),
-    (4, 'catalog pod kill, chosen and run by the AI', FIXED, 'agent-after', f'{AI_RUN}#productcatalogservice'),
-    (5, '+500 ms delay on productcatalogservice', 'no fix', 'guard', 'runs/test-delay-20261010T062255.501508Z'),
-    (7, 'adservice unavailable', 'no fix needed', 'guard', 'runs/c-ad-health-13973e53bd-20261010T070523.440196Z'),
+    (3, 'currencyservice unavailable, chosen and run by the AI', '1 replica', 'agent', f'{AI_RUN3}#currencyservice'),
+    (4, 'cartservice unavailable', '1 replica', 'guard', 'runs/test-down-20261010T062320.861245Z'),
+    (4, 'cartservice pod kill, chosen and run by the AI', '1 replica', 'agent', f'{AI_RUN2}#cartservice'),
+    (4, 'cartservice pod kill, chosen and run by the AI', FIXED, 'agent-after', f'{AI_RUN2}#cartservice'),
+    (5, 'catalog pod kill, 5 trials', '1 replica', 'trials', 'runs/trials-catalog-podkill-20261010T182606Z'),
+    (5, 'catalog pod kill, 5 trials', '2 replicas', 'trials', 'runs/trials-catalog-podkill-20261010T183121Z'),
+    (5, 'catalog pod kill, chosen and run by the AI', '1 replica', 'agent', f'{AI_RUN}#productcatalogservice'),
+    (5, 'catalog pod kill, chosen and run by the AI', FIXED, 'agent-after', f'{AI_RUN}#productcatalogservice'),
+    (6, 'paymentservice pod kill, chosen and run by the AI', '1 replica', 'agent', f'{AI_RUN3}#paymentservice'),
+    (7, '+500 ms delay on productcatalogservice', 'no fix', 'guard', 'runs/test-delay-20261010T062255.501508Z'),
+    (9, 'adservice unavailable', 'no fix needed', 'guard', 'runs/c-ad-health-13973e53bd-20261010T070523.440196Z'),
+    (None, 'checkoutservice pod kill, chosen and run by the AI (hypothesis refuted)', '1 replica', 'agent',
+     f'{AI_RUN3}#checkoutservice'),
 ]
 
 
@@ -107,7 +112,7 @@ def render(table):
         spread = f" ({r['range'][0]}–{r['range'][1]}, n={r['n']})" if r['n'] > 1 else ''
         b = r['breakdown']
         lines.append(f"| {n} | **{r['score']}**{spread} | {r['experiment']} | {r['condition']} | {b['E']} | {b['L']} | "
-                     f"{b['R']} | {b['B']} | {b['I']} | #{r['finding']} | [{Path(r['run'].split('#')[0]).name}](../../{r['run'].split('#')[0]}) |")
+                     f"{b['R']} | {b['B']} | {b['I']} | {'#' + str(r['finding']) if r['finding'] else '—'} | [{Path(r['run'].split('#')[0]).name}](../../{r['run'].split('#')[0]}) |")
     lines += ['', '## Fixes proven by re-running the same experiment', '',
               '| Experiment | Before | After | Change |', '|---|---|---|---|']
     for name in dict.fromkeys(r['experiment'] for r in table):

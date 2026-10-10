@@ -45,7 +45,7 @@ DATA_LOSS = re.compile(r'(?:data|state|cart)[- ]loss|\bloss of (?:\w+ ){0,2}?(?:
                        r'|\blos(?:e|es|t|ing) (?:[\w-]+ ){0,3}?(?:data|carts?|items|state)\b'
                        r'|\b(?:data|carts?|items|state)\b(?: \w+){0,2}? (?:lost|wiped|erased|emptied)\b'
                        r'|\bwip(?:e|ed|es)\b', re.I)
-NEGATED = re.compile(r"\b(?:no|not|never|without|prevents?|avoids?|cannot|can't|won't|doesn't|survives?)\b", re.I)
+NEGATED = re.compile(r"\b(?:no|not|never|without|prevents?|avoids?|cannot|can't|won't|doesn't|survives?|lacks?|missing)\b", re.I)
 
 
 def claims_data_loss(text):
