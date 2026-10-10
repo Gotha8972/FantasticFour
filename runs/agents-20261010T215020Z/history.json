@@ -1,0 +1,630 @@
+[
+ {
+  "vulnerability": "V2",
+  "experiment": {
+   "id": "v2-pod-failure-frontend",
+   "fault": "pod_failure",
+   "target": "frontend",
+   "params": {},
+   "duration_s": 30
+  },
+  "criteria": [
+   {
+    "metric": "error_rate",
+    "op": ">",
+    "value": 0.01
+   }
+  ],
+  "prediction": {
+   "affected": [
+    "frontend",
+    "adservice",
+    "cartservice",
+    "checkoutservice",
+    "currencyservice",
+    "emailservice",
+    "paymentservice",
+    "productcatalogservice",
+    "recommendationservice",
+    "redis-cart",
+    "shippingservice"
+   ],
+   "summary": "Frontend crash will cause 100% error rate for all user-facing requests."
+  },
+  "safety": {
+   "decision": "approve",
+   "reason": "System is healthy and experiment parameters are within safe limits.",
+   "experiment": {
+    "id": "v2-pod-failure-frontend",
+    "fault": "pod_failure",
+    "target": "frontend",
+    "params": {},
+    "duration_s": 30
+   },
+   "ramp": [
+    null
+   ],
+   "steps": [
+    {
+     "intensity": null,
+     "run_dir": "runs/v2-pod-failure-frontend-s1-20261010T215114.695340Z",
+     "observed": {
+      "error_rate": 1.0,
+      "p95_ms": 20000.0,
+      "unhealthy_count": 1,
+      "breach": {
+       "metric": "error_rate",
+       "value": 0.22916666666666669,
+       "limit": 0.05
+      },
+      "recovery_s": 30.891,
+      "service_ready_s": 20.1,
+      "customer_recovered_s": 37.8,
+      "users": 20
+     },
+     "stopped_by": null
+    }
+   ],
+   "tolerated_up_to": null,
+   "limit_crossed_at": null,
+   "status": "crossed limit at the lowest step; no tolerated level found, try a lower start",
+   "health_at_review": {
+    "ts": 1791669073.1933591,
+    "error_rate": 0.0,
+    "p50_ms": 15.0,
+    "p95_ms": 27.0,
+    "users": 20,
+    "rps": 4.2,
+    "requests": 49001,
+    "failures": 529,
+    "checkout_success": 0.991207774178621,
+    "checkout_requests": 2161,
+    "checkout_failures": 19,
+    "locust_history_ts": 1791669071.0,
+    "loadgenerator_pod_uids": [
+     "62ff364f-2626-44ab-8521-9241489ef8ba"
+    ],
+    "pod_uids": {
+     "adservice": [
+      "b3e738a7-840a-4c10-bcad-6c355a45c756"
+     ],
+     "cartservice": [
+      "a6c77726-10e7-48d2-a133-8d58dd39bdc7"
+     ],
+     "checkoutservice": [
+      "d6aad341-577f-495e-b8e8-4dbf0fe79d8a"
+     ],
+     "currencyservice": [
+      "6077ac6e-adc5-4d55-95e5-39456cac60b5"
+     ],
+     "emailservice": [
+      "793a3c99-875f-4729-91b8-6f65e55c36ea"
+     ],
+     "frontend": [
+      "c7e4e5cb-aefc-4459-96c5-f7ee6d883dc7"
+     ],
+     "loadgenerator": [
+      "62ff364f-2626-44ab-8521-9241489ef8ba"
+     ],
+     "paymentservice": [
+      "deddcdc6-892f-40f7-b55d-60e9be30b270"
+     ],
+     "productcatalogservice": [
+      "605cd7e0-1e2e-4f9b-b0ce-42fd6fb2440a"
+     ],
+     "recommendationservice": [
+      "28a150eb-7b88-4b04-ad7f-111f3ba0124a"
+     ],
+     "redis-cart": [
+      "2dd75ff5-a01e-4159-9fd6-7a2315d7e8af"
+     ],
+     "shippingservice": [
+      "d2d6b37f-db07-4932-9991-30773150aa1c"
+     ]
+    },
+    "unhealthy_services": [],
+    "restarts": {
+     "adservice": 7,
+     "cartservice": 0,
+     "checkoutservice": 0,
+     "currencyservice": 4,
+     "emailservice": 0,
+     "frontend": 2,
+     "loadgenerator": 1,
+     "paymentservice": 0,
+     "productcatalogservice": 0,
+     "recommendationservice": 1,
+     "redis-cart": 0,
+     "shippingservice": 0
+    },
+    "metrics_age_s": 2.1933281421661377,
+    "source": "locust_csv_and_kubernetes"
+   }
+  },
+  "observed": {
+   "error_rate": 1.0,
+   "p95_ms": 20000.0,
+   "unhealthy_count": 1,
+   "breach": {
+    "metric": "error_rate",
+    "value": 0.22916666666666669,
+    "limit": 0.05
+   },
+   "recovery_s": 30.891,
+   "service_ready_s": 20.1,
+   "customer_recovered_s": 37.8,
+   "users": 20,
+   "integrity_violations": 0
+  },
+  "integrity": [],
+  "verdict": "confirmed",
+  "criteria_met": [
+   {
+    "metric": "error_rate",
+    "op": ">",
+    "value": 0.01
+   }
+  ],
+  "score": {
+   "score": 17,
+   "breakdown": {
+    "E": 40.0,
+    "L": 25.0,
+    "R": 7.7,
+    "B": 10.0,
+    "I": 0.0
+   }
+  },
+  "blast_share": 1.0,
+  "remediation": {
+   "choice": {
+    "fix_id": "frontend-replicas",
+    "reason": "The experiment failed due to a single pod failure in the frontend, which had only one replica. Increasing replicas to at least two removes the single point of failure.",
+    "expected_effect": "The frontend will remain healthy after a pod failure, reducing error_rate and p95 latency, and improving recovery time."
+   },
+   "fix": "frontend-replicas",
+   "before": 17,
+   "after": 96,
+   "after_breakdown": {
+    "E": 0.0,
+    "L": 1.6,
+    "R": 2.6,
+    "B": 0.0,
+    "I": 0.0
+   },
+   "after_observed": {
+    "error_rate": 0.0,
+    "p95_ms": 93.0,
+    "unhealthy_count": 1,
+    "breach": null,
+    "recovery_s": 10.235,
+    "service_ready_s": 42.8,
+    "customer_recovered_s": 0.0,
+    "users": 20
+   },
+   "after_integrity": [],
+   "after_run_dir": "runs/v2-pod-failure-frontend-after-20261010T215248.424291Z",
+   "verdict": "improved",
+   "kept": true,
+   "after_verdict": "refuted"
+  }
+ },
+ {
+  "vulnerability": "V1",
+  "experiment": {
+   "id": "v1-pod-kill-redis-cart",
+   "fault": "pod_kill",
+   "target": "redis-cart",
+   "params": {},
+   "duration_s": 30
+  },
+  "criteria": [
+   {
+    "metric": "integrity_violations",
+    "op": ">",
+    "value": 0
+   },
+   {
+    "metric": "error_rate",
+    "op": ">",
+    "value": 0.01
+   },
+   {
+    "metric": "p95_ms",
+    "op": ">",
+    "value": 500
+   }
+  ],
+  "prediction": {
+   "affected": [
+    "redis-cart",
+    "cartservice",
+    "checkoutservice"
+   ],
+   "summary": "Restarting redis-cart will drop cart data, leading to checkout failures and integrity violations."
+  },
+  "safety": {
+   "decision": "approve",
+   "reason": "System is healthy with no unhealthy services, error rate is 0, latency within baseline limits, and the experiment targets only one service with a safe duration. No intensity adjustments needed.",
+   "experiment": {
+    "id": "v1-pod-kill-redis-cart",
+    "fault": "pod_kill",
+    "target": "redis-cart",
+    "params": {},
+    "duration_s": 30
+   },
+   "ramp": [
+    null
+   ],
+   "steps": [
+    {
+     "intensity": null,
+     "run_dir": "runs/v1-pod-kill-redis-cart-s1-20261010T215348.171644Z",
+     "observed": {
+      "error_rate": 0.0,
+      "p95_ms": 1800.0,
+      "unhealthy_count": 1,
+      "breach": {
+       "metric": "p95_ms",
+       "value": 1800.0,
+       "limit": 1000
+      },
+      "recovery_s": 10.205,
+      "service_ready_s": 3.7,
+      "customer_recovered_s": 16.9,
+      "users": 20
+     },
+     "stopped_by": null
+    }
+   ],
+   "tolerated_up_to": null,
+   "limit_crossed_at": null,
+   "status": "crossed limit at the lowest step; no tolerated level found, try a lower start",
+   "health_at_review": {
+    "ts": 1791669223.0802655,
+    "error_rate": 0.0,
+    "p50_ms": 20.0,
+    "p95_ms": 70.0,
+    "users": 20,
+    "rps": 4.5,
+    "requests": 49603,
+    "failures": 557,
+    "checkout_success": 0.9913162705667276,
+    "checkout_requests": 2188,
+    "checkout_failures": 19,
+    "locust_history_ts": 1791669220.0,
+    "loadgenerator_pod_uids": [
+     "62ff364f-2626-44ab-8521-9241489ef8ba"
+    ],
+    "pod_uids": {
+     "adservice": [
+      "b3e738a7-840a-4c10-bcad-6c355a45c756"
+     ],
+     "cartservice": [
+      "a6c77726-10e7-48d2-a133-8d58dd39bdc7"
+     ],
+     "checkoutservice": [
+      "d6aad341-577f-495e-b8e8-4dbf0fe79d8a"
+     ],
+     "currencyservice": [
+      "6077ac6e-adc5-4d55-95e5-39456cac60b5"
+     ],
+     "emailservice": [
+      "793a3c99-875f-4729-91b8-6f65e55c36ea"
+     ],
+     "frontend": [
+      "85a00582-7c76-4c33-9ccf-859df0597b6b",
+      "c7e4e5cb-aefc-4459-96c5-f7ee6d883dc7"
+     ],
+     "loadgenerator": [
+      "62ff364f-2626-44ab-8521-9241489ef8ba"
+     ],
+     "paymentservice": [
+      "deddcdc6-892f-40f7-b55d-60e9be30b270"
+     ],
+     "productcatalogservice": [
+      "605cd7e0-1e2e-4f9b-b0ce-42fd6fb2440a"
+     ],
+     "recommendationservice": [
+      "28a150eb-7b88-4b04-ad7f-111f3ba0124a"
+     ],
+     "redis-cart": [
+      "2dd75ff5-a01e-4159-9fd6-7a2315d7e8af"
+     ],
+     "shippingservice": [
+      "d2d6b37f-db07-4932-9991-30773150aa1c"
+     ]
+    },
+    "unhealthy_services": [],
+    "restarts": {
+     "adservice": 7,
+     "cartservice": 0,
+     "checkoutservice": 0,
+     "currencyservice": 4,
+     "emailservice": 0,
+     "frontend": 6,
+     "loadgenerator": 1,
+     "paymentservice": 0,
+     "productcatalogservice": 0,
+     "recommendationservice": 1,
+     "redis-cart": 0,
+     "shippingservice": 0
+    },
+    "metrics_age_s": 3.0801947116851807,
+    "source": "locust_csv_and_kubernetes"
+   }
+  },
+  "observed": {
+   "error_rate": 0.0,
+   "p95_ms": 1800.0,
+   "unhealthy_count": 1,
+   "breach": {
+    "metric": "p95_ms",
+    "value": 1800.0,
+    "limit": 1000
+   },
+   "recovery_s": 10.205,
+   "service_ready_s": 3.7,
+   "customer_recovered_s": 16.9,
+   "users": 20,
+   "integrity_violations": 1
+  },
+  "integrity": [
+   {
+    "check": "cart_persistence",
+    "expected": "1 item(s)",
+    "actual": "0 item(s)",
+    "evidence": "same session, cart emptied by the fault"
+   }
+  ],
+  "verdict": "confirmed",
+  "criteria_met": [
+   {
+    "metric": "integrity_violations",
+    "op": ">",
+    "value": 0
+   },
+   {
+    "metric": "p95_ms",
+    "op": ">",
+    "value": 500
+   }
+  ],
+  "score": {
+   "score": 43,
+   "breakdown": {
+    "E": 0.0,
+    "L": 10.4,
+    "R": 2.6,
+    "B": 3.6,
+    "I": 40.0
+   }
+  },
+  "blast_share": 0.364,
+  "remediation": {
+   "choice": {
+    "fix_id": "redis-persistence",
+    "reason": "The integrity violation shows cart data was lost when the redis-cart pod was killed, indicating that Redis is running without persistent storage. The catalog entry redis-persistence provides a persistent volume claim to ensure data survives pod restarts or kills.",
+    "expected_effect": "On re-run, cart items will survive pod termination, eliminating the integrity violation and keeping p95_ms within limits."
+   },
+   "fix": "redis-persistence",
+   "before": 43,
+   "after": 80,
+   "after_breakdown": {
+    "E": 0.0,
+    "L": 13.8,
+    "R": 2.6,
+    "B": 3.6,
+    "I": 0.0
+   },
+   "after_observed": {
+    "error_rate": 0.0,
+    "p95_ms": 3100.0,
+    "unhealthy_count": 1,
+    "breach": {
+     "metric": "p95_ms",
+     "value": 3100.0,
+     "limit": 1000
+    },
+    "recovery_s": 10.34,
+    "service_ready_s": 3.8,
+    "customer_recovered_s": 17.2,
+    "users": 20
+   },
+   "after_integrity": [],
+   "after_run_dir": "runs/v1-pod-kill-redis-cart-after-20261010T215511.874075Z",
+   "verdict": "improved",
+   "kept": true,
+   "after_verdict": "confirmed"
+  }
+ },
+ {
+  "vulnerability": "V3",
+  "experiment": {
+   "id": "v3-pod-failure-checkoutservice",
+   "fault": "pod_failure",
+   "target": "checkoutservice",
+   "params": {},
+   "duration_s": 30
+  },
+  "criteria": [
+   {
+    "metric": "error_rate",
+    "op": ">",
+    "value": 0.01
+   },
+   {
+    "metric": "p95_ms",
+    "op": ">",
+    "value": 500
+   }
+  ],
+  "prediction": {
+   "affected": [
+    "checkoutservice",
+    "frontend"
+   ],
+   "summary": "A checkoutservice crash will make all checkout requests fail, raising error_rate and p95 latency."
+  },
+  "safety": {
+   "decision": "approve",
+   "reason": "System is healthy, no unhealthy services, fault targets a single service, duration within limits, no risk to other services.",
+   "experiment": {
+    "id": "v3-pod-failure-checkoutservice",
+    "fault": "pod_failure",
+    "target": "checkoutservice",
+    "params": {},
+    "duration_s": 30
+   },
+   "ramp": [
+    null
+   ],
+   "steps": [
+    {
+     "intensity": null,
+     "run_dir": "runs/v3-pod-failure-checkoutservice-s1-20261010T215536.918896Z",
+     "observed": {
+      "error_rate": 0.07142857142857142,
+      "p95_ms": 63.0,
+      "unhealthy_count": 1,
+      "breach": {
+       "metric": "error_rate",
+       "value": 0.07142857142857142,
+       "limit": 0.05
+      },
+      "recovery_s": 4.294,
+      "service_ready_s": 22.6,
+      "customer_recovered_s": 22.6,
+      "users": 20
+     },
+     "stopped_by": null
+    }
+   ],
+   "tolerated_up_to": null,
+   "limit_crossed_at": null,
+   "status": "crossed limit at the lowest step; no tolerated level found, try a lower start",
+   "health_at_review": {
+    "ts": 1791669334.5842934,
+    "error_rate": 0.0,
+    "p50_ms": 19.0,
+    "p95_ms": 68.0,
+    "users": 20,
+    "rps": 5.4,
+    "requests": 50071,
+    "failures": 568,
+    "checkout_success": 0.9913949275362319,
+    "checkout_requests": 2208,
+    "checkout_failures": 19,
+    "locust_history_ts": 1791669333.0,
+    "loadgenerator_pod_uids": [
+     "62ff364f-2626-44ab-8521-9241489ef8ba"
+    ],
+    "pod_uids": {
+     "adservice": [
+      "b3e738a7-840a-4c10-bcad-6c355a45c756"
+     ],
+     "cartservice": [
+      "a6c77726-10e7-48d2-a133-8d58dd39bdc7"
+     ],
+     "checkoutservice": [
+      "d6aad341-577f-495e-b8e8-4dbf0fe79d8a"
+     ],
+     "currencyservice": [
+      "6077ac6e-adc5-4d55-95e5-39456cac60b5"
+     ],
+     "emailservice": [
+      "793a3c99-875f-4729-91b8-6f65e55c36ea"
+     ],
+     "frontend": [
+      "85a00582-7c76-4c33-9ccf-859df0597b6b",
+      "c7e4e5cb-aefc-4459-96c5-f7ee6d883dc7"
+     ],
+     "loadgenerator": [
+      "62ff364f-2626-44ab-8521-9241489ef8ba"
+     ],
+     "paymentservice": [
+      "deddcdc6-892f-40f7-b55d-60e9be30b270"
+     ],
+     "productcatalogservice": [
+      "605cd7e0-1e2e-4f9b-b0ce-42fd6fb2440a"
+     ],
+     "recommendationservice": [
+      "28a150eb-7b88-4b04-ad7f-111f3ba0124a"
+     ],
+     "redis-cart": [
+      "7ab7ccde-9c10-412c-b822-16b04f925841"
+     ],
+     "shippingservice": [
+      "d2d6b37f-db07-4932-9991-30773150aa1c"
+     ]
+    },
+    "unhealthy_services": [],
+    "restarts": {
+     "adservice": 7,
+     "cartservice": 0,
+     "checkoutservice": 0,
+     "currencyservice": 4,
+     "emailservice": 0,
+     "frontend": 6,
+     "loadgenerator": 1,
+     "paymentservice": 0,
+     "productcatalogservice": 0,
+     "recommendationservice": 1,
+     "redis-cart": 0,
+     "shippingservice": 0
+    },
+    "metrics_age_s": 1.5842759609222412,
+    "source": "locust_csv_and_kubernetes"
+   }
+  },
+  "observed": {
+   "error_rate": 0.07142857142857142,
+   "p95_ms": 63.0,
+   "unhealthy_count": 1,
+   "breach": {
+    "metric": "error_rate",
+    "value": 0.07142857142857142,
+    "limit": 0.05
+   },
+   "recovery_s": 4.294,
+   "service_ready_s": 22.6,
+   "customer_recovered_s": 22.6,
+   "users": 20,
+   "integrity_violations": 1
+  },
+  "integrity": [
+   {
+    "check": "checkout_completes",
+    "expected": "HTTP 200 with an order confirmation",
+    "actual": "HTTP 500",
+    "evidence": " <!DOCTYPE html> <html lang=\"en\"> <head> <meta charset=\"UTF-8\"> <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, shrink-to-fit=no\"> <meta http-equiv=\"X-UA-Compatible\" content=\"ie="
+   }
+  ],
+  "verdict": "confirmed",
+  "criteria_met": [
+   {
+    "metric": "error_rate",
+    "op": ">",
+    "value": 0.01
+   }
+  ],
+  "score": {
+   "score": 41,
+   "breakdown": {
+    "E": 15.1,
+    "L": 0.8,
+    "R": 1.1,
+    "B": 1.8,
+    "I": 40.0
+   }
+  },
+  "blast_share": 0.182,
+  "remediation": {
+   "verdict": "no_fix",
+   "choice": {
+    "fix_id": "none",
+    "reason": "no reviewed fix for checkoutservice"
+   }
+  }
+ }
+]

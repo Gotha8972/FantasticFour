@@ -15,6 +15,7 @@ from chaosmind.agents import facts as facts_mod, safety, score, steps, trials
 AI_RUN = 'runs/agents-20261010T185909Z'    # first full live AI loop (Redis and catalog fixes approved)
 AI_RUN2 = 'runs/agents-20261010T192511Z'   # fresh live AI loop, Redis fix already in place (frontend and cart fixes)
 AI_RUN3 = 'runs/agents-20261010T200021Z'   # third live AI loop: payment, currency, checkout (no reviewed fixes for them)
+AI_RUN4 = 'runs/agents-20261010T215020Z'   # recorded AI loop for the video: frontend and Redis fixes approved in the UI
 FIXED = 'after the fix, approved by a human'
 EVIDENCE = [
     (1, 'Redis restarted (cart test)', 'before fix', 'redis', 'runs/c-redis-20261010T070925.577773Z'),
@@ -37,6 +38,12 @@ EVIDENCE = [
     (9, 'adservice unavailable', 'no fix needed', 'guard', 'runs/c-ad-health-13973e53bd-20261010T070523.440196Z'),
     (None, 'checkoutservice pod kill, chosen and run by the AI (hypothesis refuted)', '1 replica', 'agent',
      f'{AI_RUN3}#checkoutservice'),
+    (1, 'Redis pod kill, recorded AI run', 'before fix', 'agent', f'{AI_RUN4}#redis-cart'),
+    (1, 'Redis pod kill, recorded AI run', FIXED, 'agent-after', f'{AI_RUN4}#redis-cart'),
+    (2, 'frontend unavailable, recorded AI run', '1 replica', 'agent', f'{AI_RUN4}#frontend'),
+    (2, 'frontend unavailable, recorded AI run', FIXED, 'agent-after', f'{AI_RUN4}#frontend'),
+    (None, 'checkoutservice unavailable, recorded AI run (no reviewed fix)', '1 replica', 'agent',
+     f'{AI_RUN4}#checkoutservice'),
 ]
 
 

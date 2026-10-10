@@ -1,0 +1,230 @@
+{
+ "vulnerabilities": [
+  {
+   "id": "V1",
+   "service": "redis-cart",
+   "severity": "critical",
+   "weakness": "Stateful emptyDir volume without PVC; cart data is lost on pod restart, affecting user experience",
+   "evidence": {
+    "volumes": [
+     "emptyDir"
+    ],
+    "stateful_without_pvc": true
+   },
+   "hypothesis": "if the redis-cart pod restarts, all cart contents are lost and users must rebuild their cart",
+   "blast_radius": [
+    "cartservice",
+    "checkoutservice",
+    "frontend",
+    "redis-cart"
+   ],
+   "severity_raised_by_code": "medium \u2192 critical (stateful without a persistent volume: a restart loses data)",
+   "unverified_evidence_dropped": {},
+   "predicted_blast_radius": [
+    "cartservice",
+    "checkoutservice",
+    "frontend",
+    "redis-cart"
+   ],
+   "risk_score": 13,
+   "status": "untested"
+  },
+  {
+   "id": "V2",
+   "service": "frontend",
+   "severity": "critical",
+   "weakness": "Single\u2011replica entrypoint with no PDB or HPA, so a pod failure or overload can bring the entire site down",
+   "evidence": {
+    "replicas": 1,
+    "pdb": false,
+    "hpa": false,
+    "entrypoint": true
+   },
+   "hypothesis": "if the frontend pod crashes or is killed, the site becomes unavailable for all users",
+   "blast_radius": [
+    "adservice",
+    "cartservice",
+    "checkoutservice",
+    "currencyservice",
+    "emailservice",
+    "frontend",
+    "paymentservice",
+    "productcatalogservice",
+    "recommendationservice",
+    "redis-cart",
+    "shippingservice"
+   ],
+   "unverified_evidence_dropped": {},
+   "predicted_blast_radius": [
+    "frontend",
+    "adservice",
+    "cartservice",
+    "checkoutservice",
+    "currencyservice",
+    "emailservice",
+    "paymentservice",
+    "productcatalogservice",
+    "recommendationservice",
+    "redis-cart",
+    "shippingservice"
+   ],
+   "risk_score": 7,
+   "status": "untested"
+  },
+  {
+   "id": "V3",
+   "service": "checkoutservice",
+   "severity": "critical",
+   "weakness": "Single\u2011replica checkout service with no PDB or HPA, making the checkout path vulnerable to a single pod failure",
+   "evidence": {
+    "replicas": 1,
+    "pdb": false,
+    "hpa": false,
+    "on_checkout_path": true
+   },
+   "hypothesis": "if the checkoutservice pod dies, all checkout attempts fail and revenue is lost",
+   "blast_radius": [
+    "checkoutservice",
+    "frontend"
+   ],
+   "unverified_evidence_dropped": {},
+   "predicted_blast_radius": [
+    "checkoutservice",
+    "frontend"
+   ],
+   "risk_score": 7,
+   "status": "untested"
+  },
+  {
+   "id": "V4",
+   "service": "productcatalogservice",
+   "severity": "high",
+   "weakness": "Single\u2011replica catalog service on the checkout path with no PDB or HPA, risking catalog unavailability during checkout",
+   "evidence": {
+    "replicas": 1,
+    "pdb": false,
+    "hpa": false,
+    "on_checkout_path": true
+   },
+   "hypothesis": "if the productcatalogservice pod is killed, checkout requests that need product data fail or timeout",
+   "blast_radius": [
+    "checkoutservice",
+    "frontend",
+    "productcatalogservice",
+    "recommendationservice"
+   ],
+   "unverified_evidence_dropped": {},
+   "predicted_blast_radius": [
+    "checkoutservice",
+    "frontend",
+    "productcatalogservice",
+    "recommendationservice"
+   ],
+   "risk_score": 9,
+   "status": "untested"
+  },
+  {
+   "id": "V5",
+   "service": "paymentservice",
+   "severity": "high",
+   "weakness": "Single\u2011replica payment service on the checkout path without PDB or HPA, exposing payment processing to single\u2011point failure",
+   "evidence": {
+    "replicas": 1,
+    "pdb": false,
+    "hpa": false,
+    "on_checkout_path": true
+   },
+   "hypothesis": "if the paymentservice pod crashes, payment attempts fail and orders are not completed",
+   "blast_radius": [
+    "checkoutservice",
+    "frontend",
+    "paymentservice"
+   ],
+   "unverified_evidence_dropped": {},
+   "predicted_blast_radius": [
+    "checkoutservice",
+    "frontend",
+    "paymentservice"
+   ],
+   "risk_score": 8,
+   "status": "untested"
+  },
+  {
+   "id": "V6",
+   "service": "shippingservice",
+   "severity": "high",
+   "weakness": "Single\u2011replica shipping service on the checkout path with no PDB or HPA, risking shipping data loss during checkout",
+   "evidence": {
+    "replicas": 1,
+    "pdb": false,
+    "hpa": false,
+    "on_checkout_path": true
+   },
+   "hypothesis": "if the shippingservice pod is killed, shipping information cannot be stored and checkout fails",
+   "blast_radius": [
+    "checkoutservice",
+    "frontend",
+    "shippingservice"
+   ],
+   "unverified_evidence_dropped": {},
+   "predicted_blast_radius": [
+    "checkoutservice",
+    "frontend",
+    "shippingservice"
+   ],
+   "risk_score": 8,
+   "status": "untested"
+  },
+  {
+   "id": "V7",
+   "service": "emailservice",
+   "severity": "low",
+   "weakness": "Optional email notification service; failure should not block checkout but may degrade user experience",
+   "evidence": {
+    "on_checkout_path": true
+   },
+   "hypothesis": "if the emailservice pod crashes, checkout succeeds but no confirmation email is sent",
+   "blast_radius": [
+    "checkoutservice",
+    "emailservice",
+    "frontend"
+   ],
+   "unverified_evidence_dropped": {},
+   "predicted_blast_radius": [
+    "checkoutservice",
+    "frontend",
+    "emailservice"
+   ],
+   "risk_score": 8,
+   "status": "untested"
+  },
+  {
+   "id": "V8",
+   "service": "recommendationservice",
+   "severity": "low",
+   "weakness": "Non\u2011critical recommendation service; failure should degrade recommendations but not block checkout",
+   "evidence": {
+    "on_checkout_path": false
+   },
+   "hypothesis": "if the recommendationservice pod dies, product recommendations are unavailable but checkout proceeds",
+   "blast_radius": [
+    "frontend",
+    "recommendationservice"
+   ],
+   "unverified_evidence_dropped": {},
+   "predicted_blast_radius": [
+    "frontend",
+    "recommendationservice"
+   ],
+   "risk_score": 5,
+   "status": "untested"
+  }
+ ],
+ "rejected": [],
+ "systemic": [
+  "All services have a single replica, no PDB, and no HPA, making the entire stack vulnerable to pod failures and traffic spikes"
+ ],
+ "blind_spots": [
+  "Facts do not reveal timeout or retry logic within services, so actual failure impact may differ from the assumed hypotheses"
+ ]
+}

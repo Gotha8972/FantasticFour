@@ -1,0 +1,47 @@
+{
+ "plan": [
+  {
+   "vulnerability": "V3",
+   "rank": 1,
+   "fault": "pod_failure",
+   "target": "checkoutservice",
+   "params": {},
+   "duration_s": 30,
+   "reason": "checkoutservice is a single\u2011replica critical orchestrator; a pod failure should cause checkout requests to fail, producing a measurable error_rate spike.",
+   "prediction": {
+    "affected": [
+     "checkoutservice",
+     "frontend"
+    ],
+    "summary": "A checkoutservice crash will make all checkout requests fail, raising error_rate and p95 latency."
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.01
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 500
+    }
+   ],
+   "experiment": {
+    "id": "v3-pod-failure-checkoutservice",
+    "fault": "pod_failure",
+    "target": "checkoutservice",
+    "params": {},
+    "duration_s": 30
+   },
+   "priority": {
+    "blast_radius": 2,
+    "criticality": "critical",
+    "score": 8
+   }
+  }
+ ],
+ "dropped": [],
+ "replan_note": "No previous pod_failure on checkoutservice; this experiment will distinguish a single\u2011point failure from other latency\u2011related issues.",
+ "feedback": null
+}

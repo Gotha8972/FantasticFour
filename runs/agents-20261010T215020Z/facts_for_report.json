@@ -1,0 +1,459 @@
+{
+ "vulnerabilities": [
+  {
+   "id": "V1",
+   "service": "redis-cart",
+   "severity": "critical",
+   "weakness": "Stateful emptyDir volume with no PVC; data lost on pod restart, breaking cart persistence",
+   "status": "confirmed"
+  },
+  {
+   "id": "V2",
+   "service": "frontend",
+   "severity": "critical",
+   "weakness": "Single replica entrypoint with no PDB or HPA, so a pod failure brings down the entire site",
+   "status": "confirmed"
+  },
+  {
+   "id": "V3",
+   "service": "checkoutservice",
+   "severity": "critical",
+   "weakness": "Single replica checkout orchestrator with no PDB or HPA, failure stops all checkout flows",
+   "status": "confirmed"
+  },
+  {
+   "id": "V4",
+   "service": "productcatalogservice",
+   "severity": "high",
+   "weakness": "Single replica catalog; failure stops product data during checkout",
+   "status": "untested"
+  },
+  {
+   "id": "V5",
+   "service": "paymentservice",
+   "severity": "high",
+   "weakness": "Single replica payment processor; failure blocks payment completion",
+   "status": "untested"
+  },
+  {
+   "id": "V6",
+   "service": "cartservice",
+   "severity": "high",
+   "weakness": "Single replica cart service; failure prevents cart retrieval during checkout",
+   "status": "untested"
+  }
+ ],
+ "experiments": [
+  {
+   "experiment_id": "v2-pod-failure-frontend",
+   "vulnerability": "V2",
+   "fault": "pod_failure",
+   "target": "frontend",
+   "params": {},
+   "prediction": {
+    "affected": [
+     "frontend",
+     "adservice",
+     "cartservice",
+     "checkoutservice",
+     "currencyservice",
+     "emailservice",
+     "paymentservice",
+     "productcatalogservice",
+     "recommendationservice",
+     "redis-cart",
+     "shippingservice"
+    ],
+    "summary": "Frontend crash will cause 100% error rate for all user-facing requests."
+   },
+   "config": {
+    "replicas": 1,
+    "pdb": false,
+    "hpa": false,
+    "volumes": [],
+    "readiness_probe": true,
+    "liveness_probe": true
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.01
+    }
+   ],
+   "verdict": "confirmed",
+   "safety_decision": "approve",
+   "ramp": [
+    null
+   ],
+   "tolerated_up_to": null,
+   "limit_crossed_at": null,
+   "phases": {
+    "pre": {
+     "error_rate": 0.0,
+     "p95_ms": 27.0,
+     "unhealthy": []
+    },
+    "during_worst": {
+     "error_rate": 0.22916666666666669,
+     "p95_ms": 70.0,
+     "unhealthy": [
+      "frontend"
+     ]
+    },
+    "post": {
+     "error_rate": 0.0,
+     "p95_ms": 82.0,
+     "unhealthy": []
+    }
+   },
+   "observed": {
+    "error_rate": 1.0,
+    "p95_ms": 20000.0,
+    "unhealthy_count": 1,
+    "breach": {
+     "metric": "error_rate",
+     "value": 0.22916666666666669,
+     "limit": 0.05
+    },
+    "recovery_s": 30.891,
+    "service_ready_s": 20.1,
+    "customer_recovered_s": 37.8,
+    "users": 20,
+    "integrity_violations": 0
+   },
+   "criteria_met": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.01
+    }
+   ],
+   "recovery_s": 30.891,
+   "integrity_violations": [],
+   "score": {
+    "score": 17,
+    "breakdown": {
+     "E": 40.0,
+     "L": 25.0,
+     "R": 7.7,
+     "B": 10.0,
+     "I": 0.0
+    }
+   },
+   "remediation": {
+    "choice": {
+     "fix_id": "frontend-replicas",
+     "reason": "The experiment failed due to a single pod failure in the frontend, which had only one replica. Increasing replicas to at least two removes the single point of failure.",
+     "expected_effect": "The frontend will remain healthy after a pod failure, reducing error_rate and p95 latency, and improving recovery time."
+    },
+    "fix": "frontend-replicas",
+    "before": 17,
+    "after": 96,
+    "after_breakdown": {
+     "E": 0.0,
+     "L": 1.6,
+     "R": 2.6,
+     "B": 0.0,
+     "I": 0.0
+    },
+    "after_observed": {
+     "error_rate": 0.0,
+     "p95_ms": 93.0,
+     "unhealthy_count": 1,
+     "breach": null,
+     "recovery_s": 10.235,
+     "service_ready_s": 42.8,
+     "customer_recovered_s": 0.0,
+     "users": 20
+    },
+    "after_integrity": [],
+    "after_run_dir": "runs/v2-pod-failure-frontend-after-20261010T215248.424291Z",
+    "verdict": "improved",
+    "kept": true,
+    "after_verdict": "refuted"
+   },
+   "run_dir": "runs/v2-pod-failure-frontend-s1-20261010T215114.695340Z",
+   "log_errors": []
+  },
+  {
+   "experiment_id": "v1-pod-kill-redis-cart",
+   "vulnerability": "V1",
+   "fault": "pod_kill",
+   "target": "redis-cart",
+   "params": {},
+   "prediction": {
+    "affected": [
+     "redis-cart",
+     "cartservice",
+     "checkoutservice"
+    ],
+    "summary": "Restarting redis-cart will drop cart data, leading to checkout failures and integrity violations."
+   },
+   "config": {
+    "replicas": 1,
+    "pdb": false,
+    "hpa": false,
+    "volumes": [
+     "emptyDir"
+    ],
+    "readiness_probe": true,
+    "liveness_probe": true
+   },
+   "criteria": [
+    {
+     "metric": "integrity_violations",
+     "op": ">",
+     "value": 0
+    },
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.01
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 500
+    }
+   ],
+   "verdict": "confirmed",
+   "safety_decision": "approve",
+   "ramp": [
+    null
+   ],
+   "tolerated_up_to": null,
+   "limit_crossed_at": null,
+   "phases": {
+    "pre": {
+     "error_rate": 0.0,
+     "p95_ms": 64.0,
+     "unhealthy": []
+    },
+    "during_worst": {
+     "error_rate": 0.0,
+     "p95_ms": 1800.0,
+     "unhealthy": [
+      "redis-cart"
+     ]
+    },
+    "post": {
+     "error_rate": 0.0,
+     "p95_ms": 72.0,
+     "unhealthy": []
+    }
+   },
+   "observed": {
+    "error_rate": 0.0,
+    "p95_ms": 1800.0,
+    "unhealthy_count": 1,
+    "breach": {
+     "metric": "p95_ms",
+     "value": 1800.0,
+     "limit": 1000
+    },
+    "recovery_s": 10.205,
+    "service_ready_s": 3.7,
+    "customer_recovered_s": 16.9,
+    "users": 20,
+    "integrity_violations": 1
+   },
+   "criteria_met": [
+    {
+     "metric": "integrity_violations",
+     "op": ">",
+     "value": 0
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 500
+    }
+   ],
+   "recovery_s": 10.205,
+   "integrity_violations": [
+    {
+     "check": "cart_persistence",
+     "expected": "1 item(s)",
+     "actual": "0 item(s)",
+     "evidence": "same session, cart emptied by the fault"
+    }
+   ],
+   "score": {
+    "score": 43,
+    "breakdown": {
+     "E": 0.0,
+     "L": 10.4,
+     "R": 2.6,
+     "B": 3.6,
+     "I": 40.0
+    }
+   },
+   "remediation": {
+    "choice": {
+     "fix_id": "redis-persistence",
+     "reason": "The integrity violation shows cart data was lost when the redis-cart pod was killed, indicating that Redis is running without persistent storage. The catalog entry redis-persistence provides a persistent volume claim to ensure data survives pod restarts or kills.",
+     "expected_effect": "On re-run, cart items will survive pod termination, eliminating the integrity violation and keeping p95_ms within limits."
+    },
+    "fix": "redis-persistence",
+    "before": 43,
+    "after": 80,
+    "after_breakdown": {
+     "E": 0.0,
+     "L": 13.8,
+     "R": 2.6,
+     "B": 3.6,
+     "I": 0.0
+    },
+    "after_observed": {
+     "error_rate": 0.0,
+     "p95_ms": 3100.0,
+     "unhealthy_count": 1,
+     "breach": {
+      "metric": "p95_ms",
+      "value": 3100.0,
+      "limit": 1000
+     },
+     "recovery_s": 10.34,
+     "service_ready_s": 3.8,
+     "customer_recovered_s": 17.2,
+     "users": 20
+    },
+    "after_integrity": [],
+    "after_run_dir": "runs/v1-pod-kill-redis-cart-after-20261010T215511.874075Z",
+    "verdict": "improved",
+    "kept": true,
+    "after_verdict": "confirmed"
+   },
+   "run_dir": "runs/v1-pod-kill-redis-cart-s1-20261010T215348.171644Z",
+   "log_errors": []
+  },
+  {
+   "experiment_id": "v3-pod-failure-checkoutservice",
+   "vulnerability": "V3",
+   "fault": "pod_failure",
+   "target": "checkoutservice",
+   "params": {},
+   "prediction": {
+    "affected": [
+     "checkoutservice",
+     "frontend"
+    ],
+    "summary": "A checkoutservice crash will make all checkout requests fail, raising error_rate and p95 latency."
+   },
+   "config": {
+    "replicas": 1,
+    "pdb": false,
+    "hpa": false,
+    "volumes": [],
+    "readiness_probe": true,
+    "liveness_probe": true
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.01
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 500
+    }
+   ],
+   "verdict": "confirmed",
+   "safety_decision": "approve",
+   "ramp": [
+    null
+   ],
+   "tolerated_up_to": null,
+   "limit_crossed_at": null,
+   "phases": {
+    "pre": {
+     "error_rate": 0.0,
+     "p95_ms": 68.0,
+     "unhealthy": []
+    },
+    "during_worst": {
+     "error_rate": 0.07142857142857142,
+     "p95_ms": 63.0,
+     "unhealthy": [
+      "checkoutservice"
+     ]
+    },
+    "post": {
+     "error_rate": 0.02702702702702703,
+     "p95_ms": 31.0,
+     "unhealthy": []
+    }
+   },
+   "observed": {
+    "error_rate": 0.07142857142857142,
+    "p95_ms": 63.0,
+    "unhealthy_count": 1,
+    "breach": {
+     "metric": "error_rate",
+     "value": 0.07142857142857142,
+     "limit": 0.05
+    },
+    "recovery_s": 4.294,
+    "service_ready_s": 22.6,
+    "customer_recovered_s": 22.6,
+    "users": 20,
+    "integrity_violations": 1
+   },
+   "criteria_met": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.01
+    }
+   ],
+   "recovery_s": 4.294,
+   "integrity_violations": [
+    {
+     "check": "checkout_completes",
+     "expected": "HTTP 200 with an order confirmation",
+     "actual": "HTTP 500",
+     "evidence": " <!DOCTYPE html> <html lang=\"en\"> <head> <meta charset=\"UTF-8\"> <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, shrink-to-fit=no\"> <meta http-equiv=\"X-UA-Compatible\" content=\"ie="
+    }
+   ],
+   "score": {
+    "score": 41,
+    "breakdown": {
+     "E": 15.1,
+     "L": 0.8,
+     "R": 1.1,
+     "B": 1.8,
+     "I": 40.0
+    }
+   },
+   "remediation": {
+    "verdict": "no_fix",
+    "choice": {
+     "fix_id": "none",
+     "reason": "no reviewed fix for checkoutservice"
+    }
+   },
+   "run_dir": "runs/v3-pod-failure-checkoutservice-s1-20261010T215536.918896Z",
+   "log_errors": [
+    "frontend: {\"error\":\"failed to complete the order: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.251.15:5050: connect: connection refused\\\"\",\"http.req.id\":\"62d28b47-284d-47e5-b9fb-6a5567f65262\",\"http.req.method\":\"POST\",\"http.req.path\":\"/cart/chec",
+    "frontend: {\"http.req.id\":\"62d28b47-284d-47e5-b9fb-6a5567f65262\",\"http.req.method\":\"POST\",\"http.req.path\":\"/cart/checkout\",\"http.resp.bytes\":5048,\"http.resp.status\":500,\"http.resp.took_ms\":2,\"message\":\"request complete\",\"session\":\"61978733-baf1-4d20-b3a8-434e37286d64\",\"severity\":\"debug\",\"timestamp\":\"2026-10-10",
+    "frontend: {\"error\":\"failed to complete the order: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.251.15:5050: connect: connection refused\\\"\",\"http.req.id\":\"42e867db-1cd0-434d-8950-36c21fe75acf\",\"http.req.method\":\"POST\",\"http.req.path\":\"/cart/chec",
+    "frontend: {\"http.req.id\":\"42e867db-1cd0-434d-8950-36c21fe75acf\",\"http.req.method\":\"POST\",\"http.req.path\":\"/cart/checkout\",\"http.resp.bytes\":5048,\"http.resp.status\":500,\"http.resp.took_ms\":0,\"message\":\"request complete\",\"session\":\"147a254b-9d1a-4019-bd28-874682d914f2\",\"severity\":\"debug\",\"timestamp\":\"2026-10-10",
+    "frontend: {\"error\":\"failed to complete the order: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.251.15:5050: connect: connection refused\\\"\",\"http.req.id\":\"7f126b53-34ce-450f-906e-fd0d23b58709\",\"http.req.method\":\"POST\",\"http.req.path\":\"/cart/chec",
+    "frontend: {\"http.req.id\":\"7f126b53-34ce-450f-906e-fd0d23b58709\",\"http.req.method\":\"POST\",\"http.req.path\":\"/cart/checkout\",\"http.resp.bytes\":5048,\"http.resp.status\":500,\"http.resp.took_ms\":15,\"message\":\"request complete\",\"session\":\"60b4d36d-b84a-4077-89d7-91004b7c8bd8\",\"severity\":\"debug\",\"timestamp\":\"2026-10-1",
+    "frontend: {\"error\":\"failed to complete the order: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.251.15:5050: connect: connection refused\\\"\",\"http.req.id\":\"93ce16c8-7363-485b-b888-00e5f1142bd1\",\"http.req.method\":\"POST\",\"http.req.path\":\"/cart/chec",
+    "frontend: {\"http.req.id\":\"93ce16c8-7363-485b-b888-00e5f1142bd1\",\"http.req.method\":\"POST\",\"http.req.path\":\"/cart/checkout\",\"http.resp.bytes\":5048,\"http.resp.status\":500,\"http.resp.took_ms\":0,\"message\":\"request complete\",\"session\":\"e21846fc-854a-4c9e-831f-6e7757307153\",\"severity\":\"debug\",\"timestamp\":\"2026-10-10",
+    "frontend: {\"error\":\"failed to complete the order: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.251.15:5050: connect: connection refused\\\"\",\"http.req.id\":\"75c1c7f6-02e0-4090-be66-2a5e507ac33a\",\"http.req.method\":\"POST\",\"http.req.path\":\"/cart/chec",
+    "frontend: {\"http.req.id\":\"75c1c7f6-02e0-4090-be66-2a5e507ac33a\",\"http.req.method\":\"POST\",\"http.req.path\":\"/cart/checkout\",\"http.resp.bytes\":5048,\"http.resp.status\":500,\"http.resp.took_ms\":0,\"message\":\"request complete\",\"session\":\"a5a96580-31a3-4880-87f4-d9e39aefee67\",\"severity\":\"debug\",\"timestamp\":\"2026-10-10"
+   ]
+  }
+ ],
+ "scorecard": {
+  "hypotheses": 3,
+  "confirmed": 3,
+  "refuted": 0,
+  "refuted_after_fix": 1
+ }
+}

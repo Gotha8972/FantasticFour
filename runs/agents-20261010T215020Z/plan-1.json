@@ -1,0 +1,182 @@
+{
+ "plan": [
+  {
+   "vulnerability": "V2",
+   "rank": 1,
+   "fault": "pod_failure",
+   "target": "frontend",
+   "params": {},
+   "duration_s": 30,
+   "reason": "Single replica entrypoint; failure should render site unavailable, impacting all downstream services.",
+   "prediction": {
+    "affected": [
+     "frontend",
+     "adservice",
+     "cartservice",
+     "checkoutservice",
+     "currencyservice",
+     "emailservice",
+     "paymentservice",
+     "productcatalogservice",
+     "recommendationservice",
+     "redis-cart",
+     "shippingservice"
+    ],
+    "summary": "Frontend crash will cause 100% error rate for all user-facing requests."
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.01
+    }
+   ],
+   "experiment": {
+    "id": "v2-pod-failure-frontend",
+    "fault": "pod_failure",
+    "target": "frontend",
+    "params": {},
+    "duration_s": 30
+   },
+   "priority": {
+    "blast_radius": 11,
+    "criticality": "critical",
+    "score": 44
+   }
+  },
+  {
+   "vulnerability": "V1",
+   "rank": 2,
+   "fault": "pod_kill",
+   "target": "redis-cart",
+   "params": {},
+   "duration_s": 30,
+   "reason": "Stateful emptyDir volume causes data loss on restart; pod_kill directly tests persistence failure.",
+   "prediction": {
+    "affected": [
+     "redis-cart",
+     "cartservice",
+     "checkoutservice"
+    ],
+    "summary": "Redis-cart restart will drop cart data, leading to cart retrieval failures and checkout errors."
+   },
+   "criteria": [
+    {
+     "metric": "integrity_violations",
+     "op": ">",
+     "value": 0
+    }
+   ],
+   "experiment": {
+    "id": "v1-pod-kill-redis-cart",
+    "fault": "pod_kill",
+    "target": "redis-cart",
+    "params": {},
+    "duration_s": 30
+   },
+   "priority": {
+    "blast_radius": 4,
+    "criticality": "critical",
+    "score": 16
+   }
+  }
+ ],
+ "dropped": [
+  {
+   "item": {
+    "vulnerability": "V3",
+    "rank": 3,
+    "fault": "network_delay",
+    "target": "checkoutservice",
+    "params": {
+     "latency": "1000"
+    },
+    "duration_s": 30,
+    "reason": "High fan\u2011in latency propagation; adding 1s delay should push p95 above 5\u00d7 baseline, revealing latency sensitivity.",
+    "prediction": {
+     "affected": [
+      "checkoutservice",
+      "frontend"
+     ],
+     "summary": "Checkout service latency will increase, causing p95_ms to exceed 268ms."
+    },
+    "criteria": [
+     {
+      "metric": "p95_ms",
+      "op": ">",
+      "value": 268
+     }
+    ]
+   },
+   "reason": "latency must be a nonnegative duration in ms"
+  },
+  {
+   "item": {
+    "vulnerability": "V1",
+    "rank": 1,
+    "fault": "pod_kill",
+    "target": "redis-cart",
+    "params": {},
+    "duration_s": 30,
+    "reason": "Stateful emptyDir volume causes data loss on restart; pod_kill tests persistence integrity.",
+    "prediction": {
+     "affected": [
+      "redis-cart",
+      "cartservice",
+      "checkoutservice"
+     ],
+     "summary": "Redis-cart restart will drop cart data, leading to checkout failures."
+    },
+    "criteria": [
+     {
+      "metric": "integrity_violations",
+      "op": ">",
+      "value": 0
+     }
+    ]
+   },
+   "reason": "already run or planned"
+  },
+  {
+   "item": {
+    "vulnerability": "V2",
+    "rank": 2,
+    "fault": "pod_failure",
+    "target": "frontend",
+    "params": {},
+    "duration_s": 30,
+    "reason": "Single replica entrypoint; pod_failure tests site-wide unavailability.",
+    "prediction": {
+     "affected": [
+      "frontend",
+      "adservice",
+      "cartservice",
+      "checkoutservice",
+      "currencyservice",
+      "emailservice",
+      "paymentservice",
+      "productcatalogservice",
+      "recommendationservice",
+      "shippingservice"
+     ],
+     "summary": "Frontend crash will make the entire site unavailable."
+    },
+    "criteria": [
+     {
+      "metric": "error_rate",
+      "op": ">",
+      "value": 0.01
+     },
+     {
+      "metric": "p95_ms",
+      "op": ">",
+      "value": 300
+     }
+    ]
+   },
+   "reason": "already run or planned"
+  }
+ ],
+ "replan_note": "No network_delay experiment included because only two distinct fault types are required and pod_kill/pod_failure already cover the critical hypotheses.",
+ "feedback": "network_delay on checkoutservice was dropped: latency must be a nonnegative duration in ms. Return corrected or replacement experiments only; keep integrity criteria for stateful services."
+}

@@ -1,0 +1,38 @@
+{
+ "summary": "The chaos experiments confirmed that a single\u2011replica frontend pod failure caused a 100% error rate for all user\u2011facing services, and a single\u2011replica checkoutservice crash produced a 7.1% error rate and integrity violations. A pod kill of redis\u2011cart resulted in cart data loss and a 1800\u202fms p95 latency spike, proving the emptyDir volume is non\u2011persistent. All three failures were mitigated by adding replicas or persistent storage, restoring service health and eliminating integrity violations.",
+ "findings": [
+  {
+   "experiment_id": "v2-pod-failure-frontend",
+   "title": "Frontend single\u2011replica pod failure",
+   "severity": "high",
+   "what_happened": "The sole frontend pod crashed, causing a 22.9% error rate for all user\u2011facing requests and a 70\u202fms p95 latency spike.",
+   "root_cause": "The frontend service was configured with only one replica and no PDB or HPA, making it a single point of failure.",
+   "evidence": [
+    "frontend: {\"error\":\"failed to complete the order: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.251.15:5050: connect: connection refused\\\"\""
+   ],
+   "fix": "Increase the frontend replica count to at least two and add a PodDisruptionBudget to prevent simultaneous pod evictions."
+  },
+  {
+   "experiment_id": "v1-pod-kill-redis-cart",
+   "title": "Redis\u2011cart pod kill caused data loss",
+   "severity": "critical",
+   "what_happened": "Killing the redis\u2011cart pod dropped all cart items, leading to a 1800\u202fms p95 latency spike and one integrity violation.",
+   "root_cause": "The redis\u2011cart deployment used an emptyDir volume with no PVC, so data did not survive pod restarts.",
+   "evidence": [
+    "same session, cart emptied by the fault"
+   ],
+   "fix": "Attach a persistent volume claim to redis\u2011cart (redis\u2011persistence) so cart data survives pod termination."
+  },
+  {
+   "experiment_id": "v3-pod-failure-checkoutservice",
+   "title": "Checkoutservice single\u2011replica pod failure",
+   "severity": "high",
+   "what_happened": "The checkoutservice pod crashed, raising error_rate to 7.1% and causing one integrity violation (HTTP 500 instead of 200).",
+   "root_cause": "The checkoutservice was deployed with a single replica and no PDB or HPA, creating a single point of failure.",
+   "evidence": [
+    "frontend: {\"error\":\"failed to complete the order: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.251.15:5050: connect: connection refused\\\"\""
+   ],
+   "fix": "Add a second replica and a PodDisruptionBudget to the checkoutservice deployment to eliminate the single point of failure."
+  }
+ ]
+}

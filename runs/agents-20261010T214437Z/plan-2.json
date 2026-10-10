@@ -1,0 +1,147 @@
+{
+ "plan": [
+  {
+   "vulnerability": "V1",
+   "rank": 1,
+   "fault": "pod_kill",
+   "target": "redis-cart",
+   "params": {},
+   "duration_s": 30,
+   "reason": "Stateful emptyDir volume causes data loss on restart; pod_kill directly tests cart data loss and customer impact via integrity violations.",
+   "prediction": {
+    "affected": [
+     "redis-cart",
+     "cartservice",
+     "checkoutservice",
+     "frontend"
+    ],
+    "summary": "Restarting redis-cart should drop cart contents, leading to integrity violations in cartservice and checkoutservice."
+   },
+   "criteria": [
+    {
+     "metric": "integrity_violations",
+     "op": ">",
+     "value": 0
+    }
+   ],
+   "experiment": {
+    "id": "v1-pod-kill-redis-cart",
+    "fault": "pod_kill",
+    "target": "redis-cart",
+    "params": {},
+    "duration_s": 30
+   },
+   "priority": {
+    "blast_radius": 4,
+    "criticality": "critical",
+    "score": 16
+   }
+  }
+ ],
+ "dropped": [
+  {
+   "item": {
+    "vulnerability": "V2",
+    "rank": 2,
+    "fault": "network_delay",
+    "target": "frontend",
+    "params": {
+     "latency": "500"
+    },
+    "duration_s": 30,
+    "reason": "Single\u2011replica frontend is sensitive to latency; adding 500\u202fms delay tests whether latency propagation causes increased error rate or latency for customers.",
+    "prediction": {
+     "affected": [
+      "frontend",
+      "adservice",
+      "cartservice",
+      "checkoutservice",
+      "currencyservice",
+      "emailservice",
+      "paymentservice",
+      "productcatalogservice",
+      "recommendationservice",
+      "redis-cart",
+      "shippingservice"
+     ],
+     "summary": "A 500\u202fms delay on frontend should raise p95 latency and potentially error rate across the stack."
+    },
+    "criteria": [
+     {
+      "metric": "p95_ms",
+      "op": ">",
+      "value": 500
+     }
+    ]
+   },
+   "reason": "latency must be a nonnegative duration in ms"
+  },
+  {
+   "item": {
+    "vulnerability": "V1",
+    "rank": 1,
+    "fault": "pod_kill",
+    "target": "redis-cart",
+    "params": {},
+    "duration_s": 30,
+    "reason": "Stateful emptyDir volume causes data loss on restart; pod_kill tests cart data integrity.",
+    "prediction": {
+     "affected": [
+      "redis-cart",
+      "cartservice",
+      "checkoutservice",
+      "frontend"
+     ],
+     "summary": "Restarting redis-cart should clear cart contents, leading to integrity violations in cart and checkout flows."
+    },
+    "criteria": [
+     {
+      "metric": "integrity_violations",
+      "op": ">",
+      "value": 0
+     }
+    ]
+   },
+   "reason": "already run or planned"
+  },
+  {
+   "item": {
+    "vulnerability": "V2",
+    "rank": 2,
+    "fault": "network_delay",
+    "target": "frontend",
+    "params": {
+     "latency": "500"
+    },
+    "duration_s": 30,
+    "reason": "Single\u2011replica frontend is sensitive to latency; adding 500\u202fms delay should surface latency propagation and error rate spikes without killing the pod.",
+    "prediction": {
+     "affected": [
+      "frontend",
+      "adservice",
+      "cartservice",
+      "checkoutservice",
+      "currencyservice",
+      "emailservice",
+      "paymentservice",
+      "productcatalogservice",
+      "recommendationservice",
+      "redis-cart",
+      "shippingservice"
+     ],
+     "summary": "Latency increase on frontend should raise p95 latency and potentially error rate across dependent services."
+    },
+    "criteria": [
+     {
+      "metric": "p95_ms",
+      "op": ">",
+      "value": 500
+     }
+    ]
+   },
+   "reason": "latency must be a nonnegative duration in ms"
+  }
+ ],
+ "replan_note": "Added a pod_kill on redis-cart to test data loss and a network_delay on frontend to probe latency propagation. No previous experiments used these fault+target combinations, and both faults are allowed. The plan respects the maximum of two experiments and uses distinct fault types to maximize insight.",
+ "feedback": "network_delay on frontend was dropped: latency must be a nonnegative duration in ms. Return corrected or replacement experiments only; keep integrity criteria for stateful services."
+}

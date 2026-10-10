@@ -1,0 +1,120 @@
+{
+  "schema_version": 1,
+  "status": "completed",
+  "baseline_suitable": true,
+  "run_started_utc": "2026-10-10T21:16:03.935852+00:00",
+  "requested_duration_s": 300.0,
+  "warmup_s": 60,
+  "interval_s": 5,
+  "expected_users": 20,
+  "context": "kind-online-boutique",
+  "namespace": "online-boutique",
+  "artifact_dir": "/home/aashrith/Desktop/boschthon/runs/baseline-study-20261010T211603.935532Z",
+  "findings": [],
+  "notes": [],
+  "collection_errors": [],
+  "acceptance_policy": {
+    "window_error_rate_exclusive_max": 0.01,
+    "guard_limits": {
+      "error_rate": 0.05,
+      "p95_ms": 1000,
+      "max_unhealthy": 2,
+      "max_duration_s": 120,
+      "poll_s": 2,
+      "recovery_timeout_s": 120,
+      "injection_timeout_s": 60
+    }
+  },
+  "metric_units": {
+    "rps": "requests/second",
+    "p50_ms": "milliseconds",
+    "p95_ms": "milliseconds",
+    "error_rate": "fraction 0..1",
+    "checkout_success": "fraction 0..1",
+    "metrics_age_s": "seconds"
+  },
+  "study_started_utc": "2026-10-10T21:17:05.004100+00:00",
+  "first_observation_utc": "2026-10-10T21:17:06.006479+00:00",
+  "sample_count": 61,
+  "collection_finished_utc": "2026-10-10T21:22:06.392117+00:00",
+  "metrics": {
+    "users": {
+      "samples": 61,
+      "mean": 20.0,
+      "p95": 20.0,
+      "min": 20,
+      "max": 20
+    },
+    "rps": {
+      "samples": 61,
+      "mean": 4.313114754098361,
+      "p95": 5.2,
+      "min": 3.2,
+      "max": 5.4
+    },
+    "error_rate": {
+      "samples": 61,
+      "mean": 0.0,
+      "p95": 0.0,
+      "min": 0.0,
+      "max": 0.0
+    },
+    "p50_ms": {
+      "samples": 61,
+      "mean": 18.0327868852459,
+      "p95": 20.0,
+      "min": 16.0,
+      "max": 21.0
+    },
+    "p95_ms": {
+      "samples": 61,
+      "mean": 53.65573770491803,
+      "p95": 83.0,
+      "min": 29.0,
+      "max": 100.0
+    },
+    "checkout_success": {
+      "samples": 61,
+      "mean": 0.990013857680633,
+      "p95": 0.9901639344262295,
+      "min": 0.9898534385569335,
+      "max": 0.990174672489083
+    },
+    "unhealthy_count": {
+      "samples": 61,
+      "mean": 0.0,
+      "p95": 0.0,
+      "min": 0,
+      "max": 0
+    },
+    "total_restarts": {
+      "samples": 61,
+      "mean": 15.0,
+      "p95": 15.0,
+      "min": 15,
+      "max": 15
+    },
+    "metrics_age_s": {
+      "samples": 61,
+      "mean": 2.224160409364544,
+      "p95": 4.088851451873779,
+      "min": 0.993582010269165,
+      "max": 5.0083582401275635
+    }
+  },
+  "last_observation_utc": "2026-10-10T21:22:06.009331+00:00",
+  "measured_span_s": 300.003,
+  "window": {
+    "requests": 1299,
+    "failures": 0,
+    "completed_rps": 4.32996123551264,
+    "error_rate": 0.0,
+    "checkout_requests": 58,
+    "checkout_failures": 0,
+    "checkout_success": 1.0
+  },
+  "unique_history_timestamps": 61,
+  "max_sample_gap_s": 5.0972700119018555,
+  "restart_increases": {},
+  "services_with_pod_changes": []
+}

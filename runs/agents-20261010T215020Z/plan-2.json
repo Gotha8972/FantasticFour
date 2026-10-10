@@ -1,0 +1,93 @@
+{
+ "plan": [
+  {
+   "vulnerability": "V1",
+   "rank": 1,
+   "fault": "pod_kill",
+   "target": "redis-cart",
+   "params": {},
+   "duration_s": 30,
+   "reason": "Stateful emptyDir volume causes data loss on restart; pod_kill tests persistence loss and customer impact via integrity violations.",
+   "prediction": {
+    "affected": [
+     "redis-cart",
+     "cartservice",
+     "checkoutservice"
+    ],
+    "summary": "Restarting redis-cart will drop cart data, leading to checkout failures and integrity violations."
+   },
+   "criteria": [
+    {
+     "metric": "integrity_violations",
+     "op": ">",
+     "value": 0
+    },
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.01
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 500
+    }
+   ],
+   "experiment": {
+    "id": "v1-pod-kill-redis-cart",
+    "fault": "pod_kill",
+    "target": "redis-cart",
+    "params": {},
+    "duration_s": 30
+   },
+   "priority": {
+    "blast_radius": 4,
+    "criticality": "critical",
+    "score": 16
+   }
+  },
+  {
+   "vulnerability": "V3",
+   "rank": 2,
+   "fault": "pod_failure",
+   "target": "checkoutservice",
+   "params": {},
+   "duration_s": 30,
+   "reason": "Single replica checkout orchestrator; failure should cause all checkout requests to fail, measurable by error_rate and p95 latency.",
+   "prediction": {
+    "affected": [
+     "checkoutservice",
+     "frontend"
+    ],
+    "summary": "Crash of checkoutservice will block all checkout flows, raising error_rate and latency."
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.01
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 500
+    }
+   ],
+   "experiment": {
+    "id": "v3-pod-failure-checkoutservice",
+    "fault": "pod_failure",
+    "target": "checkoutservice",
+    "params": {},
+    "duration_s": 30
+   },
+   "priority": {
+    "blast_radius": 2,
+    "criticality": "critical",
+    "score": 8
+   }
+  }
+ ],
+ "dropped": [],
+ "replan_note": "No repeat of V2; selected V1 and V3 to cover stateful data loss and single\u2011replica checkout failure. Both use distinct fault types (pod_kill vs pod_failure) and measure customer impact via integrity_violations, error_rate, and latency.",
+ "feedback": null
+}

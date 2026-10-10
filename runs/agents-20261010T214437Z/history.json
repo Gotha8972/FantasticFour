@@ -1,0 +1,258 @@
+[
+ {
+  "vulnerability": "V2",
+  "experiment": {
+   "id": "v2-pod-failure-frontend",
+   "fault": "pod_failure",
+   "target": "frontend",
+   "params": {},
+   "duration_s": 30
+  },
+  "criteria": [
+   {
+    "metric": "error_rate",
+    "op": ">",
+    "value": 0.01
+   }
+  ],
+  "prediction": {
+   "affected": [
+    "frontend",
+    "adservice",
+    "cartservice",
+    "checkoutservice",
+    "currencyservice",
+    "emailservice",
+    "paymentservice",
+    "productcatalogservice",
+    "recommendationservice",
+    "redis-cart",
+    "shippingservice"
+   ],
+   "summary": "All services should experience increased error rate."
+  },
+  "safety": {
+   "decision": "reject",
+   "reason": "Current health snapshot shows a p95 latency of 1700\u202fms, far above the baseline of ~54\u202fms, indicating the system is not healthy. The experiment would further disrupt the frontend service, so it must be rejected.",
+   "experiment": {
+    "id": "v2-pod-failure-frontend",
+    "fault": "pod_failure",
+    "target": "frontend",
+    "params": {},
+    "duration_s": 30
+   },
+   "ramp": [],
+   "steps": [],
+   "tolerated_up_to": null,
+   "limit_crossed_at": null,
+   "status": "reject",
+   "health_at_review": {
+    "ts": 1791668719.6110127,
+    "error_rate": 0.0,
+    "p50_ms": 23.0,
+    "p95_ms": 1700.0,
+    "users": 20,
+    "rps": 4.2,
+    "requests": 47458,
+    "failures": 529,
+    "checkout_success": 0.9908960229995208,
+    "checkout_requests": 2087,
+    "checkout_failures": 19,
+    "locust_history_ts": 1791668719.0,
+    "loadgenerator_pod_uids": [
+     "62ff364f-2626-44ab-8521-9241489ef8ba"
+    ],
+    "pod_uids": {
+     "adservice": [
+      "b3e738a7-840a-4c10-bcad-6c355a45c756"
+     ],
+     "cartservice": [
+      "a6c77726-10e7-48d2-a133-8d58dd39bdc7"
+     ],
+     "checkoutservice": [
+      "d6aad341-577f-495e-b8e8-4dbf0fe79d8a"
+     ],
+     "currencyservice": [
+      "6077ac6e-adc5-4d55-95e5-39456cac60b5"
+     ],
+     "emailservice": [
+      "793a3c99-875f-4729-91b8-6f65e55c36ea"
+     ],
+     "frontend": [
+      "c7e4e5cb-aefc-4459-96c5-f7ee6d883dc7"
+     ],
+     "loadgenerator": [
+      "62ff364f-2626-44ab-8521-9241489ef8ba"
+     ],
+     "paymentservice": [
+      "deddcdc6-892f-40f7-b55d-60e9be30b270"
+     ],
+     "productcatalogservice": [
+      "605cd7e0-1e2e-4f9b-b0ce-42fd6fb2440a"
+     ],
+     "recommendationservice": [
+      "28a150eb-7b88-4b04-ad7f-111f3ba0124a"
+     ],
+     "redis-cart": [
+      "2dd75ff5-a01e-4159-9fd6-7a2315d7e8af"
+     ],
+     "shippingservice": [
+      "d2d6b37f-db07-4932-9991-30773150aa1c"
+     ]
+    },
+    "unhealthy_services": [],
+    "restarts": {
+     "adservice": 7,
+     "cartservice": 0,
+     "checkoutservice": 0,
+     "currencyservice": 4,
+     "emailservice": 0,
+     "frontend": 2,
+     "loadgenerator": 1,
+     "paymentservice": 0,
+     "productcatalogservice": 0,
+     "recommendationservice": 1,
+     "redis-cart": 0,
+     "shippingservice": 0
+    },
+    "metrics_age_s": 0.6109859943389893,
+    "source": "locust_csv_and_kubernetes"
+   }
+  },
+  "observed": null,
+  "integrity": [],
+  "verdict": "inconclusive",
+  "criteria_met": [],
+  "score": null,
+  "blast_share": 1.0
+ },
+ {
+  "vulnerability": "V1",
+  "experiment": {
+   "id": "v1-pod-kill-redis-cart",
+   "fault": "pod_kill",
+   "target": "redis-cart",
+   "params": {},
+   "duration_s": 30
+  },
+  "criteria": [
+   {
+    "metric": "integrity_violations",
+    "op": ">",
+    "value": 0
+   }
+  ],
+  "prediction": {
+   "affected": [
+    "redis-cart",
+    "cartservice",
+    "checkoutservice",
+    "frontend"
+   ],
+   "summary": "Restarting redis-cart should drop cart contents, leading to integrity violations in cartservice and checkoutservice."
+  },
+  "safety": {
+   "decision": "approve",
+   "reason": "System is healthy, no unhealthy services, error rate is 0, duration within limits, and the experiment targets a single service with a pod_kill fault. No ramp needed.",
+   "experiment": {
+    "id": "v1-pod-kill-redis-cart",
+    "fault": "pod_kill",
+    "target": "redis-cart",
+    "params": {},
+    "duration_s": 30
+   },
+   "ramp": [
+    null
+   ],
+   "steps": [
+    {
+     "intensity": null,
+     "run_dir": "runs/v1-pod-kill-redis-cart-s1-20261010T214553.823701Z",
+     "observed": null,
+     "stopped_by": "REFUSED"
+    }
+   ],
+   "tolerated_up_to": null,
+   "limit_crossed_at": null,
+   "status": "aborted: REFUSED",
+   "health_at_review": {
+    "ts": 1791668744.0137937,
+    "error_rate": 0.0,
+    "p50_ms": 18.0,
+    "p95_ms": 100.0,
+    "users": 20,
+    "rps": 3.9,
+    "requests": 47563,
+    "failures": 529,
+    "checkout_success": 0.990909090909091,
+    "checkout_requests": 2090,
+    "checkout_failures": 19,
+    "locust_history_ts": 1791668742.0,
+    "loadgenerator_pod_uids": [
+     "62ff364f-2626-44ab-8521-9241489ef8ba"
+    ],
+    "pod_uids": {
+     "adservice": [
+      "b3e738a7-840a-4c10-bcad-6c355a45c756"
+     ],
+     "cartservice": [
+      "a6c77726-10e7-48d2-a133-8d58dd39bdc7"
+     ],
+     "checkoutservice": [
+      "d6aad341-577f-495e-b8e8-4dbf0fe79d8a"
+     ],
+     "currencyservice": [
+      "6077ac6e-adc5-4d55-95e5-39456cac60b5"
+     ],
+     "emailservice": [
+      "793a3c99-875f-4729-91b8-6f65e55c36ea"
+     ],
+     "frontend": [
+      "c7e4e5cb-aefc-4459-96c5-f7ee6d883dc7"
+     ],
+     "loadgenerator": [
+      "62ff364f-2626-44ab-8521-9241489ef8ba"
+     ],
+     "paymentservice": [
+      "deddcdc6-892f-40f7-b55d-60e9be30b270"
+     ],
+     "productcatalogservice": [
+      "605cd7e0-1e2e-4f9b-b0ce-42fd6fb2440a"
+     ],
+     "recommendationservice": [
+      "28a150eb-7b88-4b04-ad7f-111f3ba0124a"
+     ],
+     "redis-cart": [
+      "2dd75ff5-a01e-4159-9fd6-7a2315d7e8af"
+     ],
+     "shippingservice": [
+      "d2d6b37f-db07-4932-9991-30773150aa1c"
+     ]
+    },
+    "unhealthy_services": [],
+    "restarts": {
+     "adservice": 7,
+     "cartservice": 0,
+     "checkoutservice": 0,
+     "currencyservice": 4,
+     "emailservice": 0,
+     "frontend": 2,
+     "loadgenerator": 1,
+     "paymentservice": 0,
+     "productcatalogservice": 0,
+     "recommendationservice": 1,
+     "redis-cart": 0,
+     "shippingservice": 0
+    },
+    "metrics_age_s": 2.0137572288513184,
+    "source": "locust_csv_and_kubernetes"
+   }
+  },
+  "observed": null,
+  "integrity": [],
+  "verdict": "inconclusive",
+  "criteria_met": [],
+  "score": null,
+  "blast_share": 0.364
+ }
+]
