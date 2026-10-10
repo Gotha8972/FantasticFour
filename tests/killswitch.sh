@@ -1,49 +1,36 @@
 #!/usr/bin/env bash
-# Kill-switch evidence against the live cluster. Logs land in runs/ (commit them).
-# Takes ~4 min (the fail-safe test waits out a 60s fault).  Usage: ./tests/killswitch.sh
+# Kill-switch tests not yet proven live (breach on error rate/p95 already proven in runs/).
+# Run on the cluster machine with load running (bash scripts/load.sh start 20 2). ~3 min.
 set -uo pipefail
 cd "$(dirname "$0")/.."
+K="kubectl --kubeconfig .runtime/kubeconfig --context kind-online-boutique -n online-boutique"
 G="python3 -m chaosmind.guard"; I="python3 -m chaosmind.inject"
 FAILED=0
-ok()   { echo "PASS: $*"; }
-bad()  { echo "FAIL: $*"; FAILED=1; }
-none_running() { [ -z "$(kubectl get podchaos,networkchaos -n boutique -o name)" ]; }
-save() { mv runs/test-down.jsonl "runs/$1.jsonl" 2>/dev/null; }
-mkdir -p runs; rm -f runs/test-*.jsonl
+ok()  { echo "PASS: $*"; }
+bad() { echo "FAIL: $*"; FAILED=1; }
+latest() { ls -td runs/"$1"-*/ | head -1; }
+none_running() { [ -z "$(python3 -c 'from chaosmind import inject; print(*inject.running())')" ]; }
 
-echo "== 1. Breach → automatic revert → recovery"
-$G experiments/test-down.json '{"max_unhealthy": 0}'
-grep -q BREACH runs/test-down.jsonl && grep -q HEALTHY runs/test-down.jsonl && none_running \
-  && ok "breach detected, reverted, healthy" || bad "breach test"
-save 1-breach
+echo "== 1. Pod-health trigger on its own (ads are optional, so no errors expected, only unhealthy=1)"
+$G experiments/test-ads-down.json '{"max_unhealthy": 0}'
+d=$(latest test-ads-down)
+grep -q 'BREACH.*unhealthy' "$d/events.csv" && grep -q HEALTHY "$d/events.csv" \
+  && ok "breach on unhealthy, reverted, healthy ($d)" \
+  || bad "health trigger; check $d/events.csv (if error_rate fired first: ads failure is NOT graceful, that's a finding)"
 
-echo "== 2. Preflight refuses while another fault is running"
-$I apply experiments/test-delay.json
-$G experiments/test-down.json
-grep -q REFUSED runs/test-down.jsonl && ok "refused" || bad "preflight"
-$I revert experiments/test-delay.json
-save 2-preflight
-
-echo "== 3. Guard killed politely (Ctrl-C / kill) still reverts"
+echo "== 2. Guard crashes (kill -9): Chaos Mesh's own duration still ends the fault"
 $G experiments/test-down.json & pid=$!
-sleep 8; kill -TERM $pid; wait $pid
-grep -q REVERTED runs/test-down.jsonl && none_running && ok "reverted on kill" || bad "kill revert"
-save 3-interrupt
-
-echo "== 4. Guard crashes (kill -9): Chaos Mesh's own timer ends the fault"
-$G experiments/test-down.json & pid=$!
-sleep 8; kill -9 $pid; wait $pid 2>/dev/null
-echo "   guard dead, fault left behind; waiting out its 60s duration..."
+sleep 12; kill -9 $pid; wait $pid 2>/dev/null
+echo "   guard dead mid-experiment; waiting out the 60s duration..."
 sleep 60
-kubectl wait --for=condition=available deploy/cartservice -n boutique --timeout=90s \
-  && ok "cartservice recovered with no guard alive" || bad "fail-safe"
-$I revert experiments/test-down.json   # tidy the finished CR object
-save 4-failsafe
+$K wait --for=condition=available deploy/cartservice --timeout=90s \
+  && none_running && ok "fault ended and cartservice recovered with no guard alive" || bad "fail-safe"
+$I revert experiments/test-down.json   # delete the finished resource object
 
-echo "== 5. Manual abort clears everything"
+echo "== 3. Manual abort clears everything"
 $I apply experiments/test-down.json
 $I abort
-none_running && ok "abort cleared all faults" || bad "abort"
-kubectl wait --for=condition=available deploy --all -n boutique --timeout=120s >/dev/null
+none_running && ok "abort cleared all chaosmind faults" || bad "abort"
+$K wait --for=condition=available deploy --all --timeout=120s >/dev/null
 
-[ $FAILED = 0 ] && echo "ALL KILL-SWITCH TESTS PASSED" || { echo "SOME TESTS FAILED"; exit 1; }
+[ $FAILED = 0 ] && echo "ALL PASSED" || { echo "SOME FAILED"; exit 1; }

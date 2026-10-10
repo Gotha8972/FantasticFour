@@ -1,0 +1,2 @@
+{"id": "test-ads-down", "fault": "pod_failure", "target": "adservice", "duration_s": 45,
+ "hypothesis": "Ads are optional: the shop keeps working with no request errors, only adservice is unhealthy"}
