@@ -1,0 +1,3 @@
+{"id": "test-delay", "fault": "network_delay", "target": "productcatalogservice",
+ "params": {"latency": "500ms"}, "duration_s": 60,
+ "hypothesis": "All pages slow down; nothing crashes"}

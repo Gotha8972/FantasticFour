@@ -1,0 +1,2 @@
+{"id": "test-down", "fault": "pod_failure", "target": "cartservice", "duration_s": 60,
+ "hypothesis": "Cart page errors; rest of the shop works"}
