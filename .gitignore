@@ -4,3 +4,4 @@ __pycache__/
 .runtime/
 microservices-demo/
 .venv/
+.DS_Store
