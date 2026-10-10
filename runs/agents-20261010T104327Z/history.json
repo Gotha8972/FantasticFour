@@ -1,0 +1,55 @@
+[
+ {
+  "vulnerability": "V1",
+  "experiment": {
+   "id": "v1-pod-kill-productcatalogservice",
+   "fault": "pod_kill",
+   "target": "productcatalogservice",
+   "params": {},
+   "duration_s": 30
+  },
+  "criteria": [
+   {
+    "metric": "error_rate",
+    "op": ">",
+    "value": 0.05
+   },
+   {
+    "metric": "unhealthy_count",
+    "op": ">",
+    "value": 0
+   },
+   {
+    "metric": "p95_ms",
+    "op": ">",
+    "value": 300
+   }
+  ],
+  "prediction": {
+   "affected": [
+    "checkoutservice",
+    "frontend",
+    "recommendationservice"
+   ],
+   "summary": "Checkout and catalog-dependent requests are expected to show elevated errors and at least one unavailable service while the sole product catalog replica is being recreated; baseline p95_ms is approximately 60 ms."
+  },
+  "safety": {
+   "decision": "approve",
+   "reason": "System is currently healthy: no unhealthy services, zero current error rate, and latency is within baseline ranges. The pod kill targets only productcatalogservice and has a moderate 30-second duration.",
+   "experiment": {
+    "id": "v1-pod-kill-productcatalogservice",
+    "fault": "pod_kill",
+    "target": "productcatalogservice",
+    "params": {},
+    "duration_s": 30
+   },
+   "ramp": [
+    null
+   ],
+   "steps": []
+  },
+  "observed": null,
+  "verdict": "inconclusive",
+  "criteria_met": []
+ }
+]
