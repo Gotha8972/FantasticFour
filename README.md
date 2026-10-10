@@ -112,9 +112,9 @@ Every experiment passes through layered safeguards. All of them have been **test
 **Tested on:** Fedora Linux, rootless Podman, kind v0.33.0, Kubernetes v1.37, Chaos Mesh 2.8.4, Python 3.
 
 ### Prerequisites
-- Linux with Podman (rootless) or Docker
-- `kind`, `python3`, `curl`, `git`
-- ~4 CPU cores and 8 GB RAM free
+- Linux with **rootless Podman** and systemd (the scripts run kind with the Podman provider)
+- `kind`, `python3`, `curl`, `git`, `rg` (ripgrep)
+- ~4 CPU cores and 8 GB RAM free (≈ 12 GB with Prometheus/Grafana)
 
 ### 1. Clone
 ```bash
@@ -164,13 +164,11 @@ python3 -m chaosmind.verify --dry-run
 
 ## Running experiments
 
-For the platform checklist and first AI **dry run**, use
-`bash scripts/checklist.sh` from the host terminal with Grafana open. This
-publishes setup files, collects a fresh five-minute baseline with monitoring
-installed, runs agent tests, and publishes the dry-run plan for team review.
-It selects `mistral-small-latest` and never invokes live AI experiments.
-See [A_CHECKLIST_PROGRESS.md](A_CHECKLIST_PROGRESS.md) for completed changes
-and host execution requirements.
+### Quick demo (≈5 min, watch it in Grafana)
+```bash
+bash scripts/grafana-stress.sh
+```
+20 shoppers → 100 shoppers → 500 ms delay on the product catalog through the guard → automatic revert → recovery, all visible on the **Online Boutique — Chaos Overview** dashboard.
 
 ### An experiment is a JSON file
 ```json
@@ -185,7 +183,7 @@ and host execution requirements.
 | `duration_s` | 1–120 |
 | `params` | `network_delay`: `latency`, `jitter` (ms, ≤ 2000) · `network_loss`: `loss` (≤ 50%) · `cpu_stress`: `load` (1–100), `workers` (1–2) |
 
-Samples are in [`experiments/`](experiments/).
+Samples are in [`experiments/`](experiments).
 
 ### Run one experiment under the kill switch
 ```bash
@@ -266,9 +264,16 @@ Then open the **Online Boutique — Chaos Overview** dashboard at http://127.0.0
 
 ## Results so far
 
-**Steady-state baseline** (15 min, 20 shoppers, 181 samples, no faults; [details](BASELINE_STUDY.md)): **4.37 req/s, 0.05% errors (2 / 3,933), p50 ≈ 20 ms, p95 ≈ 78 ms (max 240 ms), checkout success 98.8%**, 0 unhealthy services, 0 restarts during the window.
+**Steady-state baselines** (20 shoppers, no faults):
 
-Even with nothing broken, **2 of 168 checkouts failed with HTTP 500**. That's a background failure rate, so every experiment below is judged against the baseline, not against zero.
+| Study | Samples | Req/s | Errors | p50 / p95 (mean) | Checkout success | Unhealthy / restarts |
+|---|---|---|---|---|---|---|
+| [15 min, before monitoring](BASELINE_STUDY.md) | 181 | 4.37 | 0.05% (2 / 3,933) | 20 ms / 78 ms | 98.8% (166/168) | 0 / 0 |
+| [5 min, with monitoring](runs/baseline-study-20261010T093022.185681Z/BASELINE_RESULTS.md) → [`baseline.json`](baseline.json), used by the agents | 62 | 4.55 | 0.07% (1 / 1,372) | 11 ms / 35 ms | 98.6% (68/69) | 0 / 0 |
+
+Each experiment is compared with the baseline taken under the same conditions, not with zero.
+
+**Kill-switch limits:** the runs below up to the catalog pod kill used the original limits (**20% errors / 2,000 ms p95**). The team then tightened them to **5% / 1,000 ms**, which the 100-shopper catalog-delay runs used and which are the current defaults.
 
 | Experiment | What happened | Kill switch | Recovery |
 |---|---|---|---|
@@ -278,17 +283,19 @@ Even with nothing broken, **2 of 168 checkouts failed with HTTP 500**. That's a 
 | Guard killed with `kill -9` mid-fault | Fault still ended via Chaos Mesh's duration | Fail-safe ✅ | — |
 | Manual abort with 2 active faults | Both removed in 0.39 s | ✅ | — |
 | `productcatalogservice` pod killed (**100 shoppers**) | Replacement pod available in ~3 s, but **66 HTTP 500s**, checkout 16/179 failed (8.9%), peak error rate 25.6%, peak p95 10 s | One-shot kill (no revert possible); preflight + recovery checks | Customers back to normal after **~34 s** |
+| 500 ms delay on `productcatalogservice` (**100 shoppers**), run twice | p95 **4,300 / 4,400 ms**, almost no errors | Breach on **p95** at 9.6 s both times (limit 1,000 ms), reverted in 0.30–0.32 s | **14.1 / 14.0 s**, reproducible |
 | `redis-cart` pod restarted | **Cart emptied (1 item → 0) with zero HTTP errors**: silent data loss | — | 4.9 s |
 
-**Findings so far**
+**Findings so far** (most severe first)
 
 1. 🔴 **Silent cart data loss.** `redis-cart` runs as 1 replica on an `emptyDir` volume, so any restart wipes every cart while the site reports success. *Fix:* a PersistentVolumeClaim with Redis persistence (AOF), or replicated Redis.
 2. 🟠 **Cart outage takes the shop down hard.** Losing `cartservice` drives error rate to 35–100% and takes ~55 s to recover. *Fix:* more replicas plus a PodDisruptionBudget; degrade the cart page instead of failing.
-3. 🟡 **Catalog latency spreads everywhere.** 500 ms on one service pushes site-wide p95 to 3.5–4 s, consistent with it having the most callers. *Fix:* client-side timeouts and caching of catalog reads in the frontend.
-4. 🟠 **"Healthy" ≠ recovered.** After a catalog pod kill, Kubernetes reported the service available in ~3 s, but customers kept getting errors and 10 s responses for ~30 s more. Health checks alone would have hidden it. *Fix:* more than 1 replica so a single kill isn't an outage; readiness that reflects real serving capacity; client retries with backoff in the frontend.
-5. 🟢 **Ads fail gracefully**, as the map predicted.
+3. 🟠 **"Healthy" ≠ recovered.** After a catalog pod kill, Kubernetes reported the service available in ~3 s, but customers kept getting errors and 10 s responses for ~30 s more. Health checks alone would have hidden it. *Fix:* more than 1 replica so a single kill isn't an outage; readiness that reflects real serving capacity; client retries with backoff in the frontend.
+4. 🟡 **Catalog latency spreads everywhere.** 500 ms on one service pushes site-wide p95 to 3.5 s at 20 shoppers and 4.4 s at 100, reproducibly, consistent with it having the most callers. *Fix:* client-side timeouts and caching of catalog reads in the frontend.
+5. 🟡 **Checkout fails ~1.3% of the time with nothing broken.** 3 HTTP 500s in 237 checkouts across both baselines, always `POST /cart/checkout`. Root cause not yet established (logs had rotated); next case for the Log Detective agent.
+6. 🟢 **Ads fail gracefully**, as the map predicted.
 
-*Load note:* the pod-kill run used 100 shoppers; the baseline and guarded runs used 20. Compare numbers within the same load level only.
+*Load note:* the pod-kill and second catalog-delay runs used 100 shoppers; the baselines and other guarded runs used 20. Compare numbers within the same load level only.
 
 Full evidence: [`KILLSWITCH_RESULTS.md`](KILLSWITCH_RESULTS.md), [`PROJECT_HANDOFF.md`](PROJECT_HANDOFF.md) and the `runs/` directory.
 
@@ -304,15 +311,19 @@ chaosmind/
   runlog.py          CSV/JSONL evidence writer
   capture.py         Standalone metric and pod-log capture
   verify.py          End-to-end verification of sample experiments
-  baseline_summary.py  Steady-state baseline → baseline.json
+  baseline.py        Steady-state baseline study → baseline.json
+  c_tests.py         Live kill-switch and Redis checkpoint runner
+  podkill_demo.py, checkout_investigation.py   Pod-kill demo and checkout-failure log search
   test_guard.py      Offline behaviour tests (no cluster needed)
   agents/            Cartographer, Strategist, Safety Checker (+ facts.py, llm.py, loop in __main__.py)
 experiments/         Experiment definitions (JSON)
+chaos/               Chaos Mesh install values and standalone YAML experiments
+deploy/              kind cluster and Online Boutique overlay
 scripts/             Cluster, Chaos Mesh and load setup
 tests/               Live kill-switch and Redis checks
 runs/                Evidence from every run
 monitoring/          Prometheus/Grafana setup and dashboard guide
-docs/                Diagrams
+docs/                Diagrams; docs/team/ holds our internal planning notes
 customer_simulator.py  Optional scripted shopper with Prometheus metrics
 ```
 

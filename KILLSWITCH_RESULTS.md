@@ -206,7 +206,7 @@ and [archived finding](runs/c-redis-20261010T070925.577773Z/redis-finding.txt).
 
 ## Recent implementation changes
 
-These changes implement [RUN_C_TESTS.md](RUN_C_TESTS.md):
+These changes implement [RUN_C_TESTS.md](docs/team/RUN_C_TESTS.md):
 
 | File | Purpose |
 | --- | --- |
@@ -215,7 +215,7 @@ These changes implement [RUN_C_TESTS.md](RUN_C_TESTS.md):
 | [tests/redis_finding.sh](tests/redis_finding.sh) | Executable entry point for the Redis cart check. |
 | [chaosmind/test_c_tests.py](chaosmind/test_c_tests.py) | Ten offline tests for the new runner, including recovery-before-cleanup, partial log reads, scoped cleanup, and session continuity. |
 | [tests/README.md](tests/README.md) | Run commands, result meanings, cleanup scope, and evidence format. |
-| [RUN_C_TESTS.md](RUN_C_TESTS.md) | Local implementation notes and guidance for staging ignored evidence. |
+| [RUN_C_TESTS.md](docs/team/RUN_C_TESTS.md) | Local implementation notes and guidance for staging ignored evidence. |
 
 The existing guard, injection API, metric reader, and pod-log capture API are
 reused. Guard thresholds and production application code were not changed by

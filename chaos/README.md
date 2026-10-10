@@ -7,7 +7,7 @@ Chaos Mesh injects failures and resource pressure into running pods. Use request
 Run from your normal host terminal:
 
 ```bash
-cd /home/aashrith/Desktop/boschthon
+cd FantasticFour
 bash scripts/install-chaos.sh
 ```
 

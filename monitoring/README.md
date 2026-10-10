@@ -326,7 +326,7 @@ installation if comparing future experiments.
 
 ## Recorded pod kill results — October 10, 2026
 
-Run: [`grafana-pod-kill-1a0c612c9e`](../runs/grafana-pod-kill-1a0c612c9e/).
+Run: [`grafana-pod-kill-1a0c612c9e`](../runs/grafana-pod-kill-1a0c612c9e).
 These results come from the saved files, not an inferred Grafana screenshot.
 All times in this section are **IST (UTC+05:30)**; raw CSV timestamps use UTC.
 

@@ -1,6 +1,6 @@
 # C checkpoint tests
 
-These implement [RUN_C_TESTS.md](../RUN_C_TESTS.md) for the existing
+These implement [RUN_C_TESTS.md](../docs/team/RUN_C_TESTS.md) for the existing
 `kind-online-boutique` cluster and `online-boutique` namespace.
 They use `.runtime/kubeconfig`, confirmed Chaos Mesh status, and live Locust
 metrics. Run from the host terminal where kubectl can reach the cluster.

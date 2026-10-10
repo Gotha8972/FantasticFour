@@ -10,7 +10,7 @@ The repository's design matches the goal: Online Boutique on kind, declarative C
 | --- | --- |
 | Injector and guard used namespace `boutique` | Fixed to `online-boutique` |
 | kubectl used the user's default context | Explicit project kubeconfig and `kind-online-boutique` context |
-| Original setup creates cluster `chaos`, assumes Docker/Ubuntu, installs a second platform stack | Use the existing `scripts/deploy-local.sh` and `scripts/install-chaos.sh`; do not run `setup/sandbox.sh` on this Fedora setup |
+| Original setup creates cluster `chaos`, assumes Docker/Ubuntu, installs a second platform stack | Use the existing `scripts/deploy-local.sh` and `scripts/install-chaos.sh`; `setup/sandbox.sh` has since been removed from the repository |
 | Error rate and p95 were fabricated zero placeholders | Replaced with real Locust CSV statistics; stale/missing/zero-traffic metrics cause refusal or cleanup |
 | Resource creation was logged as successful injection | `CREATED` and `INJECTED` are separate; injection requires Chaos Mesh status evidence |
 | Creation happened outside the cleanup block | Creation, observation, and exceptions now enter the cleanup path; cleanup verifies ownership and run identity |
@@ -26,7 +26,7 @@ The imported design's `mode: all` has been changed to `one` for a small initial 
 No additional Python packages are required; these modules use the standard library and kubectl.
 
 ```bash
-cd /home/aashrith/Desktop/boschthon
+cd FantasticFour
 python3 -m chaosmind.test_guard
 bash scripts/load.sh start 20 2
 bash scripts/load.sh measure 5 30

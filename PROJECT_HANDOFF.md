@@ -1,7 +1,7 @@
 # Local chaos engineering setup: work completed, logs, and results
 
 **Recorded:** 10 October 2026.  
-**Workspace:** `/home/aashrith/Desktop/boschthon`.  
+**Workspace:** the project root (a clone of this repository).  
 **Goal:** deploy Online Boutique locally, inject controlled failures, measure their effect, and provide a reliable execution and observation layer for a future AI chaos engineering agent.
 
 This document records implementation work and the evidence inspected so far. It does not claim that every available experiment or planned agent has been verified.
@@ -129,7 +129,7 @@ Reviewed the imported `PLAN.md`, `DAY1.md`, and `C_INJECTION_KILLSWITCH.md`, plu
 
 The plan matches the intended architecture: an AI planner proposes experiments, a deterministic operator injects faults, a deterministic guard limits damage, and an observer/analyst records outcomes. Only the operator, guard, metric adapter, and evidence collection are implemented here.
 
-The original `setup/sandbox.sh` assumes an Ubuntu/Docker environment, creates a different cluster and namespace, and installs Prometheus/Grafana. It has not been run on this Fedora setup. Use the local scripts documented below.
+The original `setup/sandbox.sh` (since removed from the repository) assumed an Ubuntu/Docker environment, creates a different cluster and namespace, and installs Prometheus/Grafana. It has not been run on this Fedora setup. Use the local scripts documented below.
 
 ## 7. What the Python guard does
 
@@ -346,7 +346,7 @@ No collection errors were recorded in these live exports. The delay target's CSV
 Run these from the workspace in a normal host terminal.
 
 ```bash
-cd /home/aashrith/Desktop/boschthon
+cd FantasticFour
 
 # Start request traffic and inspect counters.
 bash scripts/load.sh start 20 2
