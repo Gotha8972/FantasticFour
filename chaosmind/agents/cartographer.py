@@ -93,7 +93,8 @@ def verify(reply, facts):
             severity = 'critical'
         kept.append({**v, 'evidence': good, 'unverified_evidence_dropped': bad,
                      'severity': severity,
-                     'blast_radius': [b for b in v.get('blast_radius', []) if b in services],
+                     'blast_radius': s['blast_radius'],  # computed from the dependency map, not guessed
+                     'predicted_blast_radius': [b for b in v.get('blast_radius', []) if b in services],
                      'risk_score': s['risk_score'], 'status': 'untested'})
     kept.sort(key=lambda v: (SEVERITIES.index(v['severity']), -v['risk_score']))
     for i, v in enumerate(kept, 1):

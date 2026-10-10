@@ -86,6 +86,22 @@ class AgentTests(unittest.TestCase):
         self.assertIn('at least 2 different fault types', seen[1]['feedback'])
         self.assertEqual([i['fault'] for i in out['plan']], ['pod_kill', 'pod_kill', 'network_delay'])  # repeat dropped
 
+    def test_experiments_ranked_by_blast_radius_times_criticality(self):
+        s = FACTS['services']
+        self.assertEqual((len(s['frontend']['blast_radius']), s['redis-cart']['blast_radius']),
+                         (len(s), ['cartservice', 'checkoutservice', 'frontend', 'redis-cart']))
+        vulns = [{'id': 'V1', 'service': 'adservice', 'severity': 'low', 'blast_radius': s['adservice']['blast_radius']},
+                 {'id': 'V2', 'service': 'redis-cart', 'severity': 'critical', 'blast_radius': s['redis-cart']['blast_radius']}]
+        crit = [{'metric': 'integrity_violations', 'op': '>', 'value': 0}]
+        reply = {'plan': [  # the model ranks the harmless ads test first
+            {'vulnerability': 'V1', 'rank': 1, 'fault': 'pod_failure', 'target': 'adservice', 'duration_s': 30, 'criteria': crit},
+            {'vulnerability': 'V2', 'rank': 2, 'fault': 'network_delay', 'target': 'redis-cart', 'duration_s': 30,
+             'params': {'latency': '100ms'}, 'criteria': crit}]}
+        with patch.object(llm, 'ask', return_value=reply):
+            out = strategist.plan(vulns, {}, allowed_faults={'pod_failure', 'network_delay'})
+        self.assertEqual([(i['target'], i['rank'], i['priority']['score']) for i in out['plan']],
+                         [('redis-cart', 1, 16), ('adservice', 2, 2)])  # 4 services x critical(4) vs 2 x low(1)
+
     def test_trivial_pod_criteria_dropped(self):
         crit = [{'metric': 'unhealthy_count', 'op': '>', 'value': 0}, {'metric': 'error_rate', 'op': '>', 'value': 0.05}]
         self.assertEqual([c['metric'] for c in strategist.valid_criteria(crit, 'pod_kill')], ['error_rate'])

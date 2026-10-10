@@ -5,12 +5,12 @@
 **Findings report:** [FINDINGS.md](FINDINGS.md) · **Architecture (1 page):** [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · **Run it:** [docs/RUNNING.md](docs/RUNNING.md) · **Agents:** [docs/AGENTS.md](docs/AGENTS.md) · **Team form:** [docs/TEAM_FORM.md](docs/TEAM_FORM.md)
 
 ## Project status: complete
-All components are built and tested (**73 automated tests**): the AI agents, LangGraph workflow with a human approval gate and resume, kill switch, integrity checks, resilience score, repeated-trial statistics, Remediation and the Analyst report. The kill switch and the Redis fix are **proven on the live cluster**, and the full AI loop has **confirmed the Redis cart loss live** (the AI planned the kill, the cart went 1 → 0, code ruled it confirmed). The agents run on an **open-weight model**, `gpt-oss-20b`, hosted by NVIDIA. A full agent dry run (audit + plan + safety review) takes **about 45 seconds**. See [FINDINGS.md](FINDINGS.md) for results.
+All components are built and tested (**75 automated tests**): the AI agents, LangGraph workflow with a human approval gate and resume, kill switch, integrity checks, resilience score, repeated-trial statistics, Remediation and the Analyst report. The kill switch and the Redis fix are **proven on the live cluster**, and the full AI loop has **confirmed the Redis cart loss live** (the AI planned the kill, the cart went 1 → 0, code ruled it confirmed). The agents run on an **open-weight model**, `gpt-oss-20b`, hosted by NVIDIA. A full agent dry run (audit + plan + safety review) takes **about 45 seconds**. See [FINDINGS.md](FINDINGS.md) for results.
 
 ## Highlights
 | | |
 |---|---|
-| 🔍 **Found a silent data-loss bug, then fixed it** | Restarting Redis emptied shoppers' carts with **zero HTTP errors**; error-rate monitoring alone would never notice. Our integrity checks caught it, and our fix made the cart survive the same experiment (**1 → 0 before, 1 → 1 after**). |
+| 🔍 **Found a silent data-loss bug, then fixed it** | Restarting Redis emptied shoppers' carts with **zero HTTP errors**; error-rate monitoring alone would never notice. Our integrity checks caught it, and our fix made the cart survive the same experiment (**1 → 0 before, 1 → 1 after**; resilience score **55 → 99**). |
 | 🛑 **Kill switch: detects in ~8–10 s, reverts in ~0.3 s** | Every experiment runs under a guard that polls every 2 s and reverts automatically on error rate, latency or service-health breaches. Proven live on all three triggers, plus a crash fail-safe (`kill -9` on the guard) and manual abort. |
 | 🧠 **AI that can't hallucinate its way into the cluster** | Agents only return JSON. Code verifies every cited fact (**0 unverifiable claims** across live AI runs), the verdict is computed by code against criteria written *before* each run, and no agent can enlarge an experiment or loosen a safety limit. |
 | 📈 **Measured, not guessed** | Catalog pod kill, 5 trials each: **1 replica → customers hurt 5 of 5 times** (errors for 32–38 s although the pod was back in ~3 s); **2 replicas → 0 of 5** (never hurt). The 95% intervals (57–100% vs 0–43%) don't overlap. |
@@ -38,7 +38,7 @@ graph TD;
 1. **Audit:** the **Cartographer** reads the live configuration (call graph, replicas, probes, storage) and ranks vulnerabilities. Every fact it cites is checked against the real config.
 2. **Hypothesise:** the **Strategist** turns each vulnerability into an experiment, predicts the blast radius and writes measurable pass/fail criteria **before** the run.
 3. **Inject safely:** the **Safety Checker** approves, shrinks or rejects (it can only make experiments smaller), then ramps intensity step by step through the kill switch.
-4. **Judge:** integrity checks verify the cart survived and orders really complete; code decides **confirmed / refuted**, computes a **0–100 resilience score**, and times capacity recovery and customer recovery separately.
+4. **Judge:** integrity checks verify the cart survived and orders really complete; code decides **confirmed / refuted**, computes a **0–100 resilience score** (errors, latency, recovery, blast radius, integrity), and times capacity recovery and customer recovery separately.
 5. **Measure likelihood:** repeated trials of the same experiment give a **failure frequency with a 95% confidence interval** ("customers hurt in X of N pod kills"), not a single anecdote.
 6. **Fix and prove:** **Remediation** applies a reviewed fix and re-runs the identical experiment, keeping the fix only if the score improves.
 7. **Report:** the **Analyst** explains root causes from the logs captured during each fault and writes a fact-checked findings report.
@@ -46,7 +46,7 @@ graph TD;
 | Component | Status |
 |---|---|
 | Cartographer · Strategist · Safety Checker | ✅ Validated in 14 dry runs, then a **live run** on NVIDIA-hosted `openai/gpt-oss-20b`: Redis kill planned, approved by the Safety Checker, cart loss confirmed by code |
-| Integrity checks · resilience score · Remediation · Analyst | ✅ Built and tested |
+| Integrity checks · resilience score · Remediation · Analyst | ✅ Built and tested; every published score is regenerated from raw evidence ([scoreboard](docs/evidence/SCOREBOARD.md)) |
 | Orchestration: LangGraph state machine with a **human approval gate** before any fix and **checkpoint/resume** for long runs | ✅ Built and tested (incl. resume in a fresh process) |
 | **Chosen by measurement:** two independent agent implementations, 12 real dry runs on frozen identical inputs, scored by one script | ✅ This one won ([bake-off](docs/team/BAKEOFF_RESULT.md)): 0 hallucinated facts, 100% valid experiments, 3 fault types per plan, integrity checks on every Redis test |
 | Injector + kill switch (`inject.py`, `guard.py`) | ✅ Proven live |
@@ -127,6 +127,8 @@ The lower p95 in the second 20-shopper study follows the monitoring install, whi
 | 1 | **5 of 5** | 57–100% | ~3 s | after **32–38 s** (errors up to 96%, p95 up to 20 s) |
 | 2 | **0 of 5** | 0–43% | ~3 s | **never hurt** (errors ≤ 2.4%) |
 
+**Resilience scores, ranked:** the [scoreboard](docs/evidence/SCOREBOARD.md) recomputes every score from the raw evidence and ranks the experiments worst first. Fixes proven by re-running the same experiment: **Redis restart 55 → 99**, **catalog pod kill 29 → 99** (2 replicas).
+
 Raw guard events per trial: [1 replica](runs/trials-catalog-podkill-20261010T182606Z/trials.json), [2 replicas](runs/trials-catalog-podkill-20261010T183121Z/trials.json); `python3 -m chaosmind.agents.trials summary` recomputes this table from them. In two of the 1-replica trials traffic stalled completely, so the kill switch reverted early; those count as breaches because the errors that followed were measured.
 
 ### Findings (most severe first)
@@ -172,7 +174,7 @@ python3 -m chaosmind.test_guard && python3 -m unittest chaosmind.agents.test_age
 ## Repository layout
 ```
 chaosmind/            graph.py (LangGraph workflow) · inject.py · guard.py (kill switch) · monitor.py · baseline.py
-chaosmind/agents/     cartographer · strategist · safety · remediation · analyst · integrity · score · trials · steps (shared by graph + fallback loop)
+chaosmind/agents/     cartographer · strategist · safety · remediation · analyst · integrity · score · scoreboard · trials · steps (shared by graph + fallback loop)
 experiments/          one experiment per failure type in the brief
 remediation/          reviewed fix catalog (Redis persistence, replicas) + scripts/redis-fix.sh
 scripts/ deploy/ chaos/ monitoring/   cluster, Chaos Mesh, load generation, Prometheus/Grafana

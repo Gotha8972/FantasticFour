@@ -4,17 +4,19 @@
 **Load:** Locust shoppers (20 = normal, 100 = stress). **Faults:** Chaos Mesh, every one run under our kill switch.
 **Normal (20 shoppers):** 4.4–4.6 req/s, 0.05–0.07% errors, p95 35–78 ms, checkout success ~98.7% ([baselines](docs/evidence/BASELINE_STUDY.md)).
 
-**Resilience score** (0–100, [formula](chaosmind/agents/score.py)): 100 minus penalties for extra errors (≤ 40), extra p95 latency (≤ 25), recovery time (≤ 15) and any data-integrity violation (40).
+**Resilience score** (0–100, [formula](chaosmind/agents/score.py)): 100 minus penalties for extra errors (≤ 40), extra p95 latency (≤ 25), recovery time (≤ 15), **blast radius** (≤ 10: the share of services that break with the target, counted only when customers were hurt) and any data-integrity violation (40). Every score below is **recomputed from the raw evidence** by `python3 -m chaosmind.agents.scoreboard`: see the [scoreboard](docs/evidence/SCOREBOARD.md).
 
 ## Ranked weaknesses
 
+Ranked by **severity** first (silent data loss above outages, outages above slowdowns, contained failures last), then by **resilience score** (lower = worse). A full score-only ranking of every experiment is in the [scoreboard](docs/evidence/SCOREBOARD.md).
+
 | Rank | Weakness | Severity | Evidence | Score | Fix | Status |
 |---|---|---|---|---|---|---|
-| 1 | **Silent cart data loss** on Redis restart | 🔴 Critical | Cart **1 → 0 items** with **0 HTTP errors** | **58** (integrity violation) | PVC for `/data` + Redis append-only log + `Recreate` strategy | ✅ **Fixed and re-tested:** cart **1 → 1** |
-| 2 | **Cart service is a single point of failure** | 🟠 High | Cart down → errors peak 100%, p95 2,700 ms, customers recovered after ~62 s | **21** | 2 replicas + PodDisruptionBudget (in the [fix catalog](remediation/catalog.json)) | Fix ready |
-| 3 | **"Healthy" ≠ recovered** after a catalog pod kill | 🟠 High | At 100 shoppers: replacement pod up in **~3 s**, but **66 HTTP 500s**, checkout 16/179 failed, customers recovered after **~34 s**. Repeated at 20 shoppers: customers hurt in **5 of 5** kills (95% CI 57–100%) | — | 2 catalog replicas; frontend retries with backoff | ✅ **Fix measured:** 2 replicas → hurt in **0 of 5** (95% CI 0–43%) |
-| 4 | **Catalog latency spreads to the whole site** | 🟡 Medium | +500 ms on the catalog → site p95 **3,500 ms** at 20 shoppers, **4,300 / 4,400 ms** at 100 (two identical runs) | **71** | Client-side timeouts + caching catalog reads in the frontend | Recommended |
-| 5 | **Background checkout failures** | 🟡 Medium | 3 HTTP 500s in 237 checkouts with **no fault injected** (~1.3%); 4 of 56 under host memory pressure with `paymentservice` restarts; **0 of 55** with memory headroom | — | Resource headroom for `paymentservice` (memory limits/requests); card data ruled out | Likely cause found |
+| 1 | **Silent cart data loss** on Redis restart | 🔴 Critical | Cart **1 → 0 items** with **0 HTTP errors** | **55** → **99** after the fix (the AI's own run: 29) | PVC for `/data` + Redis append-only log + `Recreate` strategy | ✅ **Fixed and re-tested:** cart **1 → 1**, score **+44** |
+| 2 | **Cart service is a single point of failure** | 🟠 High | Cart down → errors peak 100%, p95 2,700 ms, customers recovered after ~62 s | **18** | 2 replicas + PodDisruptionBudget (in the [fix catalog](remediation/catalog.json)) | Fix ready |
+| 3 | **"Healthy" ≠ recovered** after a catalog pod kill | 🟠 High | At 100 shoppers: replacement pod up in **~3 s**, but **66 HTTP 500s**, checkout 16/179 failed, customers recovered after **~34 s**. Repeated at 20 shoppers: customers hurt in **5 of 5** kills (95% CI 57–100%) | **29** → **99** with 2 replicas (medians of 5) | 2 catalog replicas; frontend retries with backoff | ✅ **Fix measured:** 2 replicas → hurt in **0 of 5** (95% CI 0–43%), score **+70** |
+| 4 | **Catalog latency spreads to the whole site** | 🟡 Medium | +500 ms on the catalog → site p95 **3,500 ms** at 20 shoppers, **4,300 / 4,400 ms** at 100 (two identical runs) | **68** | Client-side timeouts + caching catalog reads in the frontend | Recommended |
+| 5 | **Background checkout failures** | 🟡 Medium | 3 HTTP 500s in 237 checkouts with **no fault injected** (~1.3%); 4 of 56 under host memory pressure with `paymentservice` restarts; **0 of 55** with memory headroom | n/a (no fault injected) | Resource headroom for `paymentservice` (memory limits/requests); card data ruled out | Likely cause found |
 | 6 | Ads service outage | 🟢 Low | Ad service down → **0% errors**; the frontend degrades gracefully | **90** | None needed | ✅ Resilient |
 
 ## Details

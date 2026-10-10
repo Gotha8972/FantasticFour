@@ -72,7 +72,7 @@ def execute(item, choice, baseline, guard_run=guard.run):
     events = guard_run(exp)
     observed = safety.observed(events) or {}
     violations = integrity.verify(state)
-    after = score.score(observed, baseline, observed.get('recovery_s'), violations)
+    after = score.score(observed, baseline, observed.get('recovery_s'), violations, item.get('blast_share', 0.0))
     before = (item.get('score') or {}).get('score')
     verdict = ('improved' if before is not None and after['score'] > before else
                'no_change' if before is not None and after['score'] == before else 'worse')

@@ -108,13 +108,14 @@ def judge(state):
     verdict, met = strategist.evaluate(item['criteria'], obs)
     if verdict == 'needs_integrity_check' and violations:
         verdict = 'confirmed'
-    s = score.score(obs, state['baseline'], (obs or {}).get('recovery_s'), violations) if obs else None
+    share = facts_mod.blast_share(state['facts'], item['experiment']['target'])
+    s = score.score(obs, state['baseline'], (obs or {}).get('recovery_s'), violations, share) if obs else None
     print(f"Safety Checker: {result['decision']} ({result['reason']}); ramp={result.get('ramp')}; "
           f"tolerated up to={result.get('tolerated_up_to')}, guard limit crossed at={result.get('limit_crossed_at')}; "
           f"integrity violations={len(violations)} → {verdict}" + (f", score {s['score']}" if s else ''))
     entry = {'vulnerability': item.get('vulnerability'), 'experiment': item['experiment'], 'criteria': item['criteria'],
              'prediction': item.get('prediction'), 'safety': result, 'observed': obs, 'integrity': violations,
-             'verdict': verdict, 'criteria_met': met, 'score': s}
+             'verdict': verdict, 'criteria_met': met, 'score': s, 'blast_share': share}
     audit = {**state['audit'], 'vulnerabilities': [
         {**v, 'status': verdict} if v['id'] == item.get('vulnerability') and verdict in ('confirmed', 'refuted') else v
         for v in state['audit']['vulnerabilities']]}

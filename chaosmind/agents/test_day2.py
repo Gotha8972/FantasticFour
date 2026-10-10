@@ -105,6 +105,16 @@ class Day2Tests(unittest.TestCase):
                 'run_dir': 'runs/catalog-podkill-t1-20261010T183122.447363Z'}
         self.assertEqual(trials.reobserve(held)['observed']['customer_recovered_s'], 0.0)
 
+    def test_scoreboard_from_real_evidence_ranks_and_proves_fixes(self):
+        from chaosmind.agents import scoreboard
+        table = scoreboard.rows()
+        by = {(r['experiment'], r['condition']): r['score'] for r in table}
+        self.assertTrue(all(0 <= r['score'] <= 100 for r in table))
+        self.assertLess(by[('Redis restarted', 'before fix')], by[('Redis restarted', 'after fix: PVC + append-only log')])
+        self.assertLess(by[('catalog pod kill, 5 trials', '1 replica')], by[('catalog pod kill, 5 trials', '2 replicas')])
+        self.assertLess(by[('cartservice unavailable', '1 replica')], by[('adservice unavailable', 'no fix needed')])
+        self.assertIn('| Redis restarted | 55 (before fix) | 99', scoreboard.render(table))
+
     def test_trials_wilson_and_invalid_runs(self):
         from chaosmind.agents import trials
         self.assertEqual(trials.wilson(0, 5), (0.0, 0.434))  # 0 of 5 still allows up to ~43%

@@ -38,19 +38,21 @@ If the wording isn't matched by `ORDER_PLACED` in `integrity.py`, fix the regex,
 
 ## 3. Own the score (≈20 min): `chaosmind/agents/score.py`
 ```
-score = 100 − E − L − R − I
+score = 100 − E − L − R − B − I
 E = min(40, 400 × extra error rate)   L = min(25, 25 × extra p95 / 2000 ms)
 R = min(15, recovery_s / 4)           I = 40 if any integrity violation
+B = 10 × share of services in the target's blast radius, only when customers were hurt
 ```
-On our real results it gives:
+On our real results it gives (regenerate with `python3 -m chaosmind.agents.scoreboard`):
 
 | Scenario | Score |
 |---|---|
 | Nothing broken | 100 |
 | Ad service down | 90 |
-| Catalog delay | 71 |
-| Redis silent wipe | 58 |
-| Cart down | 21 |
+| Catalog delay | 68 |
+| Redis silent wipe | 55 (99 after the fix) |
+| Catalog pod kill, 1 replica | 29 (99 with 2 replicas) |
+| Cart down | 18 |
 
 Decide with the team whether those rankings feel right. If you change weights, update the docstring and the sanity test in `test_day2.py`. **Be ready to explain the formula in one sentence on camera.**
 

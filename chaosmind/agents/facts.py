@@ -31,6 +31,12 @@ def risk_score(s):
             + (not s['liveness_probe']) + (not s['cpu_memory_limits']) + (not s['pdb']) + (not s['hpa']))
 
 
+def blast_share(facts, target):
+    """Fraction of the system inside the target's blast radius (0 if unknown)."""
+    s = facts['services'].get(target) if facts else None
+    return round(len(s['blast_radius']) / len(facts['services']), 3) if s and s.get('blast_radius') else 0.0
+
+
 def collect(workloads=None, pdbs=None, hpas=None):
     """Live cluster when workloads is None; otherwise a saved `kubectl get deployments -o json`."""
     live = workloads is None
@@ -64,6 +70,9 @@ def collect(workloads=None, pdbs=None, hpas=None):
     for name, s in services.items():
         s.update(calls=calls[name], callers=callers[name], dependents=sorted(reach(name, callers)),
                  on_checkout_path=name in checkout_path, entrypoint=not callers[name] and bool(calls[name]))
+        # Blast radius: what breaks with it. Itself plus every service that (transitively) calls it; for the single
+        # entrypoint, everything, because customers reach every service through it.
+        s['blast_radius'] = sorted(services) if s['entrypoint'] else sorted({name, *s['dependents']})
         s['risk_score'] = risk_score(s)
     return {'source': 'live cluster' if live else 'saved workloads file',
             'pdb_hpa_known': live or bool(pdbs or hpas),
