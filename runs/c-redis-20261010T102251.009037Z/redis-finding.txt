@@ -1,0 +1,5 @@
+Before: 1 item(s). After: 1. Cart wiped: False.
+The isolated cart survived pod replacement; the empty-cart hypothesis was not reproduced.
+Review saved storage configuration and repeat after any persistence changes.
+Evidence: /home/aashrith/Desktop/boschthon/runs/c-redis-20261010T102251.009037Z
+Observed failed HTTP samples: 0; this is sampled downtime, not an exact outage duration.
