@@ -1,0 +1,8 @@
+{
+  "id": "grafana-catalog-delay",
+  "fault": "network_delay",
+  "target": "productcatalogservice",
+  "params": {"latency": "500ms", "jitter": "50ms"},
+  "duration_s": 120,
+  "hypothesis": "Catalog requests slow down under increased shopper load; the guard removes the delay if approved limits are exceeded."
+}

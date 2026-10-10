@@ -98,7 +98,7 @@ Every experiment passes through layered safeguards. All of them have been **test
 | **Validation** | Only known fault types; target must be a real deployment in namespace `online-boutique`; duration ≤ 120 s; latency ≤ 2000 ms |
 | **Preflight** | Refuses to inject if the app is already unhealthy or another experiment is still active |
 | **Confirmed injection** | Distinguishes "resource created" from "Chaos Mesh actually injected" |
-| **Guard (kill switch)** | Polls every 2 s; reverts automatically when **error rate > 20%**, **p95 > 2000 ms** or **unhealthy services > 2** |
+| **Guard (kill switch)** | Polls every 2 s; reverts automatically when **error rate > 5%**, **p95 > 1000 ms** or **unhealthy services > 2** |
 | **Recovery check** | After revert, waits until health and metrics are back within limits and records the recovery time |
 | **Fail-safe duration** | Every fault carries Chaos Mesh's own `duration`, so it ends even if our guard process crashes (`kill -9` tested) |
 | **Ctrl-C / errors** | Any interruption or error triggers revert in a `finally` block |
@@ -163,6 +163,14 @@ python3 -m chaosmind.verify --dry-run
 ---
 
 ## Running experiments
+
+For the platform checklist and first AI **dry run**, use
+`bash scripts/checklist.sh` from the host terminal with Grafana open. This
+publishes setup files, collects a fresh five-minute baseline with monitoring
+installed, runs agent tests, and publishes the dry-run plan for team review.
+It selects `mistral-small-latest` and never invokes live AI experiments.
+See [A_CHECKLIST_PROGRESS.md](A_CHECKLIST_PROGRESS.md) for completed changes
+and host execution requirements.
 
 ### An experiment is a JSON file
 ```json
@@ -323,6 +331,6 @@ customer_simulator.py  Optional scripted shopper with Prometheus metrics
 
 **Third-party software:** Online Boutique v0.10.4 (Apache-2.0), kind, Podman, Kubernetes, Chaos Mesh 2.8.4, Helm 3.19, Locust (bundled load generator), kube-prometheus-stack 92.3.0 (Prometheus, Grafana, kube-state-metrics), Python `requests` and `prometheus_client` (simulator only). The agents use only the Python standard library.
 
-**AI models:** Mistral `mistral-large-latest` (Cartographer, Strategist, Safety Checker), via the Mistral chat API in JSON mode.
+**AI models:** Mistral `mistral-small-latest` (Cartographer, Strategist, Safety Checker), as selected for the first dry run, via the Mistral chat API in JSON mode. `MISTRAL_LARGE` and `MISTRAL_SMALL` can override the client aliases.
 
 **Data:** synthetic only. Simulated shoppers and the app's built-in demo products; no real user data.

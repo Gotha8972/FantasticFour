@@ -1,0 +1,68 @@
+# One rollout instruments CSV output and adds the metrics sidecar together.
+spec:
+  template:
+    metadata:
+      annotations:
+        boutique.local/exporter-sha: __EXPORTER_SHA__
+    spec:
+      volumes:
+        - name: load-stats
+          emptyDir: {}
+        - name: boutique-exporter-code
+          configMap:
+            name: boutique-metrics-exporter
+      containers:
+        - name: main
+          command: [locust]
+          args:
+            - --host=http://frontend:80
+            - --headless
+            - --users=$(USERS)
+            - --spawn-rate=$(RATE)
+            - --print-stats
+            - --csv=/stats/load
+            - --csv-full-history
+          env:
+            - name: PYTHONUNBUFFERED
+              value: "1"
+          volumeMounts:
+            - name: load-stats
+              mountPath: /stats
+        - name: metrics-exporter
+          image: python:3.13-alpine
+          command: [python, -B, -u, /opt/exporter/exporter.py]
+          env:
+            - name: EXPORTER_MODE
+              value: locust
+          ports:
+            - name: metrics
+              containerPort: 9464
+          volumeMounts:
+            - name: load-stats
+              mountPath: /stats
+              readOnly: true
+            - name: boutique-exporter-code
+              mountPath: /opt/exporter
+              readOnly: true
+          resources:
+            requests:
+              cpu: 10m
+              memory: 24Mi
+            limits:
+              cpu: 200m
+              memory: 96Mi
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          readinessProbe:
+            httpGet:
+              path: /-/healthy
+              port: metrics
+          livenessProbe:
+            httpGet:
+              path: /-/healthy
+              port: metrics

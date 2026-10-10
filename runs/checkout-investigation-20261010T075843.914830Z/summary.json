@@ -1,0 +1,46 @@
+{
+  "study": "runs/baseline-study-20261010T072314.832283Z",
+  "lookback": "3h",
+  "failure_observation_windows": [
+    {
+      "start_utc": "2026-10-10T07:26:58.867110+00:00",
+      "end_utc": "2026-10-10T07:27:03.940488+00:00",
+      "checkout_failure_increase": 1
+    },
+    {
+      "start_utc": "2026-10-10T07:29:54.062225+00:00",
+      "end_utc": "2026-10-10T07:29:59.051397+00:00",
+      "checkout_failure_increase": 1
+    }
+  ],
+  "services": [
+    {
+      "service": "checkoutservice",
+      "collection_error": "Unable to connect to the server: dial tcp 127.0.0.1:42957: socket: operation not permitted\n",
+      "log_rows": 0,
+      "error_candidates": 0,
+      "candidates_in_failure_windows": 0,
+      "earliest_log_utc": null,
+      "latest_log_utc": null
+    },
+    {
+      "service": "paymentservice",
+      "collection_error": "Unable to connect to the server: dial tcp 127.0.0.1:42957: socket: operation not permitted\n",
+      "log_rows": 0,
+      "error_candidates": 0,
+      "candidates_in_failure_windows": 0,
+      "earliest_log_utc": null,
+      "latest_log_utc": null
+    },
+    {
+      "service": "frontend",
+      "collection_error": "Unable to connect to the server: dial tcp 127.0.0.1:42957: socket: operation not permitted\n",
+      "log_rows": 0,
+      "error_candidates": 0,
+      "candidates_in_failure_windows": 0,
+      "earliest_log_utc": null,
+      "latest_log_utc": null
+    }
+  ],
+  "cause_established": false
+}

@@ -10,8 +10,8 @@ approximately every **5 seconds**. This exceeds the original five-minute plan.
 The host-terminal run **completed** the requested observation window and
 exported its supporting evidence without collection errors.
 
-**Automatic baseline suitability is false:** two requests failed during the
-study, and the collector's current acceptance rule requires zero failures.
+**Automatic baseline suitability was false for this archived run:** two requests failed during the
+study, and the collector's acceptance rule at that time required zero failures.
 This is a completed measurement with a finding. It is not a collection failure.
 No suitable root-level `baseline.json` was published by this run.
 
@@ -86,8 +86,9 @@ At 20 simulated shoppers, the application sustained about 4.37 completed
 requests per second with low sampled latency and healthy deployments.
 It still produced two checkout failures without intentional faults. A future
 chaos comparison should account for this observed background failure rate.
-The current collector correctly retained the evidence and rejected this run
-under its strict zero-failure rule. That rule has not been relaxed.
+The collector retained the evidence and rejected this run under its then-current
+zero-failure rule. The updated policy below allows a small background error rate.
+The archived study's result has not been rewritten or reclassified.
 
 This study provides a measured traffic reference for this local environment.
 It does not establish maximum capacity, a production reliability guarantee,
@@ -192,6 +193,17 @@ and deleted pods' older logs may be unavailable.
 
 ## Suitability and failure handling
 
+Following `A_NEXT_STEPS.md`, the updated policy accepts a measured background
+error rate **strictly below 1%**. An error rate of 1% or more is a finding that
+rejects the baseline. Smaller nonzero failure counts appear under `notes`, so
+the failed requests remain visible without automatically rejecting the study.
+This is based on the full study's counter differences, rather than the peak
+error rate of an overlapping recent window.
+
+The team approved guard limits of **5% recent error rate** and **1,000 ms recent
+p95**. `max_unhealthy=2` remains unchanged. Baseline collection still requires
+zero unhealthy services and applies the guard checks to every sampled window.
+
 The collector stops and saves partial evidence if collection fails, traffic is
 stale/absent, user count changes, the loadgenerator is replaced, counters reset,
 or an unrecovered chaos resource is detected. An unhealthy initial sample also
@@ -199,7 +211,7 @@ rejects the baseline.
 
 A completed study is marked unsuitable if recorded observations include
 unhealthy services, guard-limit breaches, restart increases, pod replacements,
-large sampling gaps, failed requests, no completed checkouts, or insufficient
+large sampling gaps, a window error rate of at least 1%, no completed checkouts, or insufficient
 measured duration. These findings are preserved for investigation.
 
 Supporting export failures are listed under `collection_errors`. They return

@@ -16,8 +16,15 @@ def load_baseline(path):
     for p in candidates:
         if p.exists():
             b = json.loads(p.read_text())
-            return {'source': str(p), 'metrics': b.get('metrics'), 'window': b.get('window')}
-    raise SystemExit('No baseline found: run bash scripts/baseline.sh first')
+            # Failed/preflight-only runs must never stand in for measurements.
+            if b.get('status') != 'completed' or not b.get('metrics') or not b.get('window'):
+                if p == Path(path) and Path(path).exists():
+                    raise SystemExit(f'Baseline {p} has no completed measurement window')
+                continue
+            return {'source': str(p), 'metrics': b['metrics'], 'window': b['window'],
+                    'baseline_suitable': b.get('baseline_suitable'),
+                    'findings': b.get('findings', []), 'notes': b.get('notes', [])}
+    raise SystemExit('No completed baseline found: run bash scripts/baseline.sh first')
 
 
 def main():

@@ -6,7 +6,7 @@ import urllib.error
 import urllib.request
 
 API = 'https://api.mistral.ai/v1/chat/completions'
-MODELS = {'large': os.environ.get('MISTRAL_LARGE', 'mistral-large-latest'),
+MODELS = {'large': os.environ.get('MISTRAL_LARGE', 'mistral-small-latest'),
           'small': os.environ.get('MISTRAL_SMALL', 'mistral-small-latest')}
 
 
@@ -15,8 +15,14 @@ def api_key():
         return os.environ['MISTRAL_API_KEY']
     env = Path(__file__).resolve().parents[2] / '.env'
     for line in env.read_text().splitlines() if env.exists() else []:
-        if line.startswith('MISTRAL_API_KEY='):
-            return line.split('=', 1)[1].strip().strip('"\'')
+        line = line.strip()
+        if line.startswith('export '):
+            line = line[7:].strip()
+        name, separator, value = line.partition('=')
+        if separator and name.strip() == 'MISTRAL_API_KEY':
+            key = value.strip().strip('"\'')
+            if key:
+                return key
     raise RuntimeError('Set MISTRAL_API_KEY (environment or .env)')
 
 

@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "status": "failed",
+  "baseline_suitable": false,
+  "run_started_utc": "2026-10-10T07:58:43.946268+00:00",
+  "requested_duration_s": 900.0,
+  "warmup_s": 60,
+  "interval_s": 5,
+  "expected_users": 20,
+  "context": "kind-online-boutique",
+  "namespace": "online-boutique",
+  "artifact_dir": "/home/aashrith/Desktop/boschthon/runs/baseline-study-20261010T075843.945968Z",
+  "findings": [],
+  "notes": [],
+  "collection_errors": [],
+  "acceptance_policy": {
+    "window_error_rate_exclusive_max": 0.01,
+    "guard_limits": {
+      "error_rate": 0.05,
+      "p95_ms": 1000,
+      "max_unhealthy": 2,
+      "max_duration_s": 120,
+      "poll_s": 2,
+      "recovery_timeout_s": 120,
+      "injection_timeout_s": 60
+    }
+  },
+  "metric_units": {
+    "rps": "requests/second",
+    "p50_ms": "milliseconds",
+    "p95_ms": "milliseconds",
+    "error_rate": "fraction 0..1",
+    "checkout_success": "fraction 0..1",
+    "metrics_age_s": "seconds"
+  },
+  "error": "Unable to connect to the server: dial tcp 127.0.0.1:42957: socket: operation not permitted\nUnable to connect to the server: dial tcp 127.0.0.1:42957: socket: operation not permitted\nUnable to connect to the server: dial tcp 127.0.0.1:42957: socket: operation not permitted\nUnable to connect to the server: dial tcp 127.0.0.1:42957: socket: operation not permitted\n",
+  "sample_count": 0,
+  "collection_finished_utc": "2026-10-10T07:58:44.090559+00:00",
+  "metrics": {
+    "users": null,
+    "rps": null,
+    "error_rate": null,
+    "p50_ms": null,
+    "p95_ms": null,
+    "checkout_success": null,
+    "unhealthy_count": null,
+    "total_restarts": null,
+    "metrics_age_s": null
+  }
+}

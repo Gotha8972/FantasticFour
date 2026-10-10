@@ -1,0 +1,25 @@
+# Strategic merge patch for the existing load generator Deployment.
+spec:
+  template:
+    spec:
+      volumes:
+        - name: load-stats
+          emptyDir: {}
+      containers:
+        - name: main
+          command:
+            - locust
+          args:
+            - --host=http://frontend:80
+            - --headless
+            - --users=$(USERS)
+            - --spawn-rate=$(RATE)
+            - --print-stats
+            - --csv=/stats/load
+            - --csv-full-history
+          env:
+            - name: PYTHONUNBUFFERED
+              value: "1"
+          volumeMounts:
+            - name: load-stats
+              mountPath: /stats

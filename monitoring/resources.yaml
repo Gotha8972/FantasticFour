@@ -1,0 +1,152 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: boutique-locust-metrics
+  namespace: online-boutique
+  labels:
+    app: boutique-locust-metrics
+spec:
+  selector:
+    app: loadgenerator
+  ports:
+    - name: metrics
+      port: 9464
+      targetPort: metrics
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: boutique-locust
+  namespace: monitoring
+  labels:
+    release: boutique-monitoring
+spec:
+  namespaceSelector:
+    matchNames: [online-boutique]
+  selector:
+    matchLabels:
+      app: boutique-locust-metrics
+  endpoints:
+    - port: metrics
+      interval: 5s
+      scrapeTimeout: 4s
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: boutique-chaos-observer
+  namespace: monitoring
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: boutique-chaos-observer
+  namespace: online-boutique
+rules:
+  - apiGroups: [chaos-mesh.org]
+    resources: [podchaos, networkchaos, stresschaos]
+    verbs: [get, list]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: boutique-chaos-observer
+  namespace: online-boutique
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: boutique-chaos-observer
+subjects:
+  - kind: ServiceAccount
+    name: boutique-chaos-observer
+    namespace: monitoring
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: boutique-chaos-observer
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: boutique-chaos-observer
+  template:
+    metadata:
+      annotations:
+        boutique.local/exporter-sha: __EXPORTER_SHA__
+      labels:
+        app: boutique-chaos-observer
+    spec:
+      serviceAccountName: boutique-chaos-observer
+      containers:
+        - name: observer
+          image: python:3.13-alpine
+          command: [python, -B, -u, /opt/exporter/exporter.py]
+          env:
+            - name: EXPORTER_MODE
+              value: chaos
+          ports:
+            - name: metrics
+              containerPort: 9464
+          volumeMounts:
+            - name: code
+              mountPath: /opt/exporter
+              readOnly: true
+          resources:
+            requests:
+              cpu: 10m
+              memory: 24Mi
+            limits:
+              cpu: 200m
+              memory: 96Mi
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          readinessProbe:
+            httpGet:
+              path: /-/healthy
+              port: metrics
+          livenessProbe:
+            httpGet:
+              path: /-/healthy
+              port: metrics
+      volumes:
+        - name: code
+          configMap:
+            name: boutique-metrics-exporter
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: boutique-chaos-observer
+  namespace: monitoring
+  labels:
+    app: boutique-chaos-observer
+spec:
+  selector:
+    app: boutique-chaos-observer
+  ports:
+    - name: metrics
+      port: 9464
+      targetPort: metrics
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: boutique-chaos-observer
+  namespace: monitoring
+  labels:
+    release: boutique-monitoring
+spec:
+  selector:
+    matchLabels:
+      app: boutique-chaos-observer
+  endpoints:
+    - port: metrics
+      interval: 10s
+      scrapeTimeout: 8s

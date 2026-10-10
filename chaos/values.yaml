@@ -1,0 +1,23 @@
+# kind uses containerd inside its node, independently of the host's Podman.
+chaosDaemon:
+  runtime: containerd
+  socketPath: /run/containerd/containerd.sock
+  tolerations:
+    - operator: Exists
+
+controllerManager:
+  replicaCount: 1
+  leaderElection:
+    enabled: false
+  enableFilterNamespace: true
+
+dashboard:
+  create: true
+  # Local development dashboard, accessed through a localhost port-forward.
+  securityMode: false
+  service:
+    type: ClusterIP
+
+# These initial experiments do not need the additional DNS server.
+dnsServer:
+  create: false

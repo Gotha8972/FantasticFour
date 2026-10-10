@@ -10,7 +10,7 @@ from chaosmind import inject
 from chaosmind.monitor import snapshot
 from chaosmind.runlog import RunLog
 
-LIMITS = {'error_rate': 0.20, 'p95_ms': 2000, 'max_unhealthy': 2,
+LIMITS = {'error_rate': 0.05, 'p95_ms': 1000, 'max_unhealthy': 2,
           'max_duration_s': 120, 'poll_s': 2, 'recovery_timeout_s': 120,
           'injection_timeout_s': 60}
 

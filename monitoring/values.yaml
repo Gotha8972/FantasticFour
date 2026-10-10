@@ -1,0 +1,105 @@
+# Local kind stack: kubelet/cAdvisor and workload metrics, no host mounts.
+fullnameOverride: boutique-monitoring
+alertmanager:
+  enabled: false
+nodeExporter:
+  enabled: false
+kubeEtcd:
+  enabled: false
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeProxy:
+  enabled: false
+defaultRules:
+  create: false
+grafana:
+  fullnameOverride: boutique-grafana
+  adminUser: admin
+  service:
+    type: ClusterIP
+  persistence:
+    enabled: true
+    size: 1Gi
+  defaultDashboardsEnabled: false
+  # Leave headroom for memory outside the Go heap under dashboard queries.
+  env:
+    GOMEMLIMIT: 768MiB
+  resources:
+    requests:
+      cpu: 50m
+      memory: 512Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+  sidecar:
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        cpu: 200m
+        memory: 128Mi
+    dashboards:
+      enabled: true
+      searchNamespace: monitoring
+      # Regular sidecars share the pod network; each needs its own listener.
+      env:
+        HEALTH_PORT: "8084"
+      startupProbe:
+        httpGet:
+          path: /healthz
+          port: 8084
+    datasources:
+      enabled: true
+      uid: prometheus
+      env:
+        HEALTH_PORT: "8082"
+      startupProbe:
+        httpGet:
+          path: /healthz
+          port: 8082
+prometheus:
+  service:
+    type: ClusterIP
+  prometheusSpec:
+    retention: 24h
+    retentionSize: 2GB
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          accessModes: [ReadWriteOnce]
+          resources:
+            requests:
+              storage: 4Gi
+    scrapeInterval: 15s
+    evaluationInterval: 15s
+    # Select the chart's monitors and the two custom exporter monitors.
+    serviceMonitorSelector:
+      matchLabels:
+        release: boutique-monitoring
+    serviceMonitorNamespaceSelector: {}
+    resources:
+      requests:
+        cpu: 200m
+        memory: 512Mi
+      limits:
+        cpu: "1"
+        memory: 1536Mi
+prometheusOperator:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 96Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+kube-state-metrics:
+  resources:
+    requests:
+      cpu: 20m
+      memory: 64Mi
+    limits:
+      cpu: 300m
+      memory: 192Mi

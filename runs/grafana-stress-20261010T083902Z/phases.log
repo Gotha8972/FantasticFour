@@ -1,0 +1,5 @@
+2026-10-10T08:39:02Z BASELINE: 20 shoppers for 60 seconds after rollout.
+2026-10-10T08:40:16Z INCREASED LOAD: 100 shoppers, spawn rate 10/second, observe for 90 seconds.
+2026-10-10T08:42:01Z FAULT: catalog delay 500ms, at most 120 seconds, with the existing guard.
+2026-10-10T08:42:25Z RECOVERY: observe for 60 seconds at 100 shoppers before returning to 20.
+2026-10-10T08:43:25Z FINISHED: returning to 20 shoppers.

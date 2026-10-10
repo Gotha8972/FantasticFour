@@ -1,0 +1,6 @@
+timestamp_utc,phase,elapsed_s,ts,locust_history_ts,users,rps,requests,failures,error_rate,p50_ms,p95_ms,checkout_success,checkout_requests,checkout_failures,unhealthy_services,restarts,loadgenerator_pod_uids,pod_uids,unhealthy_count,total_restarts,metrics_age_s,source,error
+2026-10-10T07:22:19.296867+00:00,collection_error,,,,,,,,,,,,,,,,,,,,,,"Unable to connect to the server: dial tcp 127.0.0.1:42957: socket: operation not permitted
+Unable to connect to the server: dial tcp 127.0.0.1:42957: socket: operation not permitted
+Unable to connect to the server: dial tcp 127.0.0.1:42957: socket: operation not permitted
+Unable to connect to the server: dial tcp 127.0.0.1:42957: socket: operation not permitted
+"

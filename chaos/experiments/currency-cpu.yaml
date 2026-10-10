@@ -1,0 +1,21 @@
+apiVersion: chaos-mesh.org/v1alpha1
+kind: StressChaos
+metadata:
+  name: currency-cpu
+  namespace: online-boutique
+  labels:
+    app.kubernetes.io/part-of: boutique-chaos
+spec:
+  mode: one
+  selector:
+    namespaces:
+      - online-boutique
+    labelSelectors:
+      app: currencyservice
+  containerNames:
+    - server
+  stressors:
+    cpu:
+      workers: 1
+      load: 80
+  duration: 60s

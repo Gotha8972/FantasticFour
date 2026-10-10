@@ -1,0 +1,18 @@
+Sampling Locust's counters. Interval RPS measures completed requests.
+TIME       USERS  TOTAL_REQ  TOTAL_FAIL  INTERVAL_RPS  FAIL/S  P95_MS
+08:49:59     100       2634           1             —       —     760
+08:50:04     100       2763           1         25.72    0.00     710
+08:50:09     100       2847           1         16.75    0.00     700
+08:50:14     100       2967           1         23.92    0.00     660
+08:50:19     100       3071           2         20.72    0.20     630
+08:50:24     100       3177           2         21.12    0.00     610
+08:50:29     100       3278           2         20.11    0.00     570
+08:50:34     100       3401           2         24.50    0.00     540
+08:50:39     100       3513           2         22.31    0.00     470
+08:50:44     100       3630           2         23.30    0.00     400
+08:50:49     100       3731           2         20.11    0.00     390
+08:50:54     100       3852           2         24.07    0.00     360
+08:50:59     100       3953           2         21.32    0.00     350
+Observed 1319 requests and 1 failures in 60.0s: 22.00 RPS.
+P95 is cumulative for this Locust run; CSV updates can lag by a few seconds.
+Saved report: /home/aashrith/Desktop/boschthon/.runtime/load-reports/sample-20261010-141958.txt

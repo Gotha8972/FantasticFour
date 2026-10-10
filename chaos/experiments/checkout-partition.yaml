@@ -1,0 +1,24 @@
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: checkout-partition
+  namespace: online-boutique
+  labels:
+    app.kubernetes.io/part-of: boutique-chaos
+spec:
+  action: partition
+  mode: one
+  selector:
+    namespaces:
+      - online-boutique
+    labelSelectors:
+      app: frontend
+  direction: both
+  target:
+    mode: all
+    selector:
+      namespaces:
+        - online-boutique
+      labelSelectors:
+        app: checkoutservice
+  duration: 45s

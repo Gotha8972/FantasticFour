@@ -97,6 +97,8 @@ def save_report(directory, result):
              'No chaos is injected. CPU, memory, and distributed traces are not collected by this runner.', '',
              '## Findings', '']
     text += [f'- {finding}' for finding in result.get('findings', [])] or ['- No recorded findings.']
+    text += ['', '## Background observations', '']
+    text += [f'- {note}' for note in result.get('notes', [])] or ['- No background observations recorded.']
     if result.get('error'):
         text += ['', '## Collection error', '', '```text', result['error'], '```']
     text += ['', '## Evidence', '', '- [Metrics CSV](metrics.csv)',
@@ -114,7 +116,9 @@ def run(args):
               'requested_duration_s': args.duration, 'warmup_s': args.warmup,
               'interval_s': args.interval, 'expected_users': args.users,
               'context': inject.CONTEXT, 'namespace': inject.NS, 'artifact_dir': str(directory),
-              'findings': [], 'collection_errors': []}
+              'findings': [], 'notes': [], 'collection_errors': [],
+              'acceptance_policy': {'window_error_rate_exclusive_max': 0.01,
+                                    'guard_limits': guard.LIMITS.copy()}}
     result['metric_units'] = {'rps': 'requests/second', 'p50_ms': 'milliseconds',
                              'p95_ms': 'milliseconds', 'error_rate': 'fraction 0..1',
                              'checkout_success': 'fraction 0..1', 'metrics_age_s': 'seconds'}
@@ -237,8 +241,13 @@ def run(args):
                     result['findings'].append('Long collection gaps reduce confidence in the study.')
                 if checkout_requests == 0:
                     result['findings'].append('No completed checkouts in the study window.')
-                if failures:
+                if requests <= 0:
+                    result['findings'].append('No completed requests in the study window.')
+                elif failures and failures / requests >= 0.01:
                     result['findings'].append(f'{failures} failed requests occurred without intentional faults.')
+                elif failures:
+                    result['notes'].append(f'{failures} failed requests ({failures / requests:.2%}) '
+                                           'without faults: background error rate.')
                 if result['status'] == 'completed' and span < args.duration:
                     result['findings'].append('Measured observation span was shorter than the requested duration.')
             result['baseline_suitable'] = result['status'] == 'completed' and bool(samples) and not result['findings']

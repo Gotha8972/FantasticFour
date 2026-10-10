@@ -1,0 +1,20 @@
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: shipping-delay
+  namespace: online-boutique
+  labels:
+    app.kubernetes.io/part-of: boutique-chaos
+spec:
+  action: delay
+  mode: one
+  selector:
+    namespaces:
+      - online-boutique
+    labelSelectors:
+      app: shippingservice
+  delay:
+    latency: 250ms
+    jitter: 50ms
+    correlation: "0"
+  duration: 60s
