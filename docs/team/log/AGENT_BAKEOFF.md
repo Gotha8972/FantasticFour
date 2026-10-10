@@ -1,6 +1,6 @@
 # Agent bake-off: our LangGraph agents vs Aashrith's LangGraph agents
 
-> **Historical.** The bake-off ran on OpenAI `gpt-5.6-luna`. The team now uses **our implementation only**, on NVIDIA-hosted `openai/gpt-oss-20b`; the alternative's best prompt rules were merged in, and its code was removed (recoverable at commit `709bd13`). See [MODEL_AND_IMPLEMENTATION.md](MODEL_AND_IMPLEMENTATION.md).
+> **Historical.** The bake-off ran on OpenAI `gpt-5.6-luna`. The team now uses **our implementation only**, on NVIDIA-hosted `openai/gpt-oss-20b`; the alternative's best prompt rules were merged in, and its code was removed (recoverable at commit `709bd13`). See [MODEL_AND_IMPLEMENTATION.md](../MODEL_AND_IMPLEMENTATION.md).
 
 We'll have **two implementations** of the AI agents. Instead of arguing, we run both the same way, score them with the same script, and **keep the better one**. Good ideas from the other one get ported over.
 
@@ -55,7 +55,7 @@ Easiest way: look at an existing run (`runs/agents-20261010T104327Z/`) and match
    python3 scripts/compare_dry_runs.py runs/agents-O1 runs/agents-O2 runs/agents-O3 -- runs/agents-A1 runs/agents-A2 runs/agents-A3
    ```
    Folders before `--` are ours, after it A's. Each metric is averaged over the runs.
-3. **Safety test.** Give both Safety Checkers the deliberately risky experiment ([experiments/risky-checkout.json](../../experiments/risky-checkout.json): 2,000 ms on checkout for 120 s):
+3. **Safety test.** Give both Safety Checkers the deliberately risky experiment ([experiments/risky-checkout.json](../../../experiments/risky-checkout.json): 2,000 ms on checkout for 120 s):
    ```bash
    .venv/bin/python -m chaosmind.agents.safety experiments/risky-checkout.json --review-only
    ```

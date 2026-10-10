@@ -61,7 +61,7 @@ The product catalog pod kill confirmed customer impact (score 53). Raw measureme
 
 - **The after-fix Redis re-run measured part of the fix's own rollout.** Its latency hit 5,500 ms 0.6 s after the kill, too early for the kill to cause it (in the before run the same kill took 8.4 s to show). Remediation had applied the fix (which restarts Redis) and re-run immediately. **Fixed:** `remediation.settle()` now waits until customers have been within the limits for 30 s before re-running. The score change (0 → 27) holds anyway: both runs hit the error and latency caps, so the difference is exactly the removed integrity penalty.
 - **Frontend fix added** to the reviewed catalog (`frontend-replicas`, 2 replicas), so the AI can now fix what it found.
-- **Scores corrected** in README/FINDINGS from the [scoreboard](../evidence/SCOREBOARD.md), now computed for the manual Redis test from its own load-generator snapshots: Redis cart test **30 → 67** (was shown as 55 → 99, which ignored the restart latency). The frontend is a new ranked finding (#2, score 16).
+- **Scores corrected** in README/FINDINGS from the [scoreboard](../../evidence/SCOREBOARD.md), now computed for the manual Redis test from its own load-generator snapshots: Redis cart test **30 → 67** (was shown as 55 → 99, which ignored the restart latency). The frontend is a new ranked finding (#2, score 16).
 - **Next (optional, strong for the video):** `git pull`, then resume this run and approve the **catalog** fix. The re-run now waits for the rollout to settle, so it gives a clean before/after (53 → expected ~99, matching the 5-trial result):
   ```bash
   .venv/bin/python -m chaosmind.graph --resume runs/agents-20261010T185909Z

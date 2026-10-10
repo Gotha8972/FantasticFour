@@ -1,6 +1,6 @@
 # A_CHECKLIST.md: implementation and execution status
 
-> **Historical planning note.** The project later switched its AI provider from Mistral to OpenAI `gpt-5.6-luna`, and now to **NVIDIA-hosted `openai/gpt-oss-20b`**. See the [README](../../README.md).
+> **Historical planning note.** The project later switched its AI provider from Mistral to OpenAI `gpt-5.6-luna`, and now to **NVIDIA-hosted `openai/gpt-oss-20b`**. See the [README](../../../README.md).
 
 ## Completed in the workspace
 

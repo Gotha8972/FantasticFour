@@ -54,7 +54,7 @@ graph TD;
 | Cartographer · Strategist · Safety Checker | ✅ Validated in 14 dry runs, then a **live run** on NVIDIA-hosted `openai/gpt-oss-20b`: Redis kill planned, approved by the Safety Checker, cart loss confirmed by code |
 | Integrity checks · resilience score · Remediation · Analyst | ✅ Built and tested; every published score is regenerated from raw evidence ([scoreboard](docs/evidence/SCOREBOARD.md)) |
 | Orchestration: LangGraph state machine with a **human approval gate** before any fix and **checkpoint/resume** for long runs | ✅ Built and tested (incl. resume in a fresh process) |
-| **Chosen by measurement:** two independent agent implementations, 12 real dry runs on frozen identical inputs, scored by one script | ✅ This one won ([bake-off](docs/team/BAKEOFF_RESULT.md)): 0 hallucinated facts, 100% valid experiments, 3 fault types per plan, integrity checks on every Redis test. *The bake-off chose the design and ran on `gpt-5.6-luna`, before the switch to `gpt-oss-20b`; the shipped model was validated separately in the two live runs.* |
+| **Chosen by measurement:** two independent agent implementations, 12 real dry runs on frozen identical inputs, scored by one script | ✅ This one won ([bake-off](docs/team/log/BAKEOFF_RESULT.md)): 0 hallucinated facts, 100% valid experiments, 3 fault types per plan, integrity checks on every Redis test. *The bake-off chose the design and ran on `gpt-5.6-luna`, before the switch to `gpt-oss-20b`; the shipped model was validated separately in the three live runs.* |
 | Injector + kill switch (`inject.py`, `guard.py`) | ✅ Proven live |
 | Grafana dashboard | ✅ Running |
 | Fault types: **proven live** | Pod failure · pod kill · network delay |
@@ -148,7 +148,7 @@ Raw guard events per trial: [1 replica](runs/trials-catalog-podkill-20261010T182
 8. 🟡 **Checkout fails ~1.3% of the time with nothing broken (likely cause found).** 3 HTTP 500s in 237 checkouts across both baselines, always on `POST /cart/checkout`. We've ruled out the load generator's card data (expiry and card numbers are always valid). **Lead:** in a baseline taken under host memory pressure, `paymentservice` failed its liveness probe and restarted while **4 of 56** checkouts failed; the final baseline, with memory headroom, had **0 of 55**. Resource pressure on payment is the likely cause, not application logic.
 9. 🟢 **Ads fail gracefully**, exactly as the map predicted.
 
-Full evidence: [`docs/evidence/`](docs/evidence/) and the `runs/` directory (CSV + JSONL for every run).
+Full evidence: [`docs/evidence/`](docs/evidence) and the `runs/` directory (CSV + JSONL for every run).
 
 ## Quick start
 Full guide: [docs/RUNNING.md](docs/RUNNING.md). **Requires Linux with rootless Podman and systemd** (tested on Fedora); Docker Desktop and macOS aren't supported by the setup scripts yet.
@@ -184,7 +184,7 @@ python3 -m chaosmind.test_guard && python3 -m unittest chaosmind.agents.test_age
 **The product is `chaosmind.graph`.** Everything else is labelled:
 - `python3 -m chaosmind.agents`: a dependency-free fallback that runs the *same* steps without LangGraph (no approval gate UI, no resume). The tests use it.
 - `chaosmind/portable/`, `profiles/`, `deploy/portable/`: a prototype of the workflow for other apps behind an HTTP API. **Not used for any result here.**
-- `docs/adk/`: a design we evaluated and didn't build. `docs/team/AGENT_BAKEOFF.md`: how this implementation was chosen (history).
+- `docs/adk/`: a design we evaluated and didn't build. `docs/team/log/`: the build log (run reports, checklists, how this implementation was chosen). Not needed to run the project.
 
 ```
 chaosmind/            graph.py (LangGraph workflow) · inject.py · guard.py (kill switch) · monitor.py · baseline.py
@@ -206,5 +206,5 @@ chaosmind/portable/   prototype: the same workflow for any app via profiles + an
 | Smrithi | Prompt tuning, architecture overview, reproducible setup |
 
 **Software:** Online Boutique v0.10.4 (Apache-2.0), kind, Podman, Kubernetes, Chaos Mesh 2.8.4, Helm 3.19, Locust, kube-prometheus-stack 92.3.0, LangGraph 1.2 (orchestration), Python standard library (agents), `requests` + `prometheus_client` (simulator).
-**AI model:** `openai/gpt-oss-20b`, open weights, hosted by NVIDIA (21B total parameters, mixture-of-experts with 3.6B active per token), via NVIDIA's OpenAI-compatible API with `NVIDIA_API_KEY`. Swap with `NIM_MODEL`; it was the smallest model that completed the whole agent workflow on our account ([model check](docs/team/MODEL_CHECK_FINDINGS.md)).
+**AI model:** `openai/gpt-oss-20b`, open weights, hosted by NVIDIA (21B total parameters, mixture-of-experts with 3.6B active per token), via NVIDIA's OpenAI-compatible API with `NVIDIA_API_KEY`. Swap with `NIM_MODEL`; it was the smallest model that completed the whole agent workflow on our account ([model check](docs/team/log/MODEL_CHECK_FINDINGS.md)).
 **Data:** synthetic only: simulated shoppers and the app's built-in demo products.

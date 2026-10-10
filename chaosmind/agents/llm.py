@@ -2,7 +2,7 @@
 
 Default model: openai/gpt-oss-20b, an open-weight model hosted by NVIDIA (21B total parameters, mixture-of-experts with
 3.6B active per token). It uses NVIDIA_API_KEY and NVIDIA's endpoint, never the OpenAI API. It was the smallest
-model that completed the whole agent workflow on our account (docs/team/MODEL_CHECK_FINDINGS.md).
+model that completed the whole agent workflow on our account (docs/team/log/MODEL_CHECK_FINDINGS.md).
 Default request adds reasoning_effort "low" for gpt-oss (measured: full dry run 45 s instead of minutes).
 Other models: NIM_MODEL. Extra request fields a model needs: NIM_EXTRA_BODY (JSON), e.g. for Nemotron
   NIM_MODEL=nvidia/nemotron-3.5-lightning-30b-a3b NIM_EXTRA_BODY='{"chat_template_kwargs": {"enable_thinking": false}}'
@@ -48,7 +48,7 @@ API = setting('NIM_BASE_URL', 'https://integrate.api.nvidia.com/v1').rstrip('/')
 MODEL = setting('NIM_MODEL', 'openai/gpt-oss-20b')
 MODELS = {'large': MODEL, 'small': MODEL}  # call sites ask for 'large'/'small'; one model serves both
 MAX_TOKENS = int(setting('NIM_MAX_TOKENS', '8192'))  # reasoning tokens count against this
-# gpt-oss at low reasoning effort: the whole dry run took 45 s instead of minutes (docs/team/LOW_REASONING_RUN.md).
+# gpt-oss at low reasoning effort: the whole dry run took 45 s instead of minutes (docs/team/log/LOW_REASONING_RUN.md).
 # NIM_EXTRA_BODY={} restores the model's default effort.
 EXTRA_BODY = json.loads(setting('NIM_EXTRA_BODY', '{"reasoning_effort": "low"}' if MODEL.startswith('openai/gpt-oss') else '{}'))
 

@@ -4,7 +4,7 @@
 python3 scripts/compare_dry_runs.py runs/agents-OURS-1 runs/agents-OURS-2 -- runs/agents-A-1 runs/agents-A-2
 
 Each folder must contain the shared output contract: facts.json, vulnerabilities.json, plan-1.json, history.json
-(see docs/team/AGENT_BAKEOFF.md). Folders before "--" are implementation 1, after it implementation 2.
+(see docs/team/log/AGENT_BAKEOFF.md). Folders before "--" are implementation 1, after it implementation 2.
 """
 import json
 from pathlib import Path

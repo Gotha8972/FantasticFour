@@ -131,4 +131,4 @@ Model availability and conclusions are specific to these checks on 10 October 20
 ## Status after review (same day)
 
 - `openai/gpt-oss-20b` is now the **default** in `chaosmind/agents/llm.py`; no `NIM_MODEL` override is needed. Nemotron's thinking option can be passed with `NIM_EXTRA_BODY` without code changes.
-- All three reasoning and safety findings are now **enforced in code with tests**: data-loss claims against persisted services are rejected, an unsuitable baseline rejects every experiment and blocks live runs, and the 500 ms / 60 s revenue-path bounds no longer depend on the prompt. Details and the next run steps: [MODEL_AND_IMPLEMENTATION.md](MODEL_AND_IMPLEMENTATION.md).
+- All three reasoning and safety findings are now **enforced in code with tests**: data-loss claims against persisted services are rejected, an unsuitable baseline rejects every experiment and blocks live runs, and the 500 ms / 60 s revenue-path bounds no longer depend on the prompt. Details and the next run steps: [MODEL_AND_IMPLEMENTATION.md](../MODEL_AND_IMPLEMENTATION.md).

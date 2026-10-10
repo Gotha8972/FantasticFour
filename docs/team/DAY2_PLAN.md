@@ -17,17 +17,17 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 .venv/bin/python -m unittest chaosmind.test_graph
 ```
 
-## ▶ Current: [MODEL_AND_IMPLEMENTATION.md](MODEL_AND_IMPLEMENTATION.md): our implementation only, NVIDIA-hosted gpt-oss-20b, final run steps
+## ▶ Current: [FINAL_RUNBOOK.md](FINAL_RUNBOOK.md): record the AI loop for the video, clean install from scratch, push
 
 ## Two agent implementations → bake-off (done)
-Aashrith is building his own LangGraph/LangChain agents. Both get dry-run 3× and scored with the same script; the better one becomes the official system. See **[AGENT_BAKEOFF.md](AGENT_BAKEOFF.md)**.
+Aashrith is building his own LangGraph/LangChain agents. Both get dry-run 3× and scored with the same script; the better one becomes the official system. See **[AGENT_BAKEOFF.md](log/AGENT_BAKEOFF.md)**.
 
 ## Day-2 milestones (from the brief) → status
 | Milestone | Status | Remaining action |
 |---|---|---|
 | AI experiment planner | ✅ Built, dry-run twice live | — |
 | ≥ 3 failure types run, errors/slowdowns/recovery recorded | ✅ Delay, pod failure, pod kill run live; the AI's two live runs used pod failure and pod kill | — |
-| Analysis and scoring | ✅ AI reports for both live runs, [scoreboard](../evidence/SCOREBOARD.md) regenerated from raw evidence, consolidated [FINDINGS.md](../../FINDINGS.md) | Regenerate the two AI reports with the improved Analyst (see [RERUN_020B817.md](RERUN_020B817.md)) |
+| Analysis and scoring | ✅ AI reports for both live runs, [scoreboard](../evidence/SCOREBOARD.md) regenerated from raw evidence, consolidated [FINDINGS.md](../../FINDINGS.md) | Regenerate the two AI reports with the improved Analyst (see [RERUN_020B817.md](log/RERUN_020B817.md)) |
 | Feature freeze + clean run | ✅ **Frozen** (one entry point: `chaosmind.graph`) | Clean install from scratch on a second laptop, recorded (Smrithi) |
 | Demo video + docs | Plan ready ([PRESENTATION_PLAN.md](PRESENTATION_PLAN.md)); [architecture](../ARCHITECTURE.md) ✅ | Record + edit |
 | Submission | [Team form](../TEAM_FORM.md) ✅ | Submit 30 min early |
@@ -57,7 +57,7 @@ Aashrith is building his own LangGraph/LangChain agents. Both get dry-run 3× an
    .venv/bin/python -m chaosmind.graph --budget 3 --remediate
    ```
    ~15–25 min. It produces `runs/agents-*/FINDINGS.md`. Push the folder.
-4. **Verify the remaining fault types once each** and add the passing ones to `LIVE_VERIFIED` in `chaosmind/inject.py`: `catalog-loss`, `cart-redis-partition`, `redis-cpu`, `redis-disk-full` ([A_REDIS_FIX_AND_FAULTS.md](A_REDIS_FIX_AND_FAULTS.md)).
+4. **Verify the remaining fault types once each** and add the passing ones to `LIVE_VERIFIED` in `chaosmind/inject.py`: `catalog-loss`, `cart-redis-partition`, `redis-cpu`, `redis-disk-full` ([A_REDIS_FIX_AND_FAULTS.md](log/A_REDIS_FIX_AND_FAULTS.md)).
 5. **Video shots:** see the shot list in [PRESENTATION_PLAN.md](PRESENTATION_PLAN.md).
 
 ## Who does what (Day 2)

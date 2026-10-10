@@ -1,6 +1,6 @@
 # Day 1 — Work Split
 
-> **Historical planning note.** The project later switched its AI provider from Mistral to OpenAI `gpt-5.6-luna`, and now to **NVIDIA-hosted `openai/gpt-oss-20b`**. See the [README](../../README.md).
+> **Historical planning note.** The project later switched its AI provider from Mistral to OpenAI `gpt-5.6-luna`, and now to **NVIDIA-hosted `openai/gpt-oss-20b`**. See the [README](../../../README.md).
 
 **Goal by end of day:** app running → AI-built dependency map → baseline → one safe failure with visible customer impact → kill switch fires automatically → one real finding.
 

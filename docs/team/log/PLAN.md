@@ -1,6 +1,6 @@
 # Bosch Hackathon — AI-Driven Chaos Engineering
 
-> **Historical planning note.** The project later switched its AI provider from Mistral to OpenAI `gpt-5.6-luna`, and now to **NVIDIA-hosted `openai/gpt-oss-20b`**. See the [README](../../README.md).
+> **Historical planning note.** The project later switched its AI provider from Mistral to OpenAI `gpt-5.6-luna`, and now to **NVIDIA-hosted `openai/gpt-oss-20b`**. See the [README](../../../README.md).
 
 **Task:** an AI that picks what to break in a cloud-native app, breaks it safely, watches what happens, and reports weaknesses + fixes + a resilience score.
 **Team:** 4 people. Out of scope: anything outside our own sandbox.

@@ -1,6 +1,6 @@
 # Agent bakeoff result — 2026-10-10
 
-> **Historical.** The bake-off ran on OpenAI `gpt-5.6-luna`. The team now uses **our implementation only**, on NVIDIA-hosted `openai/gpt-oss-20b`; the alternative's best prompt rules were merged in, and its code was removed (recoverable at commit `709bd13`). See [MODEL_AND_IMPLEMENTATION.md](MODEL_AND_IMPLEMENTATION.md).
+> **Historical.** The bake-off ran on OpenAI `gpt-5.6-luna`. The team now uses **our implementation only**, on NVIDIA-hosted `openai/gpt-oss-20b`; the alternative's best prompt rules were merged in, and its code was removed (recoverable at commit `709bd13`). See [MODEL_AND_IMPLEMENTATION.md](../MODEL_AND_IMPLEMENTATION.md).
 
 ## Decision
 
@@ -38,7 +38,7 @@ Frozen inputs and their SHA256 fingerprints are recorded in each manifest. Healt
 
 Risky case (2,000 ms checkout delay for 120 s): **existing reject; alternative reject**. Both satisfy shrink/reject.
 
-Evidence: [bakeoff-20261010T165006.772371Z manifest](../../runs/bakeoff-20261010T165006.772371Z/manifest.json), [raw score table](../../runs/bakeoff-20261010T165006.772371Z/scores.txt). The manifest lists all six artifact folders.
+Evidence: [bakeoff-20261010T165006.772371Z manifest](../../../runs/bakeoff-20261010T165006.772371Z/manifest.json), [raw score table](../../../runs/bakeoff-20261010T165006.772371Z/scores.txt). The manifest lists all six artifact folders.
 
 ## Repeat after porting validation checks
 
@@ -59,7 +59,7 @@ Evidence: [bakeoff-20261010T165006.772371Z manifest](../../runs/bakeoff-20261010
 
 Risky case (2,000 ms checkout delay for 120 s): **existing reject; alternative shrink**. Both satisfy shrink/reject.
 
-Evidence: [bakeoff-20261010T165551.289790Z manifest](../../runs/bakeoff-20261010T165551.289790Z/manifest.json), [raw score table](../../runs/bakeoff-20261010T165551.289790Z/scores.txt). The manifest lists all six artifact folders.
+Evidence: [bakeoff-20261010T165551.289790Z manifest](../../../runs/bakeoff-20261010T165551.289790Z/manifest.json), [raw score table](../../../runs/bakeoff-20261010T165551.289790Z/scores.txt). The manifest lists all six artifact folders.
 
 ## Ideas ported into the winner
 
@@ -71,7 +71,7 @@ The repeat retained zero grounding failures, 100% experiment validity, zero triv
 
 **68 tests pass:** 47 existing regression tests and 21 new portable/bakeoff tests. Added tests cover scope mismatch, missing integrity criteria, model enlargement, risky-case bounds, cancellation, cleanup failure, recovery, replay and API authentication.
 
-The application-configured package is separately documented in [PORTABLE.md](../agent-workflow/PORTABLE.md). Its two offline application demos and read-only Kubernetes discovery succeeded. Its generic live executor is experimental and was not the bakeoff candidate or a substitute for the team's live-verified guard. Native agents.ai deployment remains unverified.
+The application-configured package is separately documented in [PORTABLE.md](../../agent-workflow/PORTABLE.md). Its two offline application demos and read-only Kubernetes discovery succeeded. Its generic live executor is experimental and was not the bakeoff candidate or a substitute for the team's live-verified guard. Native agents.ai deployment remains unverified.
 
 The next live recording is a separate rehearsal requiring fresh telemetry and an appropriate baseline; this bakeoff did not run it.
 

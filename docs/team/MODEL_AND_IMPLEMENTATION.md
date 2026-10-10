@@ -1,7 +1,7 @@
 # Final decisions: one implementation, one open-weight model
 
 ## 1. Implementation: ours, with A's best ideas merged in
-**Use only `chaosmind/graph.py` + `chaosmind/agents/`.** The bake-off ([result](BAKEOFF_RESULT.md)) picked it by measurement: it won more metrics, was faster, and ranked optional services better. The alternative's code has been removed; it's still in git history at commit `709bd13` if anyone needs it.
+**Use only `chaosmind/graph.py` + `chaosmind/agents/`.** The bake-off ([result](log/BAKEOFF_RESULT.md)) picked it by measurement: it won more metrics, was faster, and ranked optional services better. The alternative's code has been removed; it's still in git history at commit `709bd13` if anyone needs it.
 
 **What we took from A's implementation** (all merged, all tested):
 
@@ -19,7 +19,7 @@
 **Don't:** start another agent implementation, add LangChain, or add new agent roles. The agent side is **feature-frozen**. From here on, only prompt tweaks backed by a dry run.
 
 ## 2. Model: `openai/gpt-oss-20b`, hosted by NVIDIA (no OpenAI API)
-Chosen by a real availability check ([MODEL_CHECK_FINDINGS.md](MODEL_CHECK_FINDINGS.md)): Mistral-7B returned 404 for our account, and the small fallbacks returned 404/410. **gpt-oss-20b was the smallest model that completed the whole agent workflow.**
+Chosen by a real availability check ([MODEL_CHECK_FINDINGS.md](log/MODEL_CHECK_FINDINGS.md)): Mistral-7B returned 404 for our account, and the small fallbacks returned 404/410. **gpt-oss-20b was the smallest model that completed the whole agent workflow.**
 
 - **What it is:** OpenAI's open-weight model, served by NVIDIA. It has **21B total parameters**; as a mixture of experts it uses **3.6B active per token**. Always quote both numbers, never "3.6B model".
 - **Key:** it uses `NVIDIA_API_KEY` and `https://integrate.api.nvidia.com/v1`. **No OpenAI key and no OpenAI endpoint anywhere.** It's now the default in `llm.py`, so no `NIM_MODEL` override is needed.
@@ -28,7 +28,7 @@ Chosen by a real availability check ([MODEL_CHECK_FINDINGS.md](MODEL_CHECK_FINDI
   - an empty `content` is handled (retried with a correction) instead of crashing
   - 300 s timeout; network blips and timeouts are retried, so a long audit doesn't kill a live run
   - `NIM_EXTRA_BODY` (JSON) adds request fields a model needs, with no code change
-  - **low reasoning effort is the default for gpt-oss**: measured full dry run **45 s** (audit 25 s, plan 11 s) instead of several minutes ([LOW_REASONING_RUN.md](LOW_REASONING_RUN.md)). `NIM_EXTRA_BODY={}` restores the model's default effort
+  - **low reasoning effort is the default for gpt-oss**: measured full dry run **45 s** (audit 25 s, plan 11 s) instead of several minutes ([LOW_REASONING_RUN.md](log/LOW_REASONING_RUN.md)). `NIM_EXTRA_BODY={}` restores the model's default effort
 - **Fallback:** Nemotron Lightning 30B (passed the JSON probe with thinking off):
   ```bash
   NIM_MODEL=nvidia/nemotron-3.5-lightning-30b-a3b NIM_EXTRA_BODY='{"chat_template_kwargs": {"enable_thinking": false}}' .venv/bin/python -m chaosmind.graph --dry-run

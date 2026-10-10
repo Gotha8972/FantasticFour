@@ -33,4 +33,4 @@ Timing evidence is published alongside this report in `LOW_REASONING_TIMING.json
 - Low reasoning effort is now the **default** for gpt-oss in `chaosmind/agents/llm.py`; the `.env` line is no longer needed.
 - The Strategist now receives the persistence facts, and code drops data-loss predictions for persisted targets.
 - A one-fault-type plan is sent back once with feedback (code, not prompt). Both have tests (71 total).
-- Still needed on the cluster laptop: a **suitable** baseline (free memory first). See [MODEL_AND_IMPLEMENTATION.md](MODEL_AND_IMPLEMENTATION.md), section 3.
+- Still needed on the cluster laptop: a **suitable** baseline (free memory first). See [MODEL_AND_IMPLEMENTATION.md](../MODEL_AND_IMPLEMENTATION.md), section 3.

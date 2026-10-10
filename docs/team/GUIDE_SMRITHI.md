@@ -36,7 +36,7 @@ Read `runs/agents-<time>/vulnerabilities.json`, `plan-1.json` and `history.json`
 **Techniques:**
 - **Few-shot:** paste one ideal output into the SYSTEM prompt.
 - **Explicit rubric:** "critical = data loss or checkout outage…".
-- **Compare models:** `NIM_MODEL=nvidia/nemotron-3.5-lightning-30b-a3b NIM_EXTRA_BODY='{"chat_template_kwargs": {"enable_thinking": false}}'` (see [MODEL_CHECK_FINDINGS.md](MODEL_CHECK_FINDINGS.md) for which models our account can reach).
+- **Compare models:** `NIM_MODEL=nvidia/nemotron-3.5-lightning-30b-a3b NIM_EXTRA_BODY='{"chat_template_kwargs": {"enable_thinking": false}}'` (see [MODEL_CHECK_FINDINGS.md](log/MODEL_CHECK_FINDINGS.md) for which models our account can reach).
 - **Reasoning models ignore temperature;** change effort or the prompt instead.
 
 Change one thing at a time, re-run `--dry-run` (Aashrith, or offline with `--workloads`), and keep a log of what improved. That log is great material for the architecture page.

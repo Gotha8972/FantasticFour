@@ -89,7 +89,7 @@ bash scripts/grafana-stress.sh
 | Failed dependency | `network_partition`: e.g. `cartservice` can no longer reach `redis-cart` | Defined, not yet run |
 | Sudden traffic spike | 20 → 100 shoppers (`scripts/grafana-stress.sh`) | ✅ run twice |
 
-Ready-made experiments for each are in [`experiments/`](../experiments/).
+Ready-made experiments for each are in [`experiments/`](../experiments).
 
 
 ### Run one experiment under the kill switch

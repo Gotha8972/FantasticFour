@@ -28,7 +28,7 @@ publication script in the host terminal.
 
 ## 2. Accept small background baseline errors
 
-[chaosmind/baseline.py](../../chaosmind/baseline.py) now accepts window error rates
+[chaosmind/baseline.py](../../../chaosmind/baseline.py) now accepts window error rates
 **below 1%**. Rates at or above 1% still produce a rejecting finding. Smaller
 nonzero failure counts are saved under `notes`, including count and percentage.
 The structured result records the acceptance policy and the guard limits used.
@@ -58,7 +58,7 @@ The user confirmed that the team approved these changes:
 | `p95_ms` | 2,000 ms | **1,000 ms** |
 | `max_unhealthy` | 2 | **2** |
 
-These are implemented in [chaosmind/guard.py](../../chaosmind/guard.py). A breach
+These are implemented in [chaosmind/guard.py](../../../chaosmind/guard.py). A breach
 requires the observed value to be greater than the limit. Existing damage
 threshold overrides still may only tighten the defaults. Duration, polling,
 injection confirmation, cleanup, and recovery behavior remain as before.
@@ -69,7 +69,7 @@ checkout failures remain an observation to investigate.
 
 ## 4. Investigate available checkout failure logs
 
-[chaosmind/checkout_investigation.py](../../chaosmind/checkout_investigation.py) exports
+[chaosmind/checkout_investigation.py](../../../chaosmind/checkout_investigation.py) exports
 available checkoutservice, paymentservice, and frontend logs to CSV, and saves
 filtered error candidates, timestamp coverage, collection errors, and a
 Markdown report in `runs/checkout-investigation-<timestamp>/`.
@@ -111,7 +111,7 @@ review and retry; it does not force-push.
 
 Prometheus/Grafana setup was added after these steps. The publisher now also
 includes `monitoring/`, its dashboard/exporters, monitoring scripts, and the
-updated root README. See [monitoring/README.md](../../monitoring/README.md). Installing
+updated root README. See [monitoring/README.md](../../../monitoring/README.md). Installing
 monitoring rolls the loadgenerator and resets live counters; install before
 starting the next baseline run.
 

@@ -74,7 +74,7 @@ git add -f runs/agents-* && git commit -m "Full live agent run" && git push
 ```
 
 ## 6. Redis instant-kill check
-The graceful restart is proven ✅. The instant kill (append-only log) is still open. See [A_REDIS_FIX_AND_FAULTS.md](A_REDIS_FIX_AND_FAULTS.md), section 3B. Your `python3 scripts/incidents/menu.py` menu can also generate the live runs for section 2. Push its `runs/` output.
+The graceful restart is proven ✅. The instant kill (append-only log) is still open. See [A_REDIS_FIX_AND_FAULTS.md](log/A_REDIS_FIX_AND_FAULTS.md), section 3B. Your `python3 scripts/incidents/menu.py` menu can also generate the live runs for section 2. Push its `runs/` output.
 
 ## 7. One small code fix
 `baseline.json` stores `/home/aashrith/...` in `artifact_dir`. Make `chaosmind/baseline.py` store the path relative to the project root.

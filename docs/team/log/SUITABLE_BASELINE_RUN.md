@@ -61,4 +61,4 @@ Also confirmed: the order-confirmation pattern matched a live order page, so the
 .venv/bin/python -m chaosmind.graph --resume runs/agents-20261010T182208Z
 ```
 
-**Score update:** the resilience score now includes the brief's blast-radius factor, so this run scores **29** (was 33): 4 of 11 services sit in Redis's blast radius, and customers were hurt. All scores are regenerated from evidence in [SCOREBOARD.md](../evidence/SCOREBOARD.md).
+**Score update:** the resilience score now includes the brief's blast-radius factor, so this run scores **29** (was 33): 4 of 11 services sit in Redis's blast radius, and customers were hurt. All scores are regenerated from evidence in [SCOREBOARD.md](../../evidence/SCOREBOARD.md).
