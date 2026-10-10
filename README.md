@@ -229,7 +229,9 @@ bash scripts/chaos.sh dashboard
 
 ## Results so far
 
-Steady state (20 shoppers): **~4.2 req/s, 0% errors, p95 ≈ 56 ms**, all services healthy.
+**Steady-state baseline** (15 min, 20 shoppers, 181 samples, no faults; [details](BASELINE_STUDY.md)): **4.37 req/s, 0.05% errors (2 / 3,933), p50 ≈ 20 ms, p95 ≈ 78 ms (max 240 ms), checkout success 98.8%**, 0 unhealthy services, 0 restarts during the window.
+
+Even with nothing broken, **2 of 168 checkouts failed with HTTP 500**. That's a background failure rate, so every experiment below is judged against the baseline, not against zero.
 
 | Experiment | What happened | Kill switch | Recovery |
 |---|---|---|---|
