@@ -1,5 +1,7 @@
 # Agent bake-off: our LangGraph agents vs Aashrith's LangGraph agents
 
+> **Historical.** The bake-off ran on OpenAI `gpt-5.6-luna`. The team now uses **our implementation only**, on NVIDIA NIM `mistral-7b-instruct-v0.3`; the alternative's best prompt rules were merged in, and its code was removed (recoverable at commit `709bd13`). See [MODEL_AND_IMPLEMENTATION.md](MODEL_AND_IMPLEMENTATION.md).
+
 We'll have **two implementations** of the AI agents. Instead of arguing, we run both the same way, score them with the same script, and **keep the better one**. Good ideas from the other one get ported over.
 
 | | Implementation 1 ("ours") | Implementation 2 ("A's") |

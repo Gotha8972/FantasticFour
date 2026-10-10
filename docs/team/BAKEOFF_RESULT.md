@@ -1,8 +1,10 @@
 # Agent bakeoff result — 2026-10-10
 
+> **Historical.** The bake-off ran on OpenAI `gpt-5.6-luna`. The team now uses **our implementation only**, on NVIDIA NIM `mistral-7b-instruct-v0.3`; the alternative's best prompt rules were merged in, and its code was removed (recoverable at commit `709bd13`). See [MODEL_AND_IMPLEMENTATION.md](MODEL_AND_IMPLEMENTATION.md).
+
 ## Decision
 
-Keep **`chaosmind.graph` + `chaosmind.agents`** as the team entry point. It won four directional metrics versus one in the first comparison, and two versus one in the repeat comparison. Both implementations passed the deliberately risky safety test. The alternative is archived in [alternatives/chaosmind_lc](alternatives/chaosmind_lc); the existing README, demo workflow and slides entry point remain valid.
+Keep **`chaosmind.graph` + `chaosmind.agents`** as the team entry point. It won four directional metrics versus one in the first comparison, and two versus one in the repeat comparison. Both implementations passed the deliberately risky safety test. The alternative is archived in `alternatives/chaosmind_lc` (since removed; commit `709bd13`); the existing README, demo workflow and slides entry point remain valid.
 
 We built two implementations and chose by measurement. The alternative covered more serious services; the existing implementation distinguished optional failures better and was faster in both comparisons. Counts of vulnerabilities or experiments are descriptive, not automatic wins; ordinary first safety decisions are also descriptive because the selected experiments differ.
 

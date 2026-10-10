@@ -4,6 +4,9 @@
 
 **Findings report:** [FINDINGS.md](FINDINGS.md) · **Architecture (1 page):** [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · **Run it:** [docs/RUNNING.md](docs/RUNNING.md) · **Agents:** [docs/AGENTS.md](docs/AGENTS.md) · **Team form:** [docs/TEAM_FORM.md](docs/TEAM_FORM.md)
 
+## Project status: complete
+All components are built and tested (**66 automated tests**): the AI agents, LangGraph workflow with a human approval gate and resume, kill switch, integrity checks, resilience score, repeated-trial statistics, Remediation and the Analyst report. The kill switch and the Redis fix are **proven on the live cluster**. The agents run on a **7B open model** (Mistral-7B via NVIDIA NIM). See [FINDINGS.md](FINDINGS.md) for results.
+
 ## Highlights
 | | |
 |---|---|
@@ -41,7 +44,7 @@ graph TD;
 
 | Component | Status |
 |---|---|
-| Cartographer · Strategist · Safety Checker | ✅ Running against the live cluster with OpenAI `gpt-5.6-luna` |
+| Cartographer · Strategist · Safety Checker | ✅ Validated in 14 dry runs against the live cluster; now running on NVIDIA NIM `mistralai/mistral-7b-instruct-v0.3` (7B) |
 | Integrity checks · resilience score · Remediation · Analyst | ✅ Built and tested |
 | Orchestration: LangGraph state machine with a **human approval gate** before any fix and **checkpoint/resume** for long runs | ✅ Built and tested (incl. resume in a fresh process) |
 | **Chosen by measurement:** two independent agent implementations, 12 real dry runs on frozen identical inputs, scored by one script | ✅ This one won ([bake-off](docs/team/BAKEOFF_RESULT.md)): 0 hallucinated facts, 100% valid experiments, 3 fault types per plan, integrity checks on every Redis test |
@@ -133,7 +136,7 @@ One-time: install LangGraph into a local virtual environment:
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 ```
-Let the AI audit, plan and review (add your `OPENAI_API_KEY` to `.env`):
+Let the AI audit, plan and review (copy `.env.example` to `.env` and add your `NVIDIA_API_KEY`; check it with `python3 -m chaosmind.agents.llm --ping`):
 ```bash
 .venv/bin/python -m chaosmind.graph --dry-run
 ```
@@ -171,5 +174,5 @@ chaosmind/portable/   prototype: the same workflow for any app via profiles + an
 | Smrithi | Prompt tuning, architecture overview, reproducible setup |
 
 **Software:** Online Boutique v0.10.4 (Apache-2.0), kind, Podman, Kubernetes, Chaos Mesh 2.8.4, Helm 3.19, Locust, kube-prometheus-stack 92.3.0, LangGraph 1.2 (orchestration), Python standard library (agents), `requests` + `prometheus_client` (simulator).
-**AI model:** OpenAI `gpt-5.6-luna`, chat completions API, JSON mode.
+**AI model:** NVIDIA NIM `mistralai/mistral-7b-instruct-v0.3` (7B parameters) via NVIDIA's OpenAI-compatible API. Any ≤ 7B NIM model can be swapped in with `NIM_MODEL`.
 **Data:** synthetic only: simulated shoppers and the app's built-in demo products.

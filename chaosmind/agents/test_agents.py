@@ -66,6 +66,27 @@ class AgentTests(unittest.TestCase):
         self.assertEqual(strategist.evaluate([], {'p95_ms': 90})[0], 'needs_integrity_check')
         self.assertEqual(strategist.evaluate(crit, None)[0], 'inconclusive')
 
+    def test_llm_calls_nvidia_nim_with_a_small_model(self):
+        import io
+        sent = []
+
+        class Response(io.BytesIO):
+            def __enter__(self): return self
+            def __exit__(self, *a): return False
+
+        def fake_urlopen(request, timeout):
+            sent.append((request.full_url, json.loads(request.data)))
+            return Response(json.dumps({'choices': [{'message': {'content': 'Here: ```json\n{"ok": true}\n```'}}]}).encode())
+
+        with patch.object(llm, 'api_key', return_value='test-key'), patch.object(llm.urllib.request, 'urlopen', fake_urlopen):
+            self.assertEqual(llm.ask('SYSTEM RULES', {'x': 1}), {'ok': True})
+        url, body = sent[0]
+        self.assertEqual(url, 'https://integrate.api.nvidia.com/v1/chat/completions')
+        self.assertEqual(body['model'], 'mistralai/mistral-7b-instruct-v0.3')
+        self.assertEqual([m['role'] for m in body['messages']], ['user'])  # system folded in: Mistral has no system role
+        self.assertTrue(body['messages'][0]['content'].startswith('SYSTEM RULES'))
+        self.assertNotIn('openai', url)
+
     def test_safety_never_sees_cumulative_counters(self):
         seen = {}
         with patch.object(llm, 'ask', side_effect=lambda system, user: seen.update(user) or {'decision': 'reject'}):

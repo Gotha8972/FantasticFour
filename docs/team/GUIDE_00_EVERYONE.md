@@ -73,7 +73,7 @@ Full description: [docs/AGENTS.md](../AGENTS.md) · one-page architecture: [docs
 **Code gathers facts → the AI reasons and returns JSON → code checks the JSON → code acts.**
 Look at `chaosmind/agents/cartographer.py`. It's the template:
 1. `facts.collect()` reads the real config (plain code, no AI).
-2. `llm.ask(SYSTEM, facts)` sends a prompt and gets back a **dict** (OpenAI `gpt-5.6-luna`, JSON mode).
+2. `llm.ask(SYSTEM, facts)` sends a prompt and gets back a **dict** (NVIDIA NIM `mistralai/mistral-7b-instruct-v0.3`).
 3. `verify(reply, facts)` throws away anything the AI claimed that doesn't match the real facts.
 
 **Why:** AI models sometimes invent things ("hallucinate"). An agent's output is never trusted directly. **No agent ever runs `kubectl` or touches the cluster.** Only `inject.py`, `guard.py` and small allow-listed code paths do.
@@ -83,8 +83,8 @@ The shared AI client:
 from chaosmind.agents import llm
 reply = llm.ask(system_prompt, user_data_dict_or_text, model='large')   # returns a dict
 ```
-- Key: `OPENAI_API_KEY` in your environment or in `.env` (git-ignored, never commit it).
-- Model: `gpt-5.6-luna`, low reasoning effort. Override with `OPENAI_MODEL` / `OPENAI_REASONING_EFFORT`.
+- Key: `NVIDIA_API_KEY` in your environment or in `.env` (copy `.env.example`; git-ignored, never commit it).
+- Model: `mistralai/mistral-7b-instruct-v0.3`; swap with `NIM_MODEL` (≤ 7B). Ping: `python3 -m chaosmind.agents.llm --ping`.
 
 **Writing a good prompt (the SYSTEM text):**
 1. Say the role ("You are a senior SRE…").

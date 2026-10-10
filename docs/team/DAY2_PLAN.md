@@ -2,7 +2,7 @@
 
 ## Orchestration decision: LangGraph
 We compared the plain loop, LangGraph and Google ADK, and chose **LangGraph**:
-- **Most agnostic:** nodes are plain Python calling our own `llm.py` (OpenAI or Mistral), with no LangChain.
+- **Most agnostic:** nodes are plain Python calling our own `llm.py` (NVIDIA NIM, Mistral-7B), with no LangChain.
 - **It matches our design:** a code-routed state machine with loops and branches. ADK is built around model-driven tool calling and Gemini, the opposite of "AI proposes, code acts".
 - **Two real features we'd otherwise hand-build:** a **human approval gate** before any fix touches the cluster, and **checkpoint/resume** for 15–25 min live runs.
 - **The diagram is the code** (`--draw`), which looks better in front of judges than a hand-drawn picture.
@@ -17,7 +17,9 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 .venv/bin/python -m unittest chaosmind.test_graph
 ```
 
-## Two agent implementations → bake-off
+## ▶ Current: [MODEL_AND_IMPLEMENTATION.md](MODEL_AND_IMPLEMENTATION.md): our implementation only, NVIDIA NIM Mistral-7B, final run steps
+
+## Two agent implementations → bake-off (done)
 Aashrith is building his own LangGraph/LangChain agents. Both get dry-run 3× and scored with the same script; the better one becomes the official system. See **[AGENT_BAKEOFF.md](AGENT_BAKEOFF.md)**.
 
 ## Day-2 milestones (from the brief) → status

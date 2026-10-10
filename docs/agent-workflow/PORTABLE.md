@@ -1,6 +1,6 @@
 # Portable LangGraph agent: implemented prototype
 
-The new package is `chaosmind.portable`. It has application profiles, an adapter interface, a durable LangGraph workflow, a CLI, and an authenticated HTTP API. The existing Boutique workflow remains the team demo implementation. The archived `docs/team/alternatives/chaosmind_lc` entry point is a contract-compatible **dry-run** reasoning candidate for the bakeoff; it reuses the team's fact collector, verifier, model client and safety rules.
+The new package is `chaosmind.portable`. It has application profiles, an adapter interface, a durable LangGraph workflow, a CLI, and an authenticated HTTP API. The existing Boutique workflow remains the team demo implementation. The bake-off alternative has been retired; the team uses `chaosmind.graph`.
 
 ```mermaid
 flowchart LR

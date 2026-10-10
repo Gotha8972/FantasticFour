@@ -23,8 +23,8 @@ And keep Grafana open: `bash scripts/monitoring.sh grafana`.
 
 | Error | Cause |
 |---|---|
-| `OpenAI API 401` | Bad `OPENAI_API_KEY` in `.env` |
-| `OpenAI API 400` | Wrong model name or parameter |
+| `NVIDIA NIM API 401` | Bad `NVIDIA_API_KEY` in `.env` |
+| `NVIDIA NIM API 404/400` | Wrong `NIM_MODEL` name |
 | `invalid JSON twice` | Send the output to Smrithi |
 
 ```bash

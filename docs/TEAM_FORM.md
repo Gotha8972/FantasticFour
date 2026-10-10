@@ -14,7 +14,7 @@
 
 **Sample application:** Google Online Boutique v0.10.4, https://github.com/GoogleCloudPlatform/microservices-demo (Apache-2.0), run locally on kind.
 
-**AI models:** OpenAI `gpt-5.6-luna` (chat completions API, JSON mode, low reasoning effort), used by the Cartographer, Strategist, Safety Checker, Remediation and Analyst agents. All AI output is validated by deterministic code before any action.
+**AI models:** NVIDIA NIM `mistralai/mistral-7b-instruct-v0.3` (7B parameters), via NVIDIA's OpenAI-compatible chat completions API, used by the Cartographer, Strategist, Safety Checker, Remediation and Analyst agents. All AI output is validated by deterministic code before any action. (Agent design was selected in a bake-off run on OpenAI `gpt-5.6-luna`; the production model is the 7B Mistral above.)
 
 **Tools and platforms:** Kubernetes (kind v0.33, rootless Podman, Fedora), Chaos Mesh 2.8.4, Helm 3.19, Locust (Online Boutique's bundled load generator), kube-prometheus-stack 92.3.0 (Prometheus, Grafana, kube-state-metrics), Python 3.
 

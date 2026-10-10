@@ -4,7 +4,7 @@ Back to the [README](../README.md) · one-page view: [ARCHITECTURE.md](ARCHITECT
 
 Every agent follows one pattern: **code gathers facts → the AI reasons and returns JSON → code verifies → code acts.**
 No agent runs `kubectl` or touches the cluster. All live actions go through `inject.py` / `guard.py` or a reviewed allow-list.
-Model: OpenAI `gpt-5.6-luna` via `chaosmind/agents/llm.py` (JSON mode, configurable reasoning effort, invalid-JSON retry, and bounded rate-limit/server-error retries). Override with `OPENAI_MODEL`, `OPENAI_MODEL_LARGE`, or `OPENAI_REASONING_EFFORT`; settings are read from the environment, then the local `.env`. Explicit `AI_PROVIDER=mistral` selects the retained Mistral client. Keys stay local.
+Model: NVIDIA NIM `mistralai/mistral-7b-instruct-v0.3` (7B) via `chaosmind/agents/llm.py` (NVIDIA's OpenAI-compatible API; system prompt folded into the user turn, JSON extracted from the reply, one corrective retry). Swap with `NIM_MODEL`.
 
 | Agent | File | AI decides | Code guarantees |
 |---|---|---|---|
