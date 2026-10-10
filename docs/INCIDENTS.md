@@ -3,7 +3,7 @@
 Keep Grafana open in another terminal, then run from the project folder:
 
 ```bash
-python3 incidents.py
+python3 scripts/incidents/menu.py
 ```
 
 Choose a number from 1 to 6. Choice 2 also asks for `delay` or `loss`.
@@ -15,12 +15,12 @@ directory too; all paths resolve against this project.
 
 | Choice | Incident | Implementation | Direct command |
 | --- | --- | --- | --- |
-| 1 | Server or container crash | Existing catalog pod kill demonstration: one exact pod is killed and a replacement observed. | `python3 incidents.py --choice 1` |
-| 2 | Slow or lossy network | 500 ms catalog delay with 50 ms jitter, or 10% catalog packet loss; at most 60 seconds through the existing guard. | `python3 incidents.py --choice 2 --network-mode delay` or `--network-mode loss` |
-| 3 | Full Disk | IOChaos returns errno 28 (ENOSPC) on Redis `/data` write/create/fsync operations, for at most 60 seconds. A dedicated write probe checks the observed error. | `python3 incidents.py --choice 3` |
-| 4 | Overloaded Database | A temporary Job runs `redis-benchmark`: 50 connections, pipeline 4, at most 10 million GET requests against a dedicated unused key. Observe for up to 60 seconds after startup. | `python3 incidents.py --choice 4` |
-| 5 | Failed Dependency | Shipping service becomes unavailable via `pod-failure`, for at most 60 seconds through the existing guard. | `python3 incidents.py --choice 5` |
-| 6 | Sudden Traffic Spike | Increase shopper load from 20 to 200 with spawn rate 100/second; observe for up to 60 seconds. | `python3 incidents.py --choice 6` |
+| 1 | Server or container crash | Existing catalog pod kill demonstration: one exact pod is killed and a replacement observed. | `python3 scripts/incidents/menu.py --choice 1` |
+| 2 | Slow or lossy network | 500 ms catalog delay with 50 ms jitter, or 10% catalog packet loss; at most 60 seconds through the existing guard. | `python3 scripts/incidents/menu.py --choice 2 --network-mode delay` or `--network-mode loss` |
+| 3 | Full Disk | IOChaos returns errno 28 (ENOSPC) on Redis `/data` write/create/fsync operations, for at most 60 seconds. A dedicated write probe checks the observed error. | `python3 scripts/incidents/menu.py --choice 3` |
+| 4 | Overloaded Database | A temporary Job runs `redis-benchmark`: 50 connections, pipeline 4, at most 10 million GET requests against a dedicated unused key. Observe for up to 60 seconds after startup. | `python3 scripts/incidents/menu.py --choice 4` |
+| 5 | Failed Dependency | Shipping service becomes unavailable via `pod-failure`, for at most 60 seconds through the existing guard. | `python3 scripts/incidents/menu.py --choice 5` |
+| 6 | Sudden Traffic Spike | Increase shopper load from 20 to 200 with spawn rate 100/second; observe for up to 60 seconds. | `python3 scripts/incidents/menu.py --choice 6` |
 
 Bash entry points are under `scripts/incidents/`: `server-crash.sh`,
 `network.sh`, `full-disk.sh`, `database-overload.sh`, `failed-dependency.sh`,

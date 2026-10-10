@@ -1,5 +1,7 @@
 # For A: checklist before we test the AI agents
 
+> **Historical planning note.** The project later switched its AI provider from Mistral to **OpenAI `gpt-5.6-luna`**. See the [README](../../README.md).
+
 The dashboard and the pod-kill run are great. The "pod back in 3 s, customers back in 34 s" result is now in the README as a finding. 5 items, in order.
 
 ## ☐ 1. Push everything that's only on your laptop (≈5 min)

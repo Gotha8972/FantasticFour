@@ -164,7 +164,7 @@ Everything is saved to `runs/agents-<time>/`: facts, vulnerabilities, every plan
 
 ### Manual incident menu (one scenario per failure type in the brief)
 ```bash
-python3 incidents.py
+python3 scripts/incidents/menu.py
 ```
 Details: [INCIDENTS.md](INCIDENTS.md).
 

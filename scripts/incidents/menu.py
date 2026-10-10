@@ -4,7 +4,7 @@ import argparse
 from pathlib import Path
 import subprocess
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[2]
 INCIDENTS = {
     1: ('Server or container crash', 'server-crash.sh'),
     2: ('Slow or lossy network responses', 'network.sh'),

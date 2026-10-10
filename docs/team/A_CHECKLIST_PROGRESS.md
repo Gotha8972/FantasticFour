@@ -1,5 +1,7 @@
 # A_CHECKLIST.md: implementation and execution status
 
+> **Historical planning note.** The project later switched its AI provider from Mistral to **OpenAI `gpt-5.6-luna`**. See the [README](../../README.md).
+
 ## Completed in the workspace
 
 - Setup, monitoring, chaos, pod kill, load and measurement source files are present.
