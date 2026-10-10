@@ -3,6 +3,13 @@
 Recorded on **10 October 2026** from the saved live run evidence in this checkout.
 This supplements [PROJECT_HANDOFF.md](PROJECT_HANDOFF.md).
 
+> **In 5 lines**
+> 1. All 3 kill-switch checkpoints **passed live** (20 shoppers): broken-service trigger, guard-crash fail-safe and manual abort.
+> 2. **Ad service down:** 0% user errors, yet the guard tripped on 1 unhealthy service at 9.2 s, reverted in 0.38 s, healthy again after 36 s. Ads degrade gracefully.
+> 3. **Guard killed with `kill -9` mid-fault:** Chaos Mesh's own duration still ended the fault, and the app recovered with no guard running.
+> 4. **Manual abort** removed 2 active faults in 0.39 s.
+> 5. **Redis restart:** the cart went from 1 item to 0 with **zero HTTP errors**, i.e. silent data loss (1 replica on `emptyDir`). No fix applied yet.
+
 ## Summary
 
 All three kill-switch checkpoints **passed**. The Redis checkpoint recorded a

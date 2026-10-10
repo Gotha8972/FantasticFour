@@ -4,6 +4,13 @@
 **Workspace:** the project root (a clone of this repository).  
 **Goal:** deploy Online Boutique locally, inject controlled failures, measure their effect, and provide a reliable execution and observation layer for a future AI chaos engineering agent.
 
+> **In 5 lines**
+> 1. **Platform:** Online Boutique v0.10.4 on kind (rootless Podman, Fedora) with Chaos Mesh 2.8.4 and Locust traffic, set up by `scripts/deploy-local.sh` and `scripts/install-chaos.sh`.
+> 2. **Safety layer:** a deterministic Python operator and guard confirm injection, revert on breach (now 5% errors / 1,000 ms p95 / 2 unhealthy services), confirm recovery and save CSV/JSONL evidence.
+> 3. **Verified live** (under the original 20% / 2,000 ms limits): 500 ms catalog delay → p95 3,500 ms, breach at 7.8 s, healthy after 14.8 s; cart service down → 35% errors, breach at 8.1 s, healthy after 55.5 s.
+> 4. **Added later (section 13):** a Prometheus/Grafana dashboard, and a catalog pod kill at 100 shoppers: pod back in ~3 s, customers recovered after ~34 s, 66 HTTP 500s.
+> 5. **Covered elsewhere:** AI agents in [AGENTS.md](AGENTS.md), baselines in [BASELINE_STUDY.md](BASELINE_STUDY.md), kill-switch checkpoints in [KILLSWITCH_RESULTS.md](KILLSWITCH_RESULTS.md).
+
 This document records implementation work and the evidence inspected so far. It does not claim that every available experiment or planned agent has been verified.
 
 ## 1. Current status

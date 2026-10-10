@@ -335,10 +335,10 @@ customer_simulator.py  Optional scripted shopper with Prometheus metrics
 
 | Member | Area |
 |---|---|
-| aashrith | Platform: cluster, Chaos Mesh, monitoring, verification |
-| Gotha8972 | Customer simulation |
-| Srinavith Srinath | Fault injection and kill switch |
-| *(name)* | AI agents |
+| Aashrith | Platform: cluster, Chaos Mesh, monitoring (Prometheus/Grafana), baselines, verification |
+| Harshil | Customer simulation and journey checks |
+| Srinavith | Fault injection, kill switch, Safety Checker and Remediation agents |
+| Smrithi | AI agents: orchestration, Cartographer, Strategist |
 
 **Third-party software:** Online Boutique v0.10.4 (Apache-2.0), kind, Podman, Kubernetes, Chaos Mesh 2.8.4, Helm 3.19, Locust (bundled load generator), kube-prometheus-stack 92.3.0 (Prometheus, Grafana, kube-state-metrics), Python `requests` and `prometheus_client` (simulator only). The agents use only the Python standard library.
 
