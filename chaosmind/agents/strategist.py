@@ -89,7 +89,7 @@ def check(reply, by_id, done, allowed, persistent):
             dropped.append({'item': item, 'reason': f"{exp['fault']} not verified live yet"})
             continue
         if (exp['fault'], exp['target']) in done:
-            dropped.append({'item': item, 'reason': 'already run'})
+            dropped.append({'item': item, 'reason': 'already run or planned'})
             continue
         criteria = valid_criteria(item.get('criteria', []), exp['fault'])
         if exp['target'] == 'redis-cart' and not any(c['metric'] == 'integrity_violations' for c in criteria):
@@ -103,28 +103,39 @@ def check(reply, by_id, done, allowed, persistent):
     return items, dropped
 
 
+def feedback(items, dropped, history, allowed):
+    """What to send back to the model: every dropped proposal with the code's reason, plus missing fault diversity."""
+    notes = [f"{d['item'].get('fault')} on {d['item'].get('target')} was dropped: {d['reason']}."
+             if isinstance(d['item'], dict) else f"A malformed proposal was dropped: {d['reason']}." for d in dropped]
+    faults = {h['experiment']['fault'] for h in history} | {i['experiment']['fault'] for i in items}
+    if len(allowed) > 1 and len(history) + len(items) >= 2 and len(faults) < 2:
+        notes.append(f'Only {sorted(faults)} so far: use at least 2 different fault types across history and plan.')
+    return ' '.join(notes + ['Return corrected or replacement experiments only; keep integrity criteria for '
+                             'stateful services.']) if notes else None
+
+
 def plan(vulnerabilities, baseline, history=(), budget=5, allowed_faults=None, persistent=()):
+    """One proposal round, then code validation; if code dropped anything (or the plan tests one fault type), the
+    reasons go back to the model ONCE and its corrected proposals are added. A wrong prediction no longer costs the
+    experiment: e.g. a Redis kill predicted as 'data loss' despite a PVC comes back as an availability test."""
     done = {(h['experiment']['fault'], h['experiment']['target']) for h in history}
     allowed = set(allowed_faults or inject.LIVE_VERIFIED)
     by_id = {v['id']: v for v in vulnerabilities}
     request = {'vulnerabilities': vulnerabilities, 'baseline': baseline, 'history': list(history),
                'max_experiments': budget, 'faults_you_may_use_now': sorted(allowed),
                'services_with_persistent_volume': sorted(persistent)}
-    dropped, retried = [], False
-    for attempt in range(2):
-        reply = llm.ask(SYSTEM, request)
-        items, rejected = check(reply, by_id, done, allowed, persistent)
-        dropped += rejected
-        faults = {h['experiment']['fault'] for h in history} | {i['experiment']['fault'] for i in items}
-        # Diversity enforced by code: one fault type tests one failure mode. One corrective retry, then accept.
-        if attempt or len(allowed) < 2 or len(history) + len(items) < 2 or len(faults) > 1:
-            break
-        retried = True
-        request = {**request, 'feedback': f'Your plan used only {next(iter(faults))}. Use at least 2 different '
-                                          'fault types across history and plan.'}
+    reply = llm.ask(SYSTEM, request)
+    items, dropped = check(reply, by_id, done, allowed, persistent)
+    note = feedback(items, dropped, history, allowed)
+    if note:
+        planned = done | {(i['experiment']['fault'], i['experiment']['target']) for i in items}
+        retry = llm.ask(SYSTEM, {**request, 'feedback': note})
+        more, rejected = check(retry, by_id, planned, allowed, persistent)
+        items, dropped = items + more, dropped + rejected
+        reply = {**reply, 'replan_note': retry.get('replan_note') or reply.get('replan_note', '')}
     items.sort(key=lambda i: i.get('rank', 99))
     return {'plan': items[:budget], 'dropped': dropped, 'replan_note': reply.get('replan_note', ''),
-            'diversity_retry': retried}
+            'feedback': note}
 
 
 def evaluate(criteria, observed):

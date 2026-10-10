@@ -14,3 +14,9 @@ Model: NVIDIA-hosted `openai/gpt-oss-20b`, reasoning effort `low`.
 The remaining prerequisite for a live run is a fresh suitable baseline. Planning could also refill rejected proposals and request varied faults after filtering leaves only one experiment.
 
 Published evidence: `LOW_REASONING_RETRY_TIMING.json` and `LOW_REASONING_RETRY_PLAN.json` alongside this report. Full audit and history remain local in `runs/agents-20261010T180459Z/`.
+
+## Status after review
+
+- **Fixed:** a dropped proposal no longer just disappears. `strategist.plan()` sends every proposal code dropped (with code's reason) and any one-fault-type plan back to the model **once**, and adds the corrected proposals. In this run, the Redis kill would have come back with an availability prediction and its integrity criterion, instead of leaving only the cartservice failure. Recorded as `feedback` in `plan-N.json`; tested (71 total).
+- After the demo reset (fixes reverted, Redis back on emptyDir), the data-loss prediction is true and is kept, so this filter doesn't affect the recorded run.
+- **Still the only blocker:** a suitable baseline. See [MODEL_AND_IMPLEMENTATION.md](MODEL_AND_IMPLEMENTATION.md), section 3, steps 0, 2 and 4.

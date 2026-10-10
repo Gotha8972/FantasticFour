@@ -86,7 +86,7 @@ graph TD;
   - experiments on the checkout/revenue path are capped at 500 ms delay and shrunk to 30 s when longer than 60 s
   - a baseline marked unsuitable means every experiment is rejected and live runs refuse to start
   - a "data loss" claim or prediction against a service with a persistent volume is rejected as contradicting the facts
-  - a plan that tests only one fault type is sent back once with feedback (one fault type tests one failure mode)
+  - every proposal code drops goes back to the model **once** with the reason, and the corrected ones are added: a wrong prediction costs a retry, not the experiment. A plan with only one fault type is sent back the same way
 
 ## Results
 **Steady-state baselines** (no faults):

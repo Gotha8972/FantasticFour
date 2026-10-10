@@ -48,40 +48,43 @@ class AgentTests(unittest.TestCase):
             {'vulnerability': 'V9', 'fault': 'delete_cluster', 'target': 'frontend'},
             {'vulnerability': 'V1', 'fault': 'pod_kill', 'target': 'redis-cart', 'duration_s': 30, 'criteria': []}]}
         history = [{'experiment': {'fault': 'pod_kill', 'target': 'redis-cart'}}]
-        with patch.object(llm, 'ask', return_value=reply):
+        replies = iter([reply, {'plan': []}])
+        with patch.object(llm, 'ask', side_effect=lambda system, user: next(replies)):
             out = strategist.plan([{'id':'V2','service':'productcatalogservice'}, {'id':'V1','service':'redis-cart'}], {}, history, allowed_faults={'network_delay', 'pod_kill'})
         self.assertEqual([i['experiment']['target'] for i in out['plan']], ['productcatalogservice'])
         self.assertEqual(out['plan'][0]['criteria'], [{'metric': 'p95_ms', 'op': '>', 'value': 500}])
         self.assertEqual(len(out['dropped']), 2)
+        self.assertIn('already run', out['feedback'])
 
-    def test_strategist_drops_contradicted_data_loss_prediction(self):
+    def test_strategist_drops_contradicted_data_loss_prediction_then_gets_it_corrected(self):
         vulns = [{'id': 'V1', 'service': 'redis-cart'}]
         crit = [{'metric': 'integrity_violations', 'op': '>', 'value': 0}]
         item = {'vulnerability': 'V1', 'fault': 'pod_kill', 'target': 'redis-cart', 'duration_s': 30, 'criteria': crit}
-        reply = {'plan': [{**item, 'prediction': {'summary': 'all carts are wiped'}}]}
-        seen = []
-        with patch.object(llm, 'ask', side_effect=lambda system, user: seen.append(user) or reply):
+        wrong = {'plan': [{**item, 'prediction': {'summary': 'Expect cart data loss and increased latency.'}}]}
+        right = {'plan': [{**item, 'prediction': {'summary': 'brief cart errors; the PVC prevents data loss'}}]}
+        replies, seen = iter([wrong, right]), []
+        with patch.object(llm, 'ask', side_effect=lambda system, user: seen.append(user) or next(replies)):
             out = strategist.plan(vulns, {}, allowed_faults={'pod_kill'}, persistent=['redis-cart'])
-        self.assertEqual((out['plan'], seen[0]['services_with_persistent_volume']), ([], ['redis-cart']))
+        self.assertEqual(seen[0]['services_with_persistent_volume'], ['redis-cart'])
+        self.assertIn('persistent volume', seen[1]['feedback'])
+        self.assertEqual([i['prediction'] for i in out['plan']], [right['plan'][0]['prediction']])
         self.assertIn('persistent volume', out['dropped'][0]['reason'])
-        ok = {'plan': [{**item, 'prediction': {'summary': 'brief cart errors; the PVC prevents data loss'}}]}
-        with patch.object(llm, 'ask', return_value=ok):
-            self.assertEqual(len(strategist.plan(vulns, {}, allowed_faults={'pod_kill'}, persistent=['redis-cart'])['plan']), 1)
-        with patch.object(llm, 'ask', return_value=reply):  # original emptyDir Redis: the same prediction is true
+        with patch.object(llm, 'ask', return_value=wrong):  # original emptyDir Redis: the same prediction is true
             self.assertEqual(len(strategist.plan(vulns, {}, allowed_faults={'pod_kill'})['plan']), 1)
 
-    def test_strategist_retries_once_for_fault_diversity(self):
+    def test_strategist_asks_once_for_fault_diversity(self):
         vulns = [{'id': 'V1', 'service': 'cartservice'}, {'id': 'V2', 'service': 'productcatalogservice'}]
         crit = [{'metric': 'error_rate', 'op': '>', 'value': 0.05}]
         kill = lambda v, t: {'vulnerability': v, 'fault': 'pod_kill', 'target': t, 'duration_s': 30, 'criteria': crit}
         mono = {'plan': [kill('V1', 'cartservice'), kill('V2', 'productcatalogservice')]}
-        mixed = {'plan': [kill('V1', 'cartservice'), {**kill('V2', 'productcatalogservice'), 'fault': 'network_delay',
+        extra = {'plan': [kill('V1', 'cartservice'), {**kill('V2', 'productcatalogservice'), 'fault': 'network_delay',
                                                       'params': {'latency': '200ms'}}]}
-        replies, seen = iter([mono, mixed]), []
+        replies, seen = iter([mono, extra]), []
         with patch.object(llm, 'ask', side_effect=lambda system, user: seen.append(user) or next(replies)):
             out = strategist.plan(vulns, {}, allowed_faults={'pod_kill', 'network_delay'})
-        self.assertIn('only pod_kill', seen[1]['feedback'])
-        self.assertEqual(({i['fault'] for i in out['plan']}, out['diversity_retry']), ({'pod_kill', 'network_delay'}, True))
+        self.assertEqual(len(seen), 2)
+        self.assertIn('at least 2 different fault types', seen[1]['feedback'])
+        self.assertEqual([i['fault'] for i in out['plan']], ['pod_kill', 'pod_kill', 'network_delay'])  # repeat dropped
 
     def test_trivial_pod_criteria_dropped(self):
         crit = [{'metric': 'unhealthy_count', 'op': '>', 'value': 0}, {'metric': 'error_rate', 'op': '>', 'value': 0.05}]

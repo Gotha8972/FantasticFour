@@ -42,7 +42,8 @@ Chosen by a real availability check ([MODEL_CHECK_FINDINGS.md](MODEL_CHECK_FINDI
 | **Unsuitable baseline** didn't stop the model approving | `safety.review()` rejects every experiment without asking the model; live runs refuse to start (`steps.setup`) |
 | 500 ms / 60 s bounds were **prompt-only** | `safety.hard_bounds()` caps delay at 500 ms and shrinks > 60 s to 30 s on the checkout path + entrypoint (from the collected facts), whatever the model said. `risky-checkout.json` now always comes back `shrink` · 500 ms · 30 s |
 | *(low-effort run)* The **Strategist** still predicted Redis data loss: the PVC check only covered the Cartographer | The Strategist now receives `services_with_persistent_volume`; `strategist.check()` drops a data-loss prediction for those targets. Negations ("the PVC prevents data loss") don't count |
-| *(low-effort run)* Plan was **only pod kills**; diversity was prompt-only | `strategist.plan()` sends a one-fault-type plan back **once** with feedback, then accepts (`diversity_retry` in `plan-N.json`) |
+| *(low-effort run)* Plan was **only pod kills**; diversity was prompt-only | A one-fault-type plan goes back to the model once (see next row) |
+| *(retry run)* The persistence filter worked but **cost the Redis kill**, the most valuable test, leaving one experiment | `strategist.plan()` sends **every dropped proposal back once with code's reason** and adds the corrected ones (`feedback` in `plan-N.json`). The Redis kill returns as an availability test that still checks cart integrity |
 | *(found while fixing these)* After a fix, Remediation re-ran the **raw** proposal, not the reviewed one | `remediation.rerun_experiment()` re-runs exactly the reviewed step the "before" score was measured on (same intensity, same length), so the review can't be bypassed and before/after compare like with like |
 
 ## 3. Final steps to show it working (Aashrith, ≈60 min, recorded)
