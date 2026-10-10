@@ -5,3 +5,4 @@ __pycache__/
 microservices-demo/
 .venv/
 .DS_Store
+.claude/
