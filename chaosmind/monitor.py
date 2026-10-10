@@ -19,7 +19,7 @@ print(json.dumps({'aggregate': aggregate, 'recent': recent, 'checkout': checkout
 
 def snapshot():
     workloads = json.loads(inject.kubectl("get", "deployments,pods", "-n", inject.NS, "-o", "json"))["items"]
-    bad, restarts = [], {}
+    bad, restarts, loadgenerator_uids, pod_uids = [], {}, [], {}
     for item in workloads:
         name = item["metadata"]["name"]
         if item["kind"] == "Deployment" and item["spec"].get("replicas", 1) > 0:
@@ -27,6 +27,10 @@ def snapshot():
                 bad.append(name)
         elif item["kind"] == "Pod":
             service = item["metadata"].get("labels", {}).get("app", name)
+            if not item["metadata"].get("deletionTimestamp"):
+                pod_uids.setdefault(service, []).append(item["metadata"]["uid"])
+            if service == "loadgenerator" and not item["metadata"].get("deletionTimestamp"):
+                loadgenerator_uids.append(item["metadata"]["uid"])
             restarts[service] = restarts.get(service, 0) + sum(
                 c.get("restartCount", 0) for c in item.get("status", {}).get("containerStatuses", []))
     data = json.loads(inject.kubectl("exec", "-i", "deployment/loadgenerator", "-n", inject.NS,
@@ -43,8 +47,13 @@ def snapshot():
     checkout_requests = sum(int(r["Request Count"]) for r in data["checkout"])
     checkout_failures = sum(int(r["Failure Count"]) for r in data["checkout"])
     return {"ts": time.time(), "error_rate": min(1.0, failures_per_s / rps),
+            "p50_ms": float(recent["50%"]) if recent.get("50%") else None,
             "p95_ms": float(recent["95%"]), "users": users, "rps": rps,
             "requests": int(total["Request Count"]), "failures": int(total["Failure Count"]),
             "checkout_success": 1 - checkout_failures / checkout_requests if checkout_requests else None,
+            "checkout_requests": checkout_requests, "checkout_failures": checkout_failures,
+            "locust_history_ts": float(recent["Timestamp"]),
+            "loadgenerator_pod_uids": sorted(loadgenerator_uids),
+            "pod_uids": {service: sorted(uids) for service, uids in pod_uids.items()},
             "unhealthy_services": sorted(bad), "restarts": restarts, "metrics_age_s": age,
             "source": "locust_csv_and_kubernetes"}

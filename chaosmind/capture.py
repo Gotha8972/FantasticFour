@@ -12,7 +12,9 @@ from chaosmind.monitor import snapshot
 from chaosmind.runlog import FIELDS
 
 METRICS = ["timestamp_utc", "phase", "ts", "users", "rps", "requests", "failures", "error_rate",
-           "p95_ms", "checkout_success", "unhealthy_services", "restarts", "metrics_age_s", "source", "error"]
+           "p50_ms", "p95_ms", "checkout_success", "checkout_requests", "checkout_failures",
+           "locust_history_ts", "loadgenerator_pod_uids", "pod_uids", "unhealthy_services",
+           "restarts", "metrics_age_s", "source", "error"]
 
 
 def destination(path, fields):
@@ -36,6 +38,9 @@ def metrics(output, duration, interval, phase):
                 row.update(snapshot())
                 row["unhealthy_services"] = json.dumps(row["unhealthy_services"])
                 row["restarts"] = json.dumps(row["restarts"])
+                for name in ("loadgenerator_pod_uids", "pod_uids"):
+                    if name in row:
+                        row[name] = json.dumps(row[name])
             except Exception as error:
                 row["error"] = getattr(error, "stderr", None) or str(error)
                 writer.writerow(row)
