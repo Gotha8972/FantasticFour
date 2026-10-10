@@ -49,10 +49,28 @@ Chosen by a real availability check ([MODEL_CHECK_FINDINGS.md](MODEL_CHECK_FINDI
 ## 3. Final steps to show it working (Aashrith, ≈60 min, recorded)
 **Why the baseline failed:** paymentservice failed its liveness probe while the laptop had ~2.7 GiB free RAM and heavy swap. The cluster needs memory headroom, or every number is noise.
 
-0. **Free memory first.** Quit Ollama, browsers (except one Grafana tab), IDEs and anything else heavy. Check that `free -h` shows ≥ 4 GiB available before going on:
-   ```bash
-   free -h
-   ```
+0. **Free memory first: stop Docker.** Our cluster runs on **rootless Podman**, not Docker, so Docker is pure overhead here. Docker Desktop in particular runs its own VM with a fixed memory reservation.
+   1. Confirm the cluster is on Podman. This must list `online-boutique-control-plane`; if it doesn't, stop and tell the team:
+      ```bash
+      podman ps --format '{{.Names}}'
+      ```
+   2. See what Docker holds (optional):
+      ```bash
+      docker stats --no-stream
+      ```
+   3. Stop it. Nothing is deleted, and `start` brings it back later. For Docker Desktop:
+      ```bash
+      systemctl --user stop docker-desktop
+      ```
+      For Docker Engine:
+      ```bash
+      sudo systemctl stop docker.socket docker.service
+      ```
+   4. Also quit Ollama, extra browser tabs (keep one Grafana tab) and IDEs. Check that `available` is ≥ 4 GiB:
+      ```bash
+      free -h
+      ```
+   If it's **disk** space Docker is eating, check with `docker system df` before stopping it. `docker system prune` frees it, but it **permanently deletes** stopped containers and unused images, so run it only if nobody needs them.
 1. **Update** (the key in `.env` is already set):
    ```bash
    git pull
