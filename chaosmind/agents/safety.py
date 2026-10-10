@@ -83,15 +83,35 @@ def review(exp, snapshot, baseline):
 
 
 def observed(events):
-    """Worst metrics seen while the fault was active (None if nothing was measured)."""
-    snaps = [e for e in events if e['event'] == 'SNAPSHOT' and e.get('stage') in ('injecting', 'injected')]
-    if not snaps:
+    """Worst metrics seen while the fault was active (None if nothing was measured), plus separate recovery
+    timings, all in seconds from confirmed injection:
+      service_ready_s     the target stopped appearing as unhealthy (capacity back)
+      customer_recovered_s  HEALTHY: health AND customer metrics back within limits
+    They differ: a killed catalog pod was Ready in ~3 s while customers were affected for ~30 s more."""
+    active = [e for e in events if e['event'] == 'SNAPSHOT' and e.get('stage') in ('injecting', 'injected')]
+    if not active:
         return None
+    # Impact window = injection until recovery: the worst moments often come right after the revert
+    # (e.g. cart service restarting), so recovery snapshots count too.
+    snaps = active + [e for e in events if e['event'] == 'SNAPSHOT' and e.get('stage') == 'recovery']
+    t0 = next((e.get('t', 0) for e in events if e['event'] == 'INJECTED'), active[0].get('t', 0))
+    target = next((e.get('target') for e in events if e.get('target')), None)
+    seen_down, service_ready = False, None
+    for e in (e for e in events if e['event'] == 'SNAPSHOT' and e.get('t', 0) >= t0):
+        if target in e['unhealthy_services']:
+            seen_down = True
+        elif seen_down:
+            service_ready = round(e.get('t', 0) - t0, 1)
+            break
+    healthy = next((e for e in events if e['event'] == 'HEALTHY'), None)
     return {'error_rate': max(e['error_rate'] for e in snaps),
             'p95_ms': max(e['p95_ms'] for e in snaps),
             'unhealthy_count': max(len(e['unhealthy_services']) for e in snaps),
             'breach': next(({k: e[k] for k in ('metric', 'value', 'limit')} for e in events if e['event'] == 'BREACH'), None),
-            'recovery_s': next((e['recovery_s'] for e in events if e['event'] == 'HEALTHY'), None)}
+            'recovery_s': healthy['recovery_s'] if healthy else None,
+            'service_ready_s': service_ready,
+            'customer_recovered_s': round(healthy['t'] - t0, 1) if healthy and 't' in healthy else None,
+            'users': snaps[0].get('users')}
 
 
 def run(exp, snapshot, baseline, guard_run=guard.run):

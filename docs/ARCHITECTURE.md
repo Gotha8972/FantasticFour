@@ -30,9 +30,10 @@ flowchart LR
 2. **Hypothesis with pre-registered criteria.** The **Strategist** turns each vulnerability into an experiment, predicts the affected services, and writes measurable pass/fail criteria (e.g. `p95_ms > 500`, `integrity_violations > 0`) **before** the run.
 3. **Safe execution.** The **Safety Checker** approves, shrinks or rejects (code guarantees it can only make experiments *smaller*), then ramps intensity in steps (e.g. 62 → 125 → 250 → 500 ms) through the guard, recording the highest tolerated level and where our safety limit was crossed.
 4. **Verdict by code, not AI.** Integrity checks catch silent failures (HTTP 200 but data lost). Code compares observations with the criteria → **confirmed / refuted**, and computes a 0–100 **resilience score**.
-5. **Learn and re-plan.** Results go back to the Strategist, which re-ranks the remaining vulnerabilities.
-6. **Fix and prove.** For confirmed weaknesses, **Remediation** chooses a fix from a reviewed catalog (it can't write arbitrary patches), applies it after a server-side dry run, **re-runs the identical experiment**, and keeps the fix only if the score improves.
-7. **Report.** The **Analyst** explains root causes from error logs captured during each fault (quotes are verified to be real log lines) and writes `FINDINGS.md`, with every number fact-checked against the measured data.
+5. **Measure likelihood.** `trials.py` repeats an experiment under identical conditions (fault, load, replicas) and reports how often customer thresholds were breached, with a 95% Wilson interval. Failed injections or missing telemetry are kept as *invalid*, never counted as passes. Recovery is timed twice: when capacity is back (service ready) and when customers are back (metrics normal).
+6. **Learn and re-plan.** Results go back to the Strategist, which re-ranks the remaining vulnerabilities.
+7. **Fix and prove.** For confirmed weaknesses, **Remediation** chooses a fix from a reviewed catalog (it can't write arbitrary patches), applies it after a server-side dry run, **re-runs the identical experiment**, and keeps the fix only if the score improves.
+8. **Report.** The **Analyst** explains root causes from error logs captured during each fault (quotes are verified to be real log lines) and writes `FINDINGS.md`, with every number fact-checked against the measured data.
 
 ## Safety controls
 | Layer | Guarantee |
@@ -46,5 +47,7 @@ flowchart LR
 | Always revert | `finally` block on errors and Ctrl-C; scoped manual abort |
 | Tighten-only | Runtime limit overrides may only be stricter |
 | Remediation allow-list | Only catalogued, reviewed fixes; dry-run first; automatic rollback if the score drops |
+
+**Next step (productionisation):** orchestrate the same stages with Google ADK workflow agents ([design](adk/README.md)); the agents' JSON contracts and code-side validation stay unchanged.
 
 **Honest limits:** breaches are detected **~6–10 s after injection**, because Locust reports a rolling ~10 s window. Pod kills are instantaneous and can't be "reverted", only observed until recovery.

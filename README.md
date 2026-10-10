@@ -2,7 +2,7 @@
 
 > **Bosch Hackathon 2026.** An AI that **audits** a microservices system for weak spots, **plans** experiments with predictions, **breaks things safely** behind a deterministic kill switch, catches **silent failures** that monitoring misses, **scores** resilience and **proves fixes** by re-running the same experiment.
 
-**Architecture (1 page):** [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · **Run it:** [docs/RUNNING.md](docs/RUNNING.md) · **Agents:** [docs/AGENTS.md](docs/AGENTS.md)
+**Findings report:** [FINDINGS.md](FINDINGS.md) · **Architecture (1 page):** [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · **Run it:** [docs/RUNNING.md](docs/RUNNING.md) · **Agents:** [docs/AGENTS.md](docs/AGENTS.md) · **Team form:** [docs/TEAM_FORM.md](docs/TEAM_FORM.md)
 
 ## Highlights
 | | |
@@ -29,9 +29,10 @@ flowchart LR
 1. **Audit:** the **Cartographer** reads the live configuration (call graph, replicas, probes, storage) and ranks vulnerabilities. Every fact it cites is checked against the real config.
 2. **Hypothesise:** the **Strategist** turns each vulnerability into an experiment, predicts the blast radius and writes measurable pass/fail criteria **before** the run.
 3. **Inject safely:** the **Safety Checker** approves, shrinks or rejects (it can only make experiments smaller), then ramps intensity step by step through the kill switch.
-4. **Judge:** integrity checks verify the cart survived and orders really complete; code decides **confirmed / refuted** and computes a **0–100 resilience score**.
-5. **Fix and prove:** **Remediation** applies a reviewed fix and re-runs the identical experiment, keeping the fix only if the score improves.
-6. **Report:** the **Analyst** explains root causes from the logs captured during each fault and writes a fact-checked findings report.
+4. **Judge:** integrity checks verify the cart survived and orders really complete; code decides **confirmed / refuted**, computes a **0–100 resilience score**, and times capacity recovery and customer recovery separately.
+5. **Measure likelihood:** repeated trials of the same experiment give a **failure frequency with a 95% confidence interval** ("customers hurt in X of N pod kills"), not a single anecdote.
+6. **Fix and prove:** **Remediation** applies a reviewed fix and re-runs the identical experiment, keeping the fix only if the score improves.
+7. **Report:** the **Analyst** explains root causes from the logs captured during each fault and writes a fact-checked findings report.
 
 | Component | Status |
 |---|---|
@@ -125,6 +126,10 @@ Let the AI audit, plan and review (add your `OPENAI_API_KEY` to `.env`):
 ```bash
 python3 -m chaosmind.agents --dry-run
 ```
+Repeat one experiment to measure how often customers are hurt (with a 95% interval):
+```bash
+python3 -m chaosmind.agents.trials run experiments/catalog-podkill.json --repeat 5
+```
 Run the full AI loop, including fixing and re-testing confirmed weaknesses:
 ```bash
 python3 -m chaosmind.agents --budget 3 --remediate
@@ -137,7 +142,7 @@ python3 -m chaosmind.test_guard && python3 -m unittest chaosmind.agents.test_age
 ## Repository layout
 ```
 chaosmind/            inject.py · guard.py (kill switch) · monitor.py · baseline.py · verify.py
-chaosmind/agents/     cartographer · strategist · safety · remediation · analyst · integrity · score · loop
+chaosmind/agents/     cartographer · strategist · safety · remediation · analyst · integrity · score · trials · loop
 experiments/          one experiment per failure type in the brief
 remediation/          reviewed fix catalog (Redis persistence, replicas) + scripts/redis-fix.sh
 scripts/ deploy/ chaos/ monitoring/   cluster, Chaos Mesh, load generation, Prometheus/Grafana

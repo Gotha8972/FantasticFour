@@ -73,6 +73,10 @@ def main():
             from chaosmind.monitor import snapshot
             state = integrity.prepare()                       # silent-failure check: set up before the fault
             health = snapshot()
+            base_users = ((baseline.get('metrics') or {}).get('users') or {}).get('mean')
+            if base_users and health.get('users') and abs(health['users'] - base_users) > 0.1 * base_users:
+                print(f"⚠ Load differs from the baseline ({health['users']} vs {base_users:.0f} shoppers); "
+                      "results won't be comparable. Re-run the baseline at this load.")
             result = {**safety.run(exp, health, baseline), 'health_at_review': health}
             violations = integrity.verify(state) if result['steps'] else []
             obs = next((s['observed'] for s in reversed(result['steps']) if s['observed']), None)
@@ -96,6 +100,11 @@ def main():
             except Exception as error:  # a failed fix must not stop the loop; the guard already restored the fault
                 entry['remediation'] = {'verdict': 'error', 'reason': str(error)}
         history.append(entry)
+        stopped = [st.get('stopped_by') for st in result.get('steps', []) if st.get('stopped_by')]
+        if any(x in ('NOT_RECOVERED', 'REVERT_FAILED', 'INTERRUPTED') for x in stopped):
+            save('history.json', history)
+            print(f'Stopping the loop: {stopped[-1]}. Cleanup or recovery needs a human before any further experiment.')
+            break
         for v in vulns:
             if v['id'] == item.get('vulnerability') and verdict in ('confirmed', 'refuted'):
                 v['status'] = verdict

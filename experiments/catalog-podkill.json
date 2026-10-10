@@ -1,0 +1,2 @@
+{"id": "catalog-podkill", "fault": "pod_kill", "target": "productcatalogservice", "duration_s": 30,
+ "hypothesis": "With 1 replica a catalog kill breaks pages and checkout; with 2 replicas customers barely notice"}

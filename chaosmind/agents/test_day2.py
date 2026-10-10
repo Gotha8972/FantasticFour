@@ -80,6 +80,34 @@ class Day2Tests(unittest.TestCase):
         self.assertNotIn('invented line', text)
         self.assertIn('999', text.split('## Fact-check')[1])
 
+    def test_recovery_timings_from_real_cart_down_run(self):
+        events = [json.loads(l) for l in Path(CART_DOWN_RUN, 'events.jsonl').read_text().splitlines()]
+        obs = loop.safety.observed(events)
+        self.assertEqual((obs['error_rate'], obs['p95_ms']), (1.0, 2700.0))  # worst moment is after the revert
+        self.assertLess(obs['service_ready_s'], obs['customer_recovered_s'])  # capacity back before customers
+
+    def test_trials_wilson_and_invalid_runs(self):
+        from chaosmind.agents import trials
+        self.assertEqual(trials.wilson(0, 5), (0.0, 0.434))  # 0 of 5 still allows up to ~43%
+        self.assertEqual(trials.wilson(5, 5)[1], 1.0)
+        ok = [{'event': 'INJECTED', 't': 1, 'target': 'x'},
+              {'event': 'SNAPSHOT', 'stage': 'injected', 't': 2, 'error_rate': 0.0, 'p95_ms': 80, 'unhealthy_services': []},
+              {'event': 'HEALTHY', 't': 9, 'recovery_s': 5}]
+        bad = [{'event': 'INJECTED', 't': 1, 'target': 'x'}, {'event': 'ERROR', 't': 2}]
+        runs = iter([ok, bad, ok])
+        with tempfile.TemporaryDirectory() as d, \
+             patch.object(trials.integrity, 'prepare', return_value={}), patch.object(trials.integrity, 'verify', return_value=[]), \
+             patch.object(trials.time, 'sleep'):
+            cwd = os.getcwd(); os.chdir(d)
+            try:
+                out = trials.run({'id': 'k', 'fault': 'pod_kill', 'target': 'x', 'duration_s': 30}, 3,
+                                 guard_run=lambda exp: next(runs), snapshot=lambda: {}, cond={'k': 1})
+                summary = json.loads(Path(out, 'trials.json').read_text())['summary']
+            finally:
+                os.chdir(cwd)
+        self.assertEqual((summary['valid_trials'], summary['invalid_trials'], summary['breaches']), (2, 1, 0))
+        self.assertEqual(summary['evidence'], 'insufficient (<3 valid trials)')
+
     def test_full_live_loop_with_everything_faked(self):
         workloads = str(next(Path('runs').glob('baseline-study-*/workloads-initial.json')))
         replies = iter([
