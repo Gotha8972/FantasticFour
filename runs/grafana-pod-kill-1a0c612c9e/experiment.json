@@ -1,0 +1,25 @@
+{
+  "apiVersion": "chaos-mesh.org/v1alpha1",
+  "kind": "PodChaos",
+  "metadata": {
+    "name": "grafana-pod-kill-1a0c612c9e",
+    "namespace": "online-boutique",
+    "labels": {
+      "app.kubernetes.io/part-of": "chaosmind"
+    }
+  },
+  "spec": {
+    "action": "pod-kill",
+    "mode": "one",
+    "selector": {
+      "namespaces": [
+        "online-boutique"
+      ],
+      "pods": {
+        "online-boutique": [
+          "productcatalogservice-67849487f4-2x7zg"
+        ]
+      }
+    }
+  }
+}

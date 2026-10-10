@@ -1,0 +1,23 @@
+{
+  "creationTimestamp": "2026-10-10T05:34:40Z",
+  "generateName": "productcatalogservice-67849487f4-",
+  "generation": 1,
+  "labels": {
+    "app": "productcatalogservice",
+    "pod-template-hash": "67849487f4"
+  },
+  "name": "productcatalogservice-67849487f4-2x7zg",
+  "namespace": "online-boutique",
+  "ownerReferences": [
+    {
+      "apiVersion": "apps/v1",
+      "blockOwnerDeletion": true,
+      "controller": true,
+      "kind": "ReplicaSet",
+      "name": "productcatalogservice-67849487f4",
+      "uid": "f6838e8f-c11c-4927-b49c-e1263a397019"
+    }
+  ],
+  "resourceVersion": "1068",
+  "uid": "9972846c-6da2-4ff1-a25b-2f34c641fb02"
+}

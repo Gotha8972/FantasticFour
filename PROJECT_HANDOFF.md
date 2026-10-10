@@ -406,3 +406,16 @@ Remaining work to fulfill the larger plan:
 8. Run the complete documented setup on another machine before submission.
 
 Further instructions: [README.md](README.md), [chaos/README.md](chaos/README.md), and [COMPATIBILITY.md](COMPATIBILITY.md).
+
+## 13. Later monitoring and pod kill results
+
+Prometheus/Grafana monitoring and a single catalog pod kill demonstration were
+added after the original handoff above. The October 10 run confirmed one kill,
+replacement availability in approximately 3 seconds, and request metrics
+returning within approved limits after approximately 34 seconds. The captured
+session recorded 68 HTTP 500 failures, including two before injection; checkout
+had 16 failures out of 179 requests and a whole-session p95 of 12 seconds.
+
+See [the monitoring results and evidence](monitoring/README.md#recorded-pod-kill-results--october-10-2026)
+for the complete timeline, affected operations, recovery measurements, and
+limits on interpreting the saved logs.

@@ -1,0 +1,71 @@
+{
+    "apiVersion": "chaos-mesh.org/v1alpha1",
+    "kind": "PodChaos",
+    "metadata": {
+        "creationTimestamp": "2026-10-10T08:56:34Z",
+        "finalizers": [
+            "chaos-mesh/records"
+        ],
+        "generation": 5,
+        "labels": {
+            "app.kubernetes.io/part-of": "chaosmind"
+        },
+        "name": "grafana-pod-kill-1a0c612c9e",
+        "namespace": "online-boutique",
+        "resourceVersion": "20103",
+        "uid": "10446637-8cb8-4a53-ba97-c7dce4566c79"
+    },
+    "spec": {
+        "action": "pod-kill",
+        "mode": "one",
+        "selector": {
+            "namespaces": [
+                "online-boutique"
+            ],
+            "pods": {
+                "online-boutique": [
+                    "productcatalogservice-67849487f4-2x7zg"
+                ]
+            }
+        }
+    },
+    "status": {
+        "conditions": [
+            {
+                "status": "True",
+                "type": "AllInjected"
+            },
+            {
+                "status": "False",
+                "type": "AllRecovered"
+            },
+            {
+                "status": "False",
+                "type": "Paused"
+            },
+            {
+                "status": "True",
+                "type": "Selected"
+            }
+        ],
+        "experiment": {
+            "containerRecords": [
+                {
+                    "events": [
+                        {
+                            "operation": "Apply",
+                            "timestamp": "2026-10-10T08:56:34Z",
+                            "type": "Succeeded"
+                        }
+                    ],
+                    "id": "online-boutique/productcatalogservice-67849487f4-2x7zg",
+                    "injectedCount": 1,
+                    "phase": "Injected",
+                    "recoveredCount": 0,
+                    "selectorKey": "."
+                }
+            ],
+            "desiredPhase": "Run"
+        }
+    }
+}
