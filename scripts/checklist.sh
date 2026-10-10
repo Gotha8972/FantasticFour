@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
-# Finish A_CHECKLIST.md from the host terminal; agent execution is dry-run only.
+# Collect local checklist evidence only; agent execution is dry-run only.
 set -Eeuo pipefail
 PROJECT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$PROJECT_DIR"
 export KUBECONFIG="$PROJECT_DIR/.runtime/kubeconfig"
-export MISTRAL_LARGE=mistral-small-latest
-export MISTRAL_SMALL=mistral-small-latest
+export MISTRAL_LARGE=mistral-small-2603
+export MISTRAL_SMALL=mistral-small-2603
 
 # Validate presence without echoing or sourcing the secret file.
 python3 - <<'PY'
 from chaosmind.agents.llm import api_key
 if not api_key():
     raise SystemExit('MISTRAL_API_KEY is empty; set it locally in .env first.')
-print('Mistral key is configured (value withheld). Model: mistral-small-latest.')
+print('Mistral key is configured (value withheld). Model: mistral-small-2603.')
 PY
 monitoring_pods="$(kubectl --context kind-online-boutique -n monitoring get pods -o json)"
 python3 -c '
@@ -30,8 +30,7 @@ print("Grafana and Prometheus are ready.")' <<< "$monitoring_pods"
 mkdir -p .runtime runs
 run_dir="runs/checklist-$(date -u +%Y%m%dT%H%M%SZ)"
 mkdir -p "$run_dir"
-echo 'Publishing setup files, monitoring, agent code and approved guard defaults.'
-bash scripts/push-next-steps.sh | tee "$run_dir/publish-setup.log"
+echo 'Collecting local evidence. This script does not commit or publish files.'
 
 echo 'Clearing Python-owned faults before a fresh 300-second baseline.'
 python3 -m chaosmind.inject abort | tee "$run_dir/abort.log"
@@ -54,9 +53,6 @@ if b.get('status') != 'completed' or not b.get('metrics') or not b.get('window')
 Path('.runtime/checklist-baseline-path.txt').write_text(str(p))
 print(f'Fresh baseline: {p}; suitable={b.get("baseline_suitable")}; findings={b.get("findings", [])}')
 PY
-# Publish measured evidence even when marked unsuitable, as requested in the checklist.
-bash scripts/push-next-steps.sh | tee "$run_dir/publish-baseline.log"
-
 echo 'Running the requested offline agent tests.'
 python3 -m unittest chaosmind.agents.test_agents 2>&1 | tee "$run_dir/agent-tests.log"
 baseline_path="$(cat .runtime/checklist-baseline-path.txt)"
@@ -80,5 +76,5 @@ if any(item['safety'].get('steps') for item in history):
     raise SystemExit('Unexpected injection steps in dry-run evidence; stop for review.')
 print(f'Dry-run plan and safety review recorded: {p}; no injection steps.')
 PY
-bash scripts/push-next-steps.sh | tee "$run_dir/publish-agent.log"
-echo "Checklist host sequence complete. Review evidence in $run_dir and runs/agents-*."
+echo "Local checklist sequence complete. Review evidence in $run_dir and runs/agents-*."
+echo 'Read docs/team/A_FINAL_CHECK.md from the updated team checkout before publishing anything.'

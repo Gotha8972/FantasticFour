@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # Publish the required setup files and updated study code on existing remote history.
 set -Eeuo pipefail
+echo 'Disabled: this legacy publisher overwrites team checkpoint files with local copies.' >&2
+echo 'Pull the updated repository and follow docs/team/A_FINAL_CHECK.md for publication.' >&2
+exit 1
 PROJECT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$PROJECT_DIR"
 git fetch origin main
