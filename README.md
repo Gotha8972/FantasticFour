@@ -354,6 +354,8 @@ customer_simulator.py  Optional scripted shopper with Prometheus metrics
 | Srinavith | Fault injection, kill switch, Safety Checker and Remediation agents |
 | Smrithi | AI agents: orchestration, Cartographer, Strategist |
 
+Each member's detailed task guide is in [`docs/team/`](docs/team/GUIDE_00_EVERYONE.md).
+
 **Third-party software:** Online Boutique v0.10.4 (Apache-2.0), kind, Podman, Kubernetes, Chaos Mesh 2.8.4, Helm 3.19, Locust (bundled load generator), kube-prometheus-stack 92.3.0 (Prometheus, Grafana, kube-state-metrics), Python `requests` and `prometheus_client` (simulator only). The agents use only the Python standard library.
 
 **AI models:** Mistral `mistral-small-latest` (Cartographer, Strategist, Safety Checker), as selected for the first dry run, via the Mistral chat API in JSON mode. `MISTRAL_LARGE` and `MISTRAL_SMALL` can override the client aliases.
