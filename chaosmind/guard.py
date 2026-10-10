@@ -1,87 +1,133 @@
-"""Kill switch: preflight -> inject -> watch -> auto-revert -> confirm recovery.
-
-python -m chaosmind.guard exp.json ['{"max_unhealthy": 0}']   # optional limit overrides as JSON
-"""
+"""Guarded injection with real metrics, confirmed injection, recovery, CSV logs."""
+import argparse
 import json
-import pathlib
-import signal
-import sys
+import math
+from pathlib import Path
 import time
+import uuid
 
 from chaosmind import inject
+from chaosmind.monitor import snapshot
+from chaosmind.runlog import RunLog
 
-LIMITS = {"error_rate": 0.20, "p95_ms": 2000, "max_unhealthy": 2,
-          "poll_s": 2, "recovery_timeout_s": 120}
-
-
-def snapshot():
-    # ponytail: stub until B's monitor.snapshot() lands; only health is real, error_rate/p95 are 0. Same shape, swap the import.
-    deps = json.loads(inject.kubectl("get", "deploy", "-n", inject.NS, "-o", "json"))["items"]
-    bad = [d["metadata"]["name"] for d in deps
-           if d["status"].get("readyReplicas", 0) < d["spec"]["replicas"]]
-    return {"ts": time.time(), "error_rate": 0.0, "p95_ms": 0, "unhealthy_services": bad}
+LIMITS = {'error_rate': 0.20, 'p95_ms': 2000, 'max_unhealthy': 2,
+          'max_duration_s': 120, 'poll_s': 2, 'recovery_timeout_s': 120,
+          'injection_timeout_s': 60}
 
 
 def breach(snap, lim):
-    """Return (metric, value, limit) for the first limit crossed, else None."""
-    for metric, value, limit in [("error_rate", snap["error_rate"], lim["error_rate"]),
-                                 ("p95_ms", snap["p95_ms"], lim["p95_ms"]),
-                                 ("unhealthy", len(snap["unhealthy_services"]), lim["max_unhealthy"])]:
+    for metric, value, limit in [('error_rate', snap['error_rate'], lim['error_rate']),
+                                 ('p95_ms', snap['p95_ms'], lim['p95_ms']),
+                                 ('unhealthy', len(snap['unhealthy_services']), lim['max_unhealthy'])]:
         if value > limit:
             return metric, value, limit
     return None
 
 
 def run(exp, limits=None):
-    lim = LIMITS | (limits or {})
-    out = pathlib.Path("runs") / f"{exp['id']}.jsonl"
-    out.parent.mkdir(exist_ok=True)
-    t0 = time.monotonic()
-    events = []
-
-    def log(event, **kw):
-        e = {"t": round(time.monotonic() - t0, 1), "event": event, **kw}
-        events.append(e)
-        print(json.dumps(e), flush=True)
-        with out.open("a") as f:
-            f.write(json.dumps(e) + "\n")
-
-    # 1. preflight
-    snap = snapshot()
-    if inject.running():
-        log("REFUSED", reason="another chaos experiment is already running")
-        return events
-    if b := breach(snap, lim):
-        log("REFUSED", reason="system already unhealthy", metric=b[0], value=b[1], limit=b[2])
-        return events
-
-    # 2-3. inject + watch; finally guarantees revert on breach, timeout, crash or Ctrl-C
-    inject.apply(exp)
-    log("INJECTED", fault=exp["fault"], target=exp["target"], params=exp.get("params", {}))
+    inject.validate(exp)
+    lim = LIMITS.copy()
+    for key, value in (limits or {}).items():
+        if key not in LIMITS or isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value < 0:
+            raise ValueError(f'invalid guard limit: {key}')
+        if key in ('error_rate', 'p95_ms', 'max_unhealthy', 'max_duration_s', 'poll_s', 'injection_timeout_s') and value > LIMITS[key]:
+            raise ValueError(f'guard overrides may only tighten {key}')
+        if key.endswith('_s') and value <= 0:
+            raise ValueError(f'{key} must be positive')
+        lim[key] = value
+    if exp['duration_s'] > lim['max_duration_s']:
+        raise ValueError('experiment exceeds guard duration limit')
+    exp = exp | {'_run_token': str(uuid.uuid4())}
+    output = RunLog(exp)
+    log = output.log
+    print(f'Run artifacts: {output.directory}', flush=True)
+    attempted = False
+    clean = False
     try:
-        while time.monotonic() - t0 < exp["duration_s"]:
-            time.sleep(lim["poll_s"])
-            if b := breach(snapshot(), lim):
-                log("BREACH", metric=b[0], value=b[1], limit=b[2])
-                break
-        else:
-            log("ENDED", reason="planned duration reached")
-    finally:
-        inject.revert(exp)
-        log("REVERTED")
-
-    # 4. confirm recovery
-    reverted_at = time.monotonic()
-    while time.monotonic() - reverted_at < lim["recovery_timeout_s"]:
+        active = inject.running()
+        if active:
+            log('REFUSED', reason='another unrecovered experiment exists', experiments=active)
+            return output.events
         snap = snapshot()
-        if not snap["unhealthy_services"] and not breach(snap, lim):
-            log("HEALTHY", recovery_s=round(time.monotonic() - reverted_at, 1))
-            return events
-        time.sleep(lim["poll_s"])
-    log("NOT_RECOVERED", unhealthy=snap["unhealthy_services"])  # this is a finding, not a bug
-    return events
+        log('SNAPSHOT', stage='preflight', **snap)
+        if snap['unhealthy_services'] or breach(snap, lim):
+            log('REFUSED', reason='baseline unhealthy', unhealthy_services=snap['unhealthy_services'])
+            return output.events
+        attempted = True
+        inject.apply(exp)
+        created_at = time.monotonic()
+        log('CREATED')
+        confirmed = False
+        while True:
+            state = inject.injection_state(inject.status(exp))
+            if state['injected']:
+                log('INJECTED', records=state['records'])
+                confirmed = True
+                break
+            if state['errors']:
+                raise RuntimeError('Chaos Mesh injection failed: ' + state['errors'][-1])
+            if time.monotonic() - created_at >= min(lim['injection_timeout_s'], exp['duration_s']):
+                raise RuntimeError('Timed out waiting for confirmed injection')
+            snap = snapshot()
+            log('SNAPSHOT', stage='injecting', **snap)
+            if b := breach(snap, lim):
+                log('BREACH', metric=b[0], value=b[1], limit=b[2])
+                break
+            time.sleep(lim['poll_s'])
+        if confirmed:
+            while time.monotonic() - created_at < exp['duration_s']:
+                snap = snapshot()
+                log('SNAPSHOT', stage='injected', **snap)
+                if b := breach(snap, lim):
+                    log('BREACH', metric=b[0], value=b[1], limit=b[2])
+                    break
+                time.sleep(lim['poll_s'])
+            else:
+                log('ENDED', reason='planned duration reached')
+    except KeyboardInterrupt:
+        log('INTERRUPTED', reason='Ctrl-C')
+    except Exception as error:
+        log('ERROR', reason=getattr(error, 'stderr', None) or str(error))
+    finally:
+        if attempted:
+            reverted_at = time.monotonic()
+            try:
+                log('REVERT_REQUESTED')
+            except OSError:
+                pass  # A full/unwritable log directory must not prevent cleanup.
+            try:
+                inject.revert(exp)
+                clean = True
+                log('REVERTED')
+            except Exception as error:
+                log('REVERT_FAILED', reason=getattr(error, 'stderr', None) or str(error))
+    if attempted and clean:
+        while time.monotonic() - reverted_at < lim['recovery_timeout_s']:
+            try:
+                snap = snapshot()
+                log('SNAPSHOT', stage='recovery', **snap)
+                if not snap['unhealthy_services'] and not breach(snap, lim):
+                    log('HEALTHY', recovery_s=round(time.monotonic() - reverted_at, 3))
+                    return output.events
+            except KeyboardInterrupt:
+                log('INTERRUPTED', reason='Ctrl-C during recovery; experiment already deleted')
+                return output.events
+            except Exception as error:
+                log('MONITOR_ERROR', reason=getattr(error, 'stderr', None) or str(error))
+            time.sleep(lim['poll_s'])
+        log('NOT_RECOVERED', reason='health could not be confirmed before recovery timeout')
+    return output.events
 
 
-if __name__ == "__main__":
-    signal.signal(signal.SIGTERM, lambda *_: sys.exit(143))  # `kill` → SystemExit → finally reverts
-    run(json.load(open(sys.argv[1])), json.loads(sys.argv[2]) if len(sys.argv) > 2 else None)
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('experiment')
+    parser.add_argument('limits', nargs='?', default='{}', help='JSON overrides that tighten thresholds')
+    args = parser.parse_args()
+    events = run(json.loads(Path(args.experiment).read_text()), json.loads(args.limits))
+    bad = {'REFUSED', 'ERROR', 'REVERT_FAILED', 'NOT_RECOVERED', 'INTERRUPTED'}
+    return 1 if any(event['event'] in bad for event in events) else 0
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())

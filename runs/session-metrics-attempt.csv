@@ -1,0 +1,4 @@
+timestamp_utc,phase,ts,users,rps,requests,failures,error_rate,p95_ms,checkout_success,unhealthy_services,restarts,metrics_age_s,source,error
+2026-10-10T06:21:47.178846+00:00,baseline,,,,,,,,,,,,,"Unable to connect to the server: dial tcp 127.0.0.1:42957: socket: operation not permitted
+Unable to connect to the server: dial tcp 127.0.0.1:42957: socket: operation not permitted
+"

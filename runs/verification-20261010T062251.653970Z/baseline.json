@@ -1,0 +1,27 @@
+{
+  "ts": 1791613372.6586328,
+  "error_rate": 0.0,
+  "p95_ms": 56.0,
+  "users": 20,
+  "rps": 4.2,
+  "requests": 124,
+  "failures": 0,
+  "checkout_success": 1.0,
+  "unhealthy_services": [],
+  "restarts": {
+    "adservice": 0,
+    "cartservice": 0,
+    "checkoutservice": 0,
+    "currencyservice": 0,
+    "emailservice": 0,
+    "frontend": 0,
+    "loadgenerator": 0,
+    "paymentservice": 0,
+    "productcatalogservice": 0,
+    "recommendationservice": 0,
+    "redis-cart": 0,
+    "shippingservice": 0
+  },
+  "metrics_age_s": 0.658602237701416,
+  "source": "locust_csv_and_kubernetes"
+}

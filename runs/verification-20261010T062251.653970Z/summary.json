@@ -1,0 +1,12 @@
+[
+  {
+    "experiment": "test-delay",
+    "admission_accepted": true,
+    "injected": false
+  },
+  {
+    "experiment": "test-down",
+    "admission_accepted": true,
+    "injected": false
+  }
+]

@@ -1,0 +1,20 @@
+[
+  {
+    "experiment": "test-delay",
+    "injected": true,
+    "recovered": true,
+    "breach_detected": true,
+    "passed": true,
+    "artifact_dir": "runs/test-delay-20261010T062255.501508Z",
+    "collection_errors": []
+  },
+  {
+    "experiment": "test-down",
+    "injected": true,
+    "recovered": true,
+    "breach_detected": true,
+    "passed": true,
+    "artifact_dir": "runs/test-down-20261010T062320.861245Z",
+    "collection_errors": []
+  }
+]

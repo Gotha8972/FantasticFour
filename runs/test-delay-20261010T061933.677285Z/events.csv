@@ -1,0 +1,6 @@
+timestamp_utc,t,event,experiment_id,fault,target,reason,metric,value,limit,recovery_s,users,rps,requests,failures,error_rate,p95_ms,checkout_success,unhealthy_services,restarts,details_json
+2026-10-10T06:19:33.827104+00:00,0.15,ERROR,test-delay,network_delay,productcatalogservice,"Unable to connect to the server: dial tcp 127.0.0.1:42957: socket: operation not permitted
+Unable to connect to the server: dial tcp 127.0.0.1:42957: socket: operation not permitted
+Unable to connect to the server: dial tcp 127.0.0.1:42957: socket: operation not permitted
+Unable to connect to the server: dial tcp 127.0.0.1:42957: socket: operation not permitted
+",,,,,,,,,,,,,,"{""reason"": ""Unable to connect to the server: dial tcp 127.0.0.1:42957: socket: operation not permitted\nUnable to connect to the server: dial tcp 127.0.0.1:42957: socket: operation not permitted\nUnable to connect to the server: dial tcp 127.0.0.1:42957: socket: operation not permitted\nUnable to connect to the server: dial tcp 127.0.0.1:42957: socket: operation not permitted\n""}"

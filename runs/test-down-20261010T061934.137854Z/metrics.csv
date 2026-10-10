@@ -1,0 +1,1 @@
+timestamp_utc,t,event,experiment_id,fault,target,reason,metric,value,limit,recovery_s,users,rps,requests,failures,error_rate,p95_ms,checkout_success,unhealthy_services,restarts,details_json
