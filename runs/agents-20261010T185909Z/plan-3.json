@@ -1,0 +1,49 @@
+{
+ "plan": [
+  {
+   "vulnerability": "V5",
+   "rank": 1,
+   "fault": "pod_kill",
+   "target": "productcatalogservice",
+   "params": {},
+   "duration_s": 30,
+   "reason": "ProductCatalogService is a single\u2011replica, stateless service whose failure is expected to cause high latency or errors in the checkout flow. A pod_kill will test the hypothesis that its unavailability propagates to the frontend and checkout, producing measurable customer impact. This experiment has the highest risk score among the remaining untested vulnerabilities and uses a different fault type than the already executed pod_kill on redis-cart, providing new insight.",
+   "prediction": {
+    "affected": [
+     "productcatalogservice",
+     "checkoutservice",
+     "frontend",
+     "recommendationservice"
+    ],
+    "summary": "Killing the product catalog pod will make product data unavailable, causing checkout steps that depend on product information to fail or timeout, leading to increased error rate and latency for users."
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 255
+    }
+   ],
+   "experiment": {
+    "id": "v5-pod-kill-productcatalogservice",
+    "fault": "pod_kill",
+    "target": "productcatalogservice",
+    "params": {},
+    "duration_s": 30
+   },
+   "priority": {
+    "blast_radius": 4,
+    "criticality": "high",
+    "score": 12
+   }
+  }
+ ],
+ "dropped": [],
+ "replan_note": "Previous experiments covered redis-cart and frontend pod failures. Remaining high\u2011risk vulnerabilities (V2, V4, V5, V6, V7, V8) are untested. We prioritize V5 because it has the highest risk score (9) and its single\u2011replica nature makes it a critical failure point. The chosen fault (pod_kill) is distinct from prior experiments and directly tests the hypothesis that the catalog service\u2019s unavailability will degrade checkout performance and increase errors. The criteria use both error_rate and p95_ms to capture customer impact. No other faults are available for this plan due to the current fault list. The plan will be executed next. ",
+ "feedback": null
+}

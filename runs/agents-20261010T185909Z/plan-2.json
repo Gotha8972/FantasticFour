@@ -1,0 +1,163 @@
+{
+ "plan": [
+  {
+   "vulnerability": "V1",
+   "rank": 1,
+   "fault": "pod_kill",
+   "target": "redis-cart",
+   "params": {},
+   "duration_s": 30,
+   "reason": "Critical data\u2011loss risk due to emptyDir; pod_kill directly tests state persistence. Highest blast radius and risk score.",
+   "prediction": {
+    "affected": [
+     "redis-cart",
+     "cartservice",
+     "checkoutservice",
+     "frontend"
+    ],
+    "summary": "Pod restart should clear cart data, causing checkout failures and visible errors."
+   },
+   "criteria": [
+    {
+     "metric": "integrity_violations",
+     "op": ">",
+     "value": 0
+    },
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0
+    }
+   ],
+   "experiment": {
+    "id": "v1-pod-kill-redis-cart",
+    "fault": "pod_kill",
+    "target": "redis-cart",
+    "params": {},
+    "duration_s": 30
+   },
+   "priority": {
+    "blast_radius": 4,
+    "criticality": "critical",
+    "score": 16
+   }
+  },
+  {
+   "vulnerability": "V2",
+   "rank": 2,
+   "fault": "pod_failure",
+   "target": "cartservice",
+   "params": {},
+   "duration_s": 30,
+   "reason": "Single\u2011replica cartservice; pod_failure tests availability impact on cart and checkout flows.",
+   "prediction": {
+    "affected": [
+     "cartservice",
+     "checkoutservice",
+     "frontend"
+    ],
+    "summary": "Cartservice pod down; cart operations and checkout should fail."
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 50
+    }
+   ],
+   "experiment": {
+    "id": "v2-pod-failure-cartservice",
+    "fault": "pod_failure",
+    "target": "cartservice",
+    "params": {},
+    "duration_s": 30
+   },
+   "priority": {
+    "blast_radius": 3,
+    "criticality": "critical",
+    "score": 12
+   }
+  }
+ ],
+ "dropped": [
+  {
+   "item": {
+    "vulnerability": "V2",
+    "rank": 2,
+    "fault": "network_delay",
+    "target": "cartservice",
+    "params": {
+     "latency": "500"
+    },
+    "duration_s": 30,
+    "reason": "Single\u2011replica cartservice may suffer latency propagation; network_delay tests fan\u2011in impact without killing the pod.",
+    "prediction": {
+     "affected": [
+      "cartservice",
+      "checkoutservice",
+      "frontend"
+     ],
+     "summary": "Added latency should increase p95_ms and error_rate for cart operations."
+    },
+    "criteria": [
+     {
+      "metric": "p95_ms",
+      "op": ">",
+      "value": 500
+     },
+     {
+      "metric": "error_rate",
+      "op": ">",
+      "value": 0
+     }
+    ]
+   },
+   "reason": "latency must be a nonnegative duration in ms"
+  },
+  {
+   "item": {
+    "vulnerability": "V1",
+    "rank": 1,
+    "fault": "pod_kill",
+    "target": "redis-cart",
+    "params": {},
+    "duration_s": 30,
+    "reason": "Critical data\u2011loss risk; pod_kill directly tests stateful emptyDir persistence.  Integrity violations will reveal cart data loss.",
+    "prediction": {
+     "affected": [
+      "redis-cart",
+      "cartservice",
+      "checkoutservice",
+      "frontend"
+     ],
+     "summary": "Redis\u2011cart pod restarts; cart contents should be lost, causing checkout failures."
+    },
+    "criteria": [
+     {
+      "metric": "integrity_violations",
+      "op": ">",
+      "value": 0
+     },
+     {
+      "metric": "error_rate",
+      "op": ">",
+      "value": 0
+     },
+     {
+      "metric": "p95_ms",
+      "op": ">",
+      "value": 50
+     }
+    ]
+   },
+   "reason": "already run or planned"
+  }
+ ],
+ "replan_note": "Added a pod_kill experiment for V1 to detect data loss and a pod_failure for V2 to assess availability. Both use distinct fault types and measure customer impact via error_rate, p95_ms, and integrity_violations where applicable.",
+ "feedback": "network_delay on cartservice was dropped: latency must be a nonnegative duration in ms. Return corrected or replacement experiments only; keep integrity criteria for stateful services."
+}

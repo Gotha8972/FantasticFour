@@ -1,0 +1,83 @@
+{
+ "plan": [
+  {
+   "vulnerability": "V2",
+   "rank": 1,
+   "fault": "pod_failure",
+   "target": "frontend",
+   "params": {},
+   "duration_s": 30,
+   "reason": "Single\u2011replica entrypoint; no PDB or HPA; pod failure should make site unavailable.",
+   "prediction": {
+    "affected": [
+     "frontend"
+    ],
+    "summary": "All user requests to frontend will fail; dependent services will be unreachable."
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 255
+    }
+   ],
+   "experiment": {
+    "id": "v2-pod-failure-frontend",
+    "fault": "pod_failure",
+    "target": "frontend",
+    "params": {},
+    "duration_s": 30
+   },
+   "priority": {
+    "blast_radius": 11,
+    "criticality": "critical",
+    "score": 44
+   }
+  },
+  {
+   "vulnerability": "V1",
+   "rank": 2,
+   "fault": "pod_kill",
+   "target": "redis-cart",
+   "params": {},
+   "duration_s": 30,
+   "reason": "Stateful cache with emptyDir; single replica; pod kill should cause data loss and checkout failure.",
+   "prediction": {
+    "affected": [
+     "redis-cart",
+     "cartservice",
+     "checkoutservice",
+     "frontend"
+    ],
+    "summary": "Redis-cart restart will lose cart data; cartservice will return empty cart; checkoutservice will fail to create order; frontend will show errors."
+   },
+   "criteria": [
+    {
+     "metric": "integrity_violations",
+     "op": ">",
+     "value": 0
+    }
+   ],
+   "experiment": {
+    "id": "v1-pod-kill-redis-cart",
+    "fault": "pod_kill",
+    "target": "redis-cart",
+    "params": {},
+    "duration_s": 30
+   },
+   "priority": {
+    "blast_radius": 4,
+    "criticality": "critical",
+    "score": 16
+   }
+  }
+ ],
+ "dropped": [],
+ "replan_note": "No previous experiments; both faults available and not yet used. V1 and V2 are highest risk and have distinct failure modes, so they are prioritized. V3 is omitted to stay within the 3\u2011experiment limit.",
+ "feedback": null
+}
