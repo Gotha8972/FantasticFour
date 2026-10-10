@@ -3,7 +3,7 @@
 **Pipeline**
 ```
 ② Cartographer → ① Strategist → ④ Safety Checker ⇄ inject.py/guard.py → Chaos Mesh
-   (map)           (what to break)   (inject + ramp intensity)     (code: validate, auto-revert)
+ (find weak spots) (prove them)   (inject + ramp intensity)     (code: validate, auto-revert)
                                               ↓
                          ③ Observer (pre/post stats) + ⑥ Log Detective (why it broke)
                                               ↓
@@ -11,50 +11,64 @@
 ```
 
 **Demo story:**
-> The Cartographer mapped the app → the Strategist predicted the weak points by blast radius → the Safety Checker injected safely and ramped intensity until the breaking point → the Observer showed the impact against the baseline → the Log Detective explained why → Remediation fixed it and the re-run proved it → the Documentor wrote it all up.
+> The Cartographer audited the architecture and flagged its weakest spots → the Strategist turned each suspicion into an experiment with a prediction → the Safety Checker injected safely and ramped intensity until the breaking point → the Observer showed the impact against the baseline → the Log Detective explained why → Remediation fixed it and the re-run proved it → the Documentor wrote it all up.
 
 ## Ground rules (everyone)
 1. **Agents return JSON; code acts.** Even the Safety Checker never runs `kubectl` itself. It calls `guard.run()`, which calls `inject.py`, which validates everything (allowed fault, real target, `online-boutique` only, duration ≤ 120 s, latency ≤ 2000 ms). **The guard's kill-switch limits can't be changed by any agent.**
 2. **One shared client:** `chaosmind/agents/llm.py` → `ask(system, user, model="large") -> dict` (Mistral, JSON mode, 1 retry on bad JSON). D builds it first.
 3. **One agent = one file** in `chaosmind/agents/` with one public function and a `__main__` that runs on **saved files in `runs/`**, so it can be tested without the cluster.
 4. **Every claim cites evidence:** a run ID, metric value or log line.
-5. **Models:** `mistral-large-latest` for reasoning (Strategist, Safety Checker, Remediation, Documentor), `mistral-small-latest` for bulk reading (Cartographer, Log Detective, Observer). Confirm the exact IDs on the Mistral console.
+5. **Models:** `mistral-large-latest` for reasoning (Cartographer, Strategist, Safety Checker, Remediation, Documentor), `mistral-small-latest` for bulk reading (Log Detective, Observer). Confirm the exact IDs on the Mistral console.
 
 ## Who owns what
 
 | Person | Agents | Why them |
 |---|---|---|
-| **D: AI lead** | `llm.py` + orchestrator + **② Cartographer** + **① Strategist** | The map feeds the Strategist directly, and D owns the pipeline |
+| **D: AI lead** | `llm.py` + orchestrator + **② Cartographer** + **① Strategist** | The Cartographer's findings feed the Strategist directly, and D owns the pipeline |
 | **C: Injection** | **④ Safety Checker** + **⑤ Remediation** | Both drive `inject.py`/`guard.py`, which C built |
 | **A: Platform** | **③ Observer** + **⑥ Log Detective** | A built `monitor.py`, the baseline and the log capture |
 | **B: Simulation** | **⑦ Documentor** + resilience score (code) + integrity checks for the Observer | Reports + the customer-journey checks from the simulator |
 
 ---
 
-## ② Cartographer (D)
-**Job:** build the dependency graph by reading the live network structure.
-- **Code part:** read deployments, services and every `*_ADDR` env var (each one is a call edge) via `inject.kubectl()` → raw nodes + edges + replica counts + storage type (e.g. `redis-cart` uses `emptyDir`).
-- **AI part:** label each service (`critical` / `optional` / `stateful`) and explain why.
-- **Out:** `graph.json`
+## ② Cartographer (D): architecture vulnerability auditor
+**Job:** it doesn't draw the graph (code does that, and Google's map is already verified). It **reads the architecture and finds its most vulnerable points *before* anything is broken**, like a reviewer doing a static audit.
+
+**Code gathers the facts** (via `inject.kubectl()`, read-only):
+- Call graph from every `*_ADDR` env var → fan-in (who depends on it), fan-out, longest synchronous chain, reachability from `frontend`/`checkout`
+- Per deployment: replicas, readiness/liveness probes, resource requests/limits, volumes (`emptyDir` vs PVC), PodDisruptionBudget, HPA
+
+**AI reasons over the facts** and returns ranked vulnerabilities, each with a hypothesis to test:
 ```json
-{"nodes": [{"name": "redis-cart", "replicas": 1, "storage": "emptyDir", "role": "stateful", "why": "holds all carts"}],
- "edges": [{"from": "cartservice", "to": "redis-cart"}]}
+{"vulnerabilities": [
+  {"id": "V1", "service": "redis-cart", "severity": "critical",
+   "weakness": "Single replica, data on emptyDir: every cart lives in one pod's temporary disk",
+   "evidence": {"replicas": 1, "volume": "emptyDir", "pdb": false, "callers": ["cartservice"]},
+   "hypothesis": "Restarting redis-cart silently wipes all carts while HTTP stays 200",
+   "blast_radius": ["cartservice", "frontend", "checkoutservice"]},
+  {"id": "V2", "service": "productcatalogservice", "severity": "high",
+   "weakness": "Highest fan-in (frontend, checkout, recommendation), single replica, on the checkout path",
+   "hypothesis": "Latency here propagates to every page and to checkout"}]}
 ```
-- **Done when:** the edges match the verified README table (17 edges), and it's rendered as a Mermaid diagram.
+Things it should look for: single points of failure, stateful services without persistence, high fan-in hotspots, long synchronous chains on the revenue path (checkout), missing probes, missing PDBs, everything at 1 replica, and optional dependencies (ads, recommendations) that *should* fail gracefully.
+
+- **Why it's a real agent:** facts → judgement. Code can count callers; deciding *which* combination of facts is dangerous, and why, is reasoning.
+- **Scored later:** each vulnerability is either **confirmed** or **refuted** by experiments. The demo line is "the static audit flagged 6 risks; experiments confirmed 4 and refuted 2". Redis (V1) and ads-fail-gracefully are already known, so they're free first checks.
+- **Done when:** it returns a ranked list where every item cites real config facts, and the top items include redis-cart and productcatalog.
 
 ## ① Strategist (D)
-**Job:** find likely points of failure from the graph, and **predict** what happens if each one breaks.
-- **Uses:** blast radius (how many services depend on it, directly and indirectly), fan-in/fan-out, single replicas, stateful storage, the critical path (checkout).
-- **In:** `graph.json` + `baseline.json` + past results in `runs/`
+**Job:** turn the Cartographer's vulnerabilities into **experiments that prove or refute them**, predict the outcome, and **re-plan after every result**.
+- **In:** `vulnerabilities.json` + `baseline.json` + allowed faults + results so far
 - **Out:**
 ```json
-{"targets": [{"service": "productcatalogservice", "rank": 1, "blast_radius": 4,
-  "reason": "3 direct callers incl. checkout; single replica",
-  "experiment": {"fault": "network_delay", "params": {"latency": "300ms"}, "duration_s": 60},
-  "prediction": {"p95_ms": 1500, "error_rate": 0.02, "affected": ["frontend", "checkoutservice", "recommendationservice"]}}]}
+{"plan": [{"vulnerability": "V2", "rank": 1,
+  "experiment": {"fault": "network_delay", "target": "productcatalogservice", "params": {"latency": "200ms"}, "duration_s": 30},
+  "prediction": {"p95_ms": 1200, "error_rate": 0.02, "affected": ["frontend", "checkoutservice", "recommendationservice"]},
+  "reason": "Highest fan-in on the checkout path; test latency propagation"}]}
 ```
-- **Code afterwards:** compare prediction vs actual. The demo line is "the AI predicted 5 of 6 blast radii correctly".
-- **Done when:** a top-5 that a human agrees with, and predictions saved next to actuals.
+- **Loop:** after each experiment, it's called again with the result: mark the vulnerability `confirmed` / `refuted`, re-rank what's left ("catalog was worse than predicted → test checkout's other dependencies next; ads degraded gracefully → skip recommendation").
+- **Code afterwards:** prediction vs actual → "the AI predicted 5 of 6 blast radii correctly".
+- **Done when:** every plan item maps to a vulnerability, passes `inject.validate()`, and the plan visibly changes after a result.
 
 ## ④ Safety Checker (C): the agent that injects
 **Job:** take the Strategist's experiment, decide if it's safe right now, **inject it through `guard.run()`**, and **ramp intensity** step by step to find the breaking point.
@@ -106,8 +120,8 @@ step 1: 100ms → guard.run() → metrics OK? → step 2: 200ms → OK? → step
 
 ## Orchestrator (D): `python3 -m chaosmind.run`
 ```
-Cartographer → Strategist → for each target: Safety Checker (ramp via guard) →
-Observer + Log Detective → (if weakness) Remediation + re-run → Documentor → FINDINGS.md
+Cartographer (audit) → Strategist → for each experiment: Safety Checker (ramp via guard) →
+Observer + Log Detective → Strategist re-plans (confirmed/refuted) → (if confirmed) Remediation + re-run → Documentor → FINDINGS.md
 ```
 Every step writes to `runs/`, so everything is replayable offline.
 
@@ -120,5 +134,5 @@ Every step writes to `runs/`, so everything is replayable offline.
 | H4–5 | ⑤ Redis fix + re-run; ⑦ report generated |
 | H5–6 | Feature freeze → clean run → record the demo |
 
-**If behind, cut in this order:** Documentor's self-check → Cartographer's AI labels (keep the code part) → intensity ramp (single intensity instead) → Strategist predictions.
+**If behind, cut in this order:** Documentor's self-check → Strategist re-planning loop (run the plan once) → intensity ramp (single intensity instead) → Strategist predictions.
 **Never cut:** Strategist ranking, Safety Checker injection through the guard, Observer pre/post, Remediation re-run.
