@@ -53,8 +53,11 @@ flowchart LR
 | `chaosmind/inject.py` (**Operator**) | Validates experiments, creates/reverts Chaos Mesh resources, confirms injection | ✅ |
 | `chaosmind/monitor.py` | Real error rate, p95 latency, checkout success, unhealthy services, restarts | ✅ |
 | `chaosmind/guard.py` (**kill switch**) | Preflight → inject → watch every 2 s → auto-revert on breach → confirm recovery | ✅ Verified live |
-| AI agents: Cartographer, Strategist, Safety Officer, Observer, Analyst | Plan experiments from the dependency map, explain results, rank weaknesses, score resilience | 🚧 In progress |
-| Dashboard | Live view of experiments and metrics | 🚧 Planned |
+| **Cartographer** agent (`chaosmind/agents/cartographer.py`) | Audits the live architecture and ranks its most vulnerable points; every cited fact is checked against the real config | ✅ Built, offline-tested |
+| **Strategist** agent (`chaosmind/agents/strategist.py`) | Turns each vulnerability into an experiment with a prediction and pass/fail criteria; re-plans after each result | ✅ Built, offline-tested |
+| **Safety Checker** agent (`chaosmind/agents/safety.py`) | Approves/shrinks/rejects, then injects through the guard with a gradual intensity ramp to find the breaking point | ✅ Built, offline-tested |
+| Observer, Log Detective, Remediation, Documentor agents | Impact pre/post, root cause from logs, fix + re-run, findings report | 🚧 In progress ([AGENTS.md](AGENTS.md)) |
+| **Grafana dashboard** (Prometheus + kube-state-metrics + Locust/Chaos exporters) | Live shoppers, throughput, errors, p95, confirmed faults, pod availability, CPU/memory, restarts | ✅ Running ([monitoring/README.md](monitoring/README.md)) |
 
 **Design rule:** the kill switch is **deterministic code, not an LLM**. AI agents may propose experiments and make them *safer*, but they can never loosen or bypass the guard.
 
@@ -169,10 +172,10 @@ python3 -m chaosmind.verify --dry-run
 ```
 | Field | Allowed |
 |---|---|
-| `fault` | `pod_failure` (service unavailable), `network_delay` (added latency + jitter) |
+| `fault` | `pod_failure` (service unavailable), `pod_kill` (pod killed once and recreated), `network_delay` (added latency + jitter), `network_loss` (packet loss %), `cpu_stress` (CPU load) |
 | `target` | Any deployment name, e.g. `cartservice`, `productcatalogservice` |
 | `duration_s` | 1–120 |
-| `params` | `network_delay`: `latency`, `jitter` (ms, ≤ 2000) |
+| `params` | `network_delay`: `latency`, `jitter` (ms, ≤ 2000) · `network_loss`: `loss` (≤ 50%) · `cpu_stress`: `load` (1–100), `workers` (1–2) |
 
 Samples are in [`experiments/`](experiments/).
 
@@ -222,6 +225,32 @@ Open the Chaos Mesh dashboard at http://localhost:2333:
 bash scripts/chaos.sh dashboard
 ```
 
+### Let the agents choose and run experiments
+Needs `MISTRAL_API_KEY` in the environment or in `.env` (git-ignored).
+
+Audit, plan and safety review only; nothing is injected:
+```bash
+python3 -m chaosmind.agents --dry-run
+```
+Live: up to 3 experiments, each ramped through the guard, re-planning after each result:
+```bash
+python3 -m chaosmind.agents --budget 3
+```
+Offline tests (no cluster, no API key):
+```bash
+python3 -m unittest chaosmind.agents.test_agents
+```
+Everything is saved to `runs/agents-<time>/`: facts, vulnerabilities, every plan and the full history with verdicts.
+
+### Watch it live in Grafana
+```bash
+bash scripts/install-monitoring.sh
+```
+```bash
+bash scripts/monitoring.sh grafana
+```
+Then open the **Online Boutique — Chaos Overview** dashboard at http://127.0.0.1:3000. Full guide: [monitoring/README.md](monitoring/README.md).
+
 ### Optional: standalone customer simulator
 `customer_simulator.py` runs scripted shopper journeys with per-request error tracing and Prometheus metrics. See [`CUSTOMER_SIMULATION.md`](CUSTOMER_SIMULATION.md).
 
@@ -240,6 +269,7 @@ Even with nothing broken, **2 of 168 checkouts failed with HTTP 500**. That's a 
 | `adservice` unavailable | **0% errors**, the frontend degrades gracefully | Breach on **unhealthy service** at 9.2 s, reverted in 0.38 s | 36.1 s |
 | Guard killed with `kill -9` mid-fault | Fault still ended via Chaos Mesh's duration | Fail-safe ✅ | — |
 | Manual abort with 2 active faults | Both removed in 0.39 s | ✅ | — |
+| `productcatalogservice` pod killed (**100 shoppers**) | Replacement pod available in ~3 s, but **66 HTTP 500s**, checkout 16/179 failed (8.9%), peak error rate 25.6%, peak p95 10 s | One-shot kill (no revert possible); preflight + recovery checks | Customers back to normal after **~34 s** |
 | `redis-cart` pod restarted | **Cart emptied (1 item → 0) with zero HTTP errors**: silent data loss | — | 4.9 s |
 
 **Findings so far**
@@ -247,7 +277,10 @@ Even with nothing broken, **2 of 168 checkouts failed with HTTP 500**. That's a 
 1. 🔴 **Silent cart data loss.** `redis-cart` runs as 1 replica on an `emptyDir` volume, so any restart wipes every cart while the site reports success. *Fix:* a PersistentVolumeClaim with Redis persistence (AOF), or replicated Redis.
 2. 🟠 **Cart outage takes the shop down hard.** Losing `cartservice` drives error rate to 35–100% and takes ~55 s to recover. *Fix:* more replicas plus a PodDisruptionBudget; degrade the cart page instead of failing.
 3. 🟡 **Catalog latency spreads everywhere.** 500 ms on one service pushes site-wide p95 to 3.5–4 s, consistent with it having the most callers. *Fix:* client-side timeouts and caching of catalog reads in the frontend.
-4. 🟢 **Ads fail gracefully**, as the map predicted.
+4. 🟠 **"Healthy" ≠ recovered.** After a catalog pod kill, Kubernetes reported the service available in ~3 s, but customers kept getting errors and 10 s responses for ~30 s more. Health checks alone would have hidden it. *Fix:* more than 1 replica so a single kill isn't an outage; readiness that reflects real serving capacity; client retries with backoff in the frontend.
+5. 🟢 **Ads fail gracefully**, as the map predicted.
+
+*Load note:* the pod-kill run used 100 shoppers; the baseline and guarded runs used 20. Compare numbers within the same load level only.
 
 Full evidence: [`KILLSWITCH_RESULTS.md`](KILLSWITCH_RESULTS.md), [`PROJECT_HANDOFF.md`](PROJECT_HANDOFF.md) and the `runs/` directory.
 
@@ -265,10 +298,12 @@ chaosmind/
   verify.py          End-to-end verification of sample experiments
   baseline_summary.py  Steady-state baseline → baseline.json
   test_guard.py      Offline behaviour tests (no cluster needed)
+  agents/            Cartographer, Strategist, Safety Checker (+ facts.py, llm.py, loop in __main__.py)
 experiments/         Experiment definitions (JSON)
 scripts/             Cluster, Chaos Mesh and load setup
 tests/               Live kill-switch and Redis checks
 runs/                Evidence from every run
+monitoring/          Prometheus/Grafana setup and dashboard guide
 docs/                Diagrams
 customer_simulator.py  Optional scripted shopper with Prometheus metrics
 ```
@@ -286,8 +321,8 @@ customer_simulator.py  Optional scripted shopper with Prometheus metrics
 | Srinavith Srinath | Fault injection and kill switch |
 | *(name)* | AI agents |
 
-**Third-party software:** Online Boutique v0.10.4 (Apache-2.0), kind, Podman, Kubernetes, Chaos Mesh 2.8.4, Helm 3.19, Locust (bundled load generator), Python `requests` and `prometheus_client` (simulator only).
+**Third-party software:** Online Boutique v0.10.4 (Apache-2.0), kind, Podman, Kubernetes, Chaos Mesh 2.8.4, Helm 3.19, Locust (bundled load generator), kube-prometheus-stack 92.3.0 (Prometheus, Grafana, kube-state-metrics), Python `requests` and `prometheus_client` (simulator only). The agents use only the Python standard library.
 
-**AI models:** Mistral (agents, in progress).
+**AI models:** Mistral `mistral-large-latest` (Cartographer, Strategist, Safety Checker), via the Mistral chat API in JSON mode.
 
 **Data:** synthetic only. Simulated shoppers and the app's built-in demo products; no real user data.
