@@ -17,7 +17,7 @@ The required local files are present:
 caches, and `.env`. Runtime credentials and downloaded source are not included
 by the publication script.
 
-[scripts/push-next-steps.sh](../../scripts/push-next-steps.sh) prepares a separate
+`scripts/push-next-steps.sh` (since removed) prepares a separate
 checkout of GitHub's existing `main`, copies the required files and updated
 code, shows a staged summary, commits, and pushes. This avoids merging the
 workspace's independently initialized local history.

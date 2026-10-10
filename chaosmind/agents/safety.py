@@ -50,7 +50,8 @@ def only_smaller(original, proposed):
 
 
 def default_ramp(top):
-    steps = [top / 4, top / 2, top]
+    # Start low (1/8): at 20 shoppers even 500 ms on the catalog already crosses the 1,000 ms p95 limit.
+    steps = [top / 8, top / 4, top / 2, top]
     return [s for s in steps if s >= 1]
 
 
@@ -93,7 +94,9 @@ def observed(events):
 
 def run(exp, snapshot, baseline, guard_run=guard.run):
     verdict = review(exp, snapshot, baseline)
-    result = {**verdict, 'steps': [], 'breaking_point': None, 'status': verdict['decision']}
+    # tolerated_up_to: highest step that stayed inside the guard limits.
+    # limit_crossed_at: first step where the guard tripped. "Crossed our safety limit", not "the system died".
+    result = {**verdict, 'steps': [], 'tolerated_up_to': None, 'limit_crossed_at': None, 'status': verdict['decision']}
     if verdict['decision'] == 'reject':
         return result
     final = verdict['experiment']
@@ -108,8 +111,11 @@ def run(exp, snapshot, baseline, guard_run=guard.run):
             result['status'] = f'aborted: {stop}'
             break
         if result['steps'][-1]['observed'] and result['steps'][-1]['observed']['breach']:
-            result['breaking_point'] = level  # guard already reverted; don't go higher
+            result['limit_crossed_at'] = level  # guard already reverted; don't go higher
+            if n == 1:
+                result['status'] = 'crossed limit at the lowest step; no tolerated level found, try a lower start'
             break
+        result['tolerated_up_to'] = level
     return result
 
 

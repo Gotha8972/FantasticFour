@@ -9,7 +9,7 @@
 > 2. **Safety layer:** a deterministic Python operator and guard confirm injection, revert on breach (now 5% errors / 1,000 ms p95 / 2 unhealthy services), confirm recovery and save CSV/JSONL evidence.
 > 3. **Verified live** (under the original 20% / 2,000 ms limits): 500 ms catalog delay → p95 3,500 ms, breach at 7.8 s, healthy after 14.8 s; cart service down → 35% errors, breach at 8.1 s, healthy after 55.5 s.
 > 4. **Added later (section 13):** a Prometheus/Grafana dashboard, and a catalog pod kill at 100 shoppers: pod back in ~3 s, customers recovered after ~34 s, 66 HTTP 500s.
-> 5. **Covered elsewhere:** AI agents in [AGENTS.md](AGENTS.md), baselines in [BASELINE_STUDY.md](BASELINE_STUDY.md), kill-switch checkpoints in [KILLSWITCH_RESULTS.md](KILLSWITCH_RESULTS.md).
+> 5. **Covered elsewhere:** AI agents in [AGENTS.md](../AGENTS.md), baselines in [BASELINE_STUDY.md](BASELINE_STUDY.md), kill-switch checkpoints in [KILLSWITCH_RESULTS.md](KILLSWITCH_RESULTS.md).
 
 This document records implementation work and the evidence inspected so far. It does not claim that every available experiment or planned agent has been verified.
 
@@ -24,7 +24,7 @@ This document records implementation work and the evidence inspected so far. It 
 - Fourteen offline behavior tests passed.
 - The AI planning agents, Prometheus/Grafana integration, dependency mapping, resilience scoring, and Streamlit dashboard remain future work.
 
-The successful verification summary is [runs/verification-20261010T062253.878389Z/summary.json](runs/verification-20261010T062253.878389Z/summary.json). Both experiments have `injected: true`, `recovered: true`, `breach_detected: true`, `passed: true`, and no log collection errors.
+The successful verification summary is [runs/verification-20261010T062253.878389Z/summary.json](../../runs/verification-20261010T062253.878389Z/summary.json). Both experiments have `injected: true`, `recovered: true`, `breach_detected: true`, `passed: true`, and no log collection errors.
 
 ## 2. Local deployment
 
@@ -132,7 +132,7 @@ Increasing users raises offered traffic. Chaos increases failure conditions or r
 
 The code from [Gotha8972/FantasticFour](https://github.com/Gotha8972/FantasticFour) was brought into the existing workspace, preserving the running platform's `.runtime/` state and upstream application checkout. Overwritten local files were backed up under `.runtime/import-backups/`. Repository Git metadata was excluded from the import.
 
-Reviewed the imported `PLAN.md`, `DAY1.md`, and `C_INJECTION_KILLSWITCH.md`, plus the local documentation, original injector/guard/tests, setup script, and experiment definitions. Detailed findings are in [COMPATIBILITY.md](COMPATIBILITY.md).
+Reviewed the imported `PLAN.md`, `DAY1.md`, and `C_INJECTION_KILLSWITCH.md`, plus the local documentation, original injector/guard/tests, setup script, and experiment definitions. Detailed findings are in [COMPATIBILITY.md](../COMPATIBILITY.md).
 
 The plan matches the intended architecture: an AI planner proposes experiments, a deterministic operator injects faults, a deterministic guard limits damage, and an observer/analyst records outcomes. Only the operator, guard, metric adapter, and evidence collection are implemented here.
 
@@ -291,7 +291,7 @@ Its saved baseline had **20 users**, **4.2 RPS**, **0% errors**, **56 ms p95**, 
 
 ### Product catalog delay
 
-Artifacts: [runs/test-delay-20261010T062255.501508Z/](runs/test-delay-20261010T062255.501508Z/events.csv).
+Artifacts: [runs/test-delay-20261010T062255.501508Z/](../../runs/test-delay-20261010T062255.501508Z/events.csv).
 
 | Event | Elapsed seconds from guard start |
 | --- | ---: |
@@ -308,7 +308,7 @@ Ten metric samples kept 20 users active. RPS ranged from **2.7 to 5.3**, and cum
 
 ### Cart service pod failure
 
-Artifacts: [runs/test-down-20261010T062320.861245Z/](runs/test-down-20261010T062320.861245Z/events.csv).
+Artifacts: [runs/test-down-20261010T062320.861245Z/](../../runs/test-down-20261010T062320.861245Z/events.csv).
 
 | Event | Elapsed seconds from guard start |
 | --- | ---: |
@@ -412,7 +412,7 @@ Remaining work to fulfill the larger plan:
 7. Define resilience scoring and build findings/fix reports, then rerun after a chosen fix.
 8. Run the complete documented setup on another machine before submission.
 
-Further instructions: [README.md](README.md), [chaos/README.md](chaos/README.md), and [COMPATIBILITY.md](COMPATIBILITY.md).
+Further instructions: [README.md](../../README.md), [chaos/README.md](../../chaos/README.md), and [COMPATIBILITY.md](../COMPATIBILITY.md).
 
 ## 13. Later monitoring and pod kill results
 
@@ -423,6 +423,6 @@ returning within approved limits after approximately 34 seconds. The captured
 session recorded 68 HTTP 500 failures, including two before injection; checkout
 had 16 failures out of 179 requests and a whole-session p95 of 12 seconds.
 
-See [the monitoring results and evidence](monitoring/README.md#recorded-pod-kill-results--october-10-2026)
+See [the monitoring results and evidence](../../monitoring/README.md#recorded-pod-kill-results--october-10-2026)
 for the complete timeline, affected operations, recovery measurements, and
 limits on interpreting the saved logs.

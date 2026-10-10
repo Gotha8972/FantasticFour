@@ -22,9 +22,9 @@ The timing difference comes from one run per configuration and is not proof
 of a performance improvement. Zero failed samples does not prove zero downtime.
 
 Before evidence:
-[`runs/c-redis-20261010T070925.577773Z/summary.json`](runs/c-redis-20261010T070925.577773Z/summary.json).
+[`runs/c-redis-20261010T070925.577773Z/summary.json`](../../runs/c-redis-20261010T070925.577773Z/summary.json).
 After evidence:
-[`runs/c-redis-20261010T102251.009037Z/summary.json`](runs/c-redis-20261010T102251.009037Z/summary.json).
+[`runs/c-redis-20261010T102251.009037Z/summary.json`](../../runs/c-redis-20261010T102251.009037Z/summary.json).
 
 ## Applied change
 
@@ -67,11 +67,11 @@ every kind of failure.
 
 ## After-fix evidence files
 
-- [Structured result](runs/c-redis-20261010T102251.009037Z/summary.json)
-- [Finding text](runs/c-redis-20261010T102251.009037Z/redis-finding.txt)
-- [Saved Redis deployment](runs/c-redis-20261010T102251.009037Z/redis-deployment.json)
-- [Cart before](runs/c-redis-20261010T102251.009037Z/cart-before.html)
-- [Cart after](runs/c-redis-20261010T102251.009037Z/cart-after.html)
-- [Lifecycle CSV](runs/c-redis-20261010T102251.009037Z/evidence.csv)
-- [Lifecycle JSONL](runs/c-redis-20261010T102251.009037Z/evidence.jsonl)
+- [Structured result](../../runs/c-redis-20261010T102251.009037Z/summary.json)
+- [Finding text](../../runs/c-redis-20261010T102251.009037Z/redis-finding.txt)
+- [Saved Redis deployment](../../runs/c-redis-20261010T102251.009037Z/redis-deployment.json)
+- [Cart before](../../runs/c-redis-20261010T102251.009037Z/cart-before.html)
+- [Cart after](../../runs/c-redis-20261010T102251.009037Z/cart-after.html)
+- [Lifecycle CSV](../../runs/c-redis-20261010T102251.009037Z/evidence.csv)
+- [Lifecycle JSONL](../../runs/c-redis-20261010T102251.009037Z/evidence.jsonl)
 - Redis, loadgenerator and Chaos Mesh daemon log CSVs in the same run directory.

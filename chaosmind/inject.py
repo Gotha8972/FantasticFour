@@ -17,6 +17,9 @@ INTENSITY = {'network_delay': ('latency', '500ms'), 'network_loss': ('loss', 10)
              'disk_full': ('percent', 100)}
 DNS = r'[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?'
 OWNER = 'chaosmind'
+# Faults that have actually run live through the guard on our cluster. The AI only plans these unless
+# --allow-unverified is passed. Add a fault here once a live guarded run has succeeded.
+LIVE_VERIFIED = {'pod_failure', 'network_delay'}
 
 
 def kubectl(*args, stdin=None, timeout=40):

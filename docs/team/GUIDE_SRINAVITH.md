@@ -1,106 +1,41 @@
-# Srinavith: injection, kill switch, Safety Checker + Remediation
+# Srinavith: Safety Checker, Remediation, demo story
 
 Read [GUIDE_00_EVERYONE.md](GUIDE_00_EVERYONE.md) first.
 
-**Your role:** you own the "hands" of the system: everything that **changes** the cluster. You built the injector, the guard and the Safety Checker. Today you add **⑤ Remediation**, the agent that *fixes* a weakness and **proves** the fix by re-running the same experiment. That's the strongest moment in the demo: "score 41 → 78".
+**Your role:** you own the "hands", everything that **changes** the cluster: injector, guard, Safety Checker, Remediation. Today you prove the fix loop live (the demo's strongest moment) and own the story.
 
 ---
 
-## Part 0: Understand what you already own (≈20 min, read the code)
-| File | What it does | Read these functions |
-|---|---|---|
-| `chaosmind/inject.py` | Experiment JSON → Chaos Mesh resource. 7 fault types, each with limits | `validate`, `manifest`, `apply`, `revert` |
-| `chaosmind/guard.py` | Preflight → inject → watch every 2 s → revert on breach → confirm recovery | `run`, `breach` |
-| `chaosmind/agents/safety.py` | AI approves/shrinks/rejects, then **ramps intensity** through the guard | `review`, `only_smaller`, `clean_ramp`, `run`, `observed` |
-| `scripts/redis-fix.sh` + `remediation/` | The hand-written Redis fix (PVC + append-only log + Recreate) | — |
+## 1. Know your code (≈20 min)
+| File | Key ideas to explain |
+|---|---|
+| `inject.py` | 7 fault types with caps; namespace-only; ownership labels; `LIVE_VERIFIED` gates what the AI may use |
+| `guard.py` | Preflight → inject → poll every 2 s → revert on breach → confirm recovery. `watch_breach()`: a moderate error spike must last 2 polls, so background 500s (~1.3% of checkouts) don't cause false trips |
+| `agents/safety.py` | **Only-smaller rule** in code; ramp starts at 1/8 intensity; reports `tolerated_up_to` and `limit_crossed_at` ("crossed our safety limit", not "the system died") |
+| `agents/remediation.py` | The AI **picks** from `remediation/catalog.json`, never writes patches. Dry run → apply → re-run the identical experiment → keep only if the score improves, else roll back |
+| `scripts/redis-fix.sh` | Manual apply/revert of the Redis fix (PVC + append-only log + Recreate) |
 
-**Concepts to be able to explain:**
-- **Why the AI never injects directly:** a hallucinated or manipulated AI reply could break something outside the sandbox. Code validates everything, and the guard can always overrule.
-- **Ramp:** 100 → 200 → 400 ms, each step a full guarded run; stop at the first breach. That step is the **breaking point**.
-- **Only smaller:** the Safety Checker may lower duration or intensity, never raise them or change the target, and **code** enforces it (`only_smaller`).
+## 2. Redis before/after, live (with Aashrith, ≈30 min)
+**Graceful restart: done ✅** (Aashrith, [REDIS_FIX_RESULTS.md](../evidence/REDIS_FIX_RESULTS.md): cart 1 → 0 before, 1 → 1 after). **Still to prove: the instant kill**, plus the AI choosing this fix itself:
+- **Through the AI:** `python3 -m chaosmind.agents --budget 2 --remediate`. If the Strategist picks Redis and the integrity check confirms it, Remediation should choose `redis-persistence` and the re-run should show no `cart_persistence` violation.
+- **Manually** (fallback): `bash scripts/redis-fix.sh apply`, then `./tests/redis_finding.sh` → the cart survives. Then the instant-kill test in [A_REDIS_FIX_AND_FAULTS.md](A_REDIS_FIX_AND_FAULTS.md), section 3B.
 
----
+Second target: **cart service replicas 1 → 2** (`cartservice-replicas` in the catalog), then re-run `experiments/test-down.json`. Expect the error rate and recovery time to drop. Pod failure only takes out one of the two pods (`mode: one`).
 
-## Part 1: Safety Checker live (with Aashrith, ≈20 min)
-After Aashrith's dry run works:
+## 3. Record a Safety Checker rejection (≈10 min)
+Create a risky experiment (e.g. `network_delay` 2000 ms for 120 s on `checkoutservice`) and run:
 ```bash
-python3 -m chaosmind.agents.safety experiments/test-delay.json --review-only
+python3 -m chaosmind.agents.safety <file> --review-only
 ```
-This shows the AI's decision and ramp without injecting. Then one live ramp:
-```bash
-python3 -m chaosmind.agents.safety experiments/test-delay.json
-```
-**Expect:** steps like 125 → 250 → 500 ms, a `breaking_point`, and one `runs/` folder per step.
+If the AI approves it, add an explicit rule to `SYSTEM` in `safety.py` (e.g. "shrink anything on the checkout path to ≤ 500 ms and ≤ 60 s"). **A visible rejection is a great 10-second demo clip.**
 
-**For the demo:** record one **rejected** request too. Write an experiment with `"duration_s": 120` and `"latency": "2000ms"` on `checkoutservice` and run `--review-only`. If the AI approves it as-is, tighten the SYSTEM prompt in `safety.py` (e.g. "reject anything on the checkout path above 500 ms or longer than 60 s"). **That's prompt engineering, and it's your call.**
+## 4. Keep the claims honest
+As Aashrith verifies fault types live, update the README's coverage table ("Defined, not yet run" → "✅") and `LIVE_VERIFIED`. **Never claim a fault type we haven't run.**
 
----
+## 5. Demo narration (your 45 s)
+> "Our AI never touches the cluster. It proposes; code validates; the kill switch can always pull the plug. The Safety Checker ramped catalog latency step by step; it tolerated X ms and crossed our limit at Y. Our auditor flagged Redis before we broke anything; the experiment proved it: carts wiped with zero errors, caught only by our integrity check. Remediation picked a reviewed fix, re-ran the identical experiment, and the cart survived. Score A → B."
 
-## Part 2: Build ⑤ Remediation (≈2 h): `chaosmind/agents/remediation.py`
-**Concept:** a confirmed weakness → the AI proposes a **Kubernetes patch** → code checks it against an **allow-list** → apply it → **re-run the identical experiment** → compare scores. Fixing without re-testing is just advice; re-testing is proof.
-
-### Interface
-```python
-def propose(vulnerability: dict, history_item: dict, deployment: dict, root_cause: dict | None) -> dict:
-    """AI proposes a fix. Returns {"fix": "...", "patch": [json-patch ops], "extra_resources": [...],
-                                   "expected_effect": "...", "rollback": [json-patch ops]}"""
-
-def check(proposal: dict, deployment: dict) -> list[str]:
-    """Code: return a list of problems; an empty list means allowed."""
-
-def apply_and_verify(proposal, experiment, baseline) -> dict:
-    """Apply → re-run the SAME experiment via guard.run() → score before vs after.
-       Returns {"before": {...}, "after": {...}, "score_before": 41, "score_after": 78, "verdict": "improved"}"""
-```
-
-### Step by step
-1. **Inputs:** the vulnerability (from the Cartographer), the experiment and its observed result (from `history.json`), the target's live Deployment JSON (`inject.kubectl('get','deployment',name,'-n',inject.NS,'-o','json')`), and the Log Detective's `root_cause` if available.
-
-2. **The AI prompt** (large model). Give it the facts and ask for an RFC 6902 **JSON patch** like `remediation/redis-persistence-patch.json`. Tell it which fixes it may use:
-   - `replicas` ≥ 2 (most services are stateless, so this is safe for them; **not** for `redis-cart`)
-   - resources (requests/limits), readiness/liveness probes
-   - a `PodDisruptionBudget` (as an `extra_resources` item)
-   - for `redis-cart` only: the persistence fix (PVC + `--appendonly yes` + `Recreate`)
-
-3. **The allow-list (code). This is the safety part, so make it strict:**
-   - The target must be a Deployment in `online-boutique`.
-   - Every patch `path` must start with one of: `/spec/replicas`, `/spec/strategy`, `/spec/template/spec/containers/0/resources`, `/spec/template/spec/containers/0/readinessProbe`, `/spec/template/spec/containers/0/livenessProbe`, `/spec/template/spec/containers/0/args` (redis-cart only), `/spec/template/spec/volumes` (redis-cart only, PVC named `redis-cart-data` only).
-   - `replicas` must be between 1 and 3, and never > 1 for `redis-cart`. (Explain why in the demo: each Redis copy would have different carts.)
-   - `extra_resources`: only `PodDisruptionBudget` or `PersistentVolumeClaim`, in our namespace, labelled `app.kubernetes.io/part-of: chaosmind-remediation`.
-   - **Dry-run first:** `kubectl patch … --dry-run=server`. If the API server rejects it, so do you.
-
-4. **Apply:** `kubectl patch deployment <t> --type=json -p '<ops>'`, then `kubectl rollout status`. Save the patch and the rollback ops in the run folder **before** applying.
-
-5. **Verify:** run the *same* experiment JSON through `guard.run()` (new id suffix `-after`). Compute before/after with Harshil's `score.score(...)` and, for Redis, his integrity checks.
-
-6. **Verdict (code):** `improved` if the score went up and nothing new broke, `no_change`, or `worse`. If worse, apply the rollback automatically.
-
-### Test offline
-- Patch-check unit tests:
-  - the Redis fix passes
-  - `replicas: 3` on `redis-cart` is rejected
-  - a patch to `/spec/template/spec/containers/0/image` is rejected
-  - a patch in another namespace is rejected
-- Use `patch.object(llm, 'ask', return_value=...)` to fake the AI's proposal.
-
-### First live target: the Redis cart (the demo moment)
-1. **Before:** the already-recorded evidence: cart 1 → 0 with zero errors (`runs/c-redis-*`).
-2. Remediation proposes the fix. Check that it matches `remediation/redis-persistence-patch.json` in spirit.
-3. Apply → re-run: Harshil's `cart_persistence` check passes, and the score goes up.
-4. Second target: `cartservice` replicas 1 → 2, then re-run the cart-down experiment. Error rate and recovery time should drop.
-
----
-
-## Part 3: The demo narration (your part, ≈45 s)
-> "Our AI never touches the cluster directly. It proposes; code validates; the guard can always pull the plug. Here the Safety Checker ramped catalog latency 125 → 250 → 500 ms and found the breaking point at 500. Our auditor flagged Redis before we broke anything; the experiment proved it: carts silently wiped, zero errors. Remediation patched it with persistent storage, re-ran the identical experiment, and the cart survived. Score 41 → 78."
-(Use the real numbers once you have them.)
-
-## Hand-offs
-- **To Smrithi:** `remediation.propose / check / apply_and_verify`. She calls them when a verdict is `confirmed`.
-- **From Harshil:** `score.score(...)`, `integrity.prepare()/verify()`. **From Aashrith:** `root_cause.json`.
-
-## What to learn while doing this
-- **JSON Patch (RFC 6902)** and `kubectl patch --type=json`
-- **Server-side dry run:** how to test a change against the real API without applying it
-- **Rollback design:** always save the undo before doing anything
-- **Stateful vs stateless services:** why replicas fix the cart service but would *break* Redis
+## What to learn
+- **JSON Patch** and `kubectl patch --type=json --dry-run=server`
+- **Stateful vs stateless:** why replicas fix the cart service but would *break* Redis (each copy holds different carts)
+- **Rollback-first design:** know the undo before you do anything

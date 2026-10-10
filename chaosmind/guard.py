@@ -24,6 +24,17 @@ def breach(snap, lim):
     return None
 
 
+def watch_breach(snap, previous, lim):
+    """Breach check while a fault is active. A moderate error-rate spike (<= 2x the limit) must persist for two
+    consecutive polls: ~45 requests per Locust window means 2-3 random background 500s can touch 5% on their own.
+    Latency, health and severe error spikes still trip on a single poll."""
+    b = breach(snap, lim)
+    if b and b[0] == 'error_rate' and b[1] <= 2 * b[2] and (previous is None or previous['error_rate'] <= lim['error_rate']):
+        rest = breach({**snap, 'error_rate': 0}, lim)
+        return rest
+    return b
+
+
 def run(exp, limits=None):
     inject.validate(exp)
     lim = LIMITS.copy()
@@ -68,17 +79,17 @@ def run(exp, limits=None):
                 raise RuntimeError('Chaos Mesh injection failed: ' + state['errors'][-1])
             if time.monotonic() - created_at >= min(lim['injection_timeout_s'], exp['duration_s']):
                 raise RuntimeError('Timed out waiting for confirmed injection')
-            snap = snapshot()
+            snap, previous = snapshot(), snap
             log('SNAPSHOT', stage='injecting', **snap)
-            if b := breach(snap, lim):
+            if b := watch_breach(snap, previous, lim):
                 log('BREACH', metric=b[0], value=b[1], limit=b[2])
                 break
             time.sleep(lim['poll_s'])
         if confirmed:
             while time.monotonic() - created_at < exp['duration_s']:
-                snap = snapshot()
+                snap, previous = snapshot(), snap
                 log('SNAPSHOT', stage='injected', **snap)
-                if b := breach(snap, lim):
+                if b := watch_breach(snap, previous, lim):
                     log('BREACH', metric=b[0], value=b[1], limit=b[2])
                     break
                 time.sleep(lim['poll_s'])

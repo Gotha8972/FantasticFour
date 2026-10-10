@@ -47,28 +47,27 @@ head -3 runs/test-down-20261010T062320.861245Z/events.jsonl
 ```
 A `SNAPSHOT` event has: `stage` (`preflight` = before, `injecting`/`injected` = during, `recovery` = after), `error_rate`, `p95_ms`, `rps`, `requests`, `failures`, `checkout_success`, `unhealthy_services` (a list), `restarts` (per service).
 
-## 4. How the AI agents fit in
+## 4. How the AI agents fit in (updated: all built, 14 offline tests)
+To fit Day 2 into ~6 hours, the Observer, Log Detective and Documentor were **merged into one Analyst**, and Remediation **picks from a reviewed fix catalog** instead of writing patches. Everything below already exists in `chaosmind/agents/`. **Day 2 is about running it live, tuning it, and presenting it, not building more.**
 
 ```
-② Cartographer ─► ① Strategist ─► ④ Safety Checker ─► guard.run() ─► Chaos Mesh
- (find weak spots)  (plan + predict)  (approve + ramp)    (code, safe)
-                          ▲                                    │
-                          │                                    ▼
-                  re-plan ◄── verdict ◄── ③ Observer + Integrity checks + ⑥ Log Detective
-                                                               │
-                                               ⑤ Remediation (fix + re-run) ─► ⑦ Documentor (FINDINGS.md)
+Cartographer ─► Strategist ─► Safety Checker ─► guard.run() ─► Chaos Mesh
+ (audit)         (plan+predict)  (approve+ramp)     (code)
+                     ▲                                  │
+                     └── re-plan ◄── verdict + score ◄──┴── integrity checks (cart kept? order placed?)
+                                         │
+                       confirmed ─► Remediation (catalog fix + re-run) ─► Analyst ─► FINDINGS.md
 ```
 
-| # | Agent | File | Owner | Status |
-|---|---|---|---|---|
-| ② | Cartographer (vulnerability auditor) | `chaosmind/agents/cartographer.py` | Smrithi | ✅ built, offline-tested |
-| ① | Strategist | `chaosmind/agents/strategist.py` | Smrithi | ✅ built, offline-tested |
-| ④ | Safety Checker | `chaosmind/agents/safety.py` | Srinavith | ✅ built, offline-tested |
-| ③ | Observer | `chaosmind/agents/observer.py` | Aashrith | 🚧 to build |
-| ⑥ | Log Detective | `chaosmind/agents/log_detective.py` | Aashrith | 🚧 to build |
-| ⑤ | Remediation | `chaosmind/agents/remediation.py` | Srinavith | 🚧 to build |
-| ⑦ | Documentor + score + integrity checks | `chaosmind/agents/{documentor,score,integrity}.py` | Harshil | 🚧 to build |
-| — | Orchestrator (the loop) | `chaosmind/agents/__main__.py` | Smrithi | ✅ first 3 agents wired; add the rest |
+| Piece | File | Day-2 owner |
+|---|---|---|
+| Cartographer, Strategist (prompt quality) | `agents/cartographer.py`, `agents/strategist.py` | Smrithi (tuning) |
+| Safety Checker, Remediation | `agents/safety.py`, `agents/remediation.py` | Srinavith |
+| Integrity checks, score | `agents/integrity.py`, `agents/score.py` | Harshil (live validation) |
+| Analyst | `agents/analyst.py` | Aashrith (live logs) + Smrithi (output quality) |
+| Loop | `agents/__main__.py` | runs on Aashrith's laptop |
+
+Full description: [docs/AGENTS.md](../AGENTS.md) · one-page architecture: [docs/ARCHITECTURE.md](../ARCHITECTURE.md).
 
 ## 5. The ONE pattern every agent follows
 **Code gathers facts → the AI reasons and returns JSON → code checks the JSON → code acts.**
@@ -114,22 +113,22 @@ git pull
 - **Pull before you start and before you push.** Commit small and often, with a clear message.
 - Add your own files by name (`git add chaosmind/agents/observer.py`). Avoid `git add -A` unless you've checked `git status`.
 - **Never** commit `.env`, `.runtime/` or `microservices-demo/`.
-- **Never** use `scripts/push-next-steps.sh`: it overwrites other people's README changes.
+- `scripts/push-next-steps.sh`, `checklist.sh` and `push-incidents.sh` have been **removed** (it overwrote other people's README changes). Use plain git.
 - `runs/` is ignored on some machines, so use `git add -f runs/<folder>` to publish evidence.
 - Only Aashrith's laptop has the cluster. Everyone else builds and tests offline, then Aashrith runs it live.
 
 ## 8. Day 2 timeline (everyone)
 | Time | Milestone |
 |---|---|
-| H0–1 | Aashrith: AI dry run works with the real key. Everyone: read your guide, start building offline |
-| H1–3 | Each new agent works offline on saved `runs/` data, with tests |
-| H3–4 | **Integration:** Smrithi wires every agent into the loop. One full live run on Aashrith's laptop |
-| H4–5 | Redis fix before/after; FINDINGS.md generated; resilience scores |
-| H5–6 | **Feature freeze** → clean run → record the ≤3-min demo → submit 30 min early |
+| H0–1 | Aashrith: AI dry run with the real key; first live runs of the unverified faults. Everyone else: read your guide, then do your offline tasks |
+| H1–3 | Live: integrity checks validated (Harshil + Aashrith), prompts tuned (Smrithi), Redis before/after (Srinavith + Aashrith), second-machine setup (Smrithi) |
+| H3–4 | **Full live agent run**: `python3 -m chaosmind.agents --budget 3 --remediate`, **screen-recorded** (takes ~15–25 min, too long to run during the demo) |
+| H4–5 | `FINDINGS.md` reviewed; README results updated; demo video edited to ≤ 3 min |
+| H5–6 | **Feature freeze** → clean run → submit 30 min early |
 
-**Day 2 deliverables (from the brief):**
+**Day 2 deliverables:**
 1. Repo + README
 2. Demo video ≤ 3 min
-3. One-page architecture overview
-4. Findings report
-5. Team form (names, tools, AI models, libraries)
+3. Architecture overview: [docs/ARCHITECTURE.md](../ARCHITECTURE.md), done
+4. Findings report: the Analyst's `FINDINGS.md` from the live run
+5. Team form (names, tools, AI models, libraries; see the README's last section)

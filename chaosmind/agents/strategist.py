@@ -9,7 +9,7 @@ import re
 from chaosmind import inject
 from chaosmind.agents import llm
 
-METRICS = ('error_rate', 'p95_ms', 'unhealthy_count')
+METRICS = ('error_rate', 'p95_ms', 'unhealthy_count', 'integrity_violations')
 
 SYSTEM = f"""You design chaos experiments that PROVE or REFUTE suspected vulnerabilities.
 
@@ -29,9 +29,11 @@ flaky dependency -> network_loss; dependency down -> network_partition; overload
 storage/full disk -> disk_full; plain availability -> pod_failure.
 
 For each experiment write pass/fail "criteria" BEFORE it runs. The hypothesis is CONFIRMED if ANY criterion is met
-during the fault. Allowed metrics: {', '.join(METRICS)} ("unhealthy_count" = number of unavailable services).
+during the fault. Allowed metrics: {', '.join(METRICS)} ("unhealthy_count" = number of unavailable services;
+"integrity_violations" = number of business checks that failed after the fault: cart lost its items, checkout did
+not produce an order. Use {{"metric": "integrity_violations", "op": ">", "value": 0}} for silent data-loss hypotheses).
 Use the baseline to set values well above normal (e.g. p95 at least 5x baseline).
-If a hypothesis can't be measured with these metrics (e.g. silent data loss), set "criteria": [] and say so in "reason".
+If a hypothesis can't be measured with these metrics, set "criteria": [] and say so in "reason".
 
 Given "history": never repeat a fault+target already run; use confirmed/refuted results to re-rank what's left
 and explain what changed in "replan_note".
@@ -53,10 +55,12 @@ def valid_criteria(criteria):
             and c.get('op') in ('>', '<') and type(c.get('value')) in (int, float)]
 
 
-def plan(vulnerabilities, baseline, history=(), budget=5):
+def plan(vulnerabilities, baseline, history=(), budget=5, allowed_faults=None):
     done = {(h['experiment']['fault'], h['experiment']['target']) for h in history}
+    allowed = set(allowed_faults or inject.LIVE_VERIFIED)
     reply = llm.ask(SYSTEM, {'vulnerabilities': vulnerabilities, 'baseline': baseline,
-                             'history': list(history), 'max_experiments': budget})
+                             'history': list(history), 'max_experiments': budget,
+                             'faults_you_may_use_now': sorted(allowed)})
     items, dropped = [], []
     for item in reply.get('plan', []):
         try:
@@ -65,6 +69,9 @@ def plan(vulnerabilities, baseline, history=(), budget=5):
             inject.validate(exp)
         except (KeyError, TypeError, ValueError) as error:
             dropped.append({'item': item, 'reason': str(error)})
+            continue
+        if exp['fault'] not in allowed:
+            dropped.append({'item': item, 'reason': f"{exp['fault']} not verified live yet"})
             continue
         if (exp['fault'], exp['target']) in done:
             dropped.append({'item': item, 'reason': 'already run'})
@@ -81,6 +88,6 @@ def evaluate(criteria, observed):
         return 'inconclusive', []
     if not criteria:
         return 'needs_integrity_check', []
-    met = [c for c in criteria if (observed[c['metric']] > c['value'] if c['op'] == '>'
-                                   else observed[c['metric']] < c['value'])]
+    met = [c for c in criteria if c['metric'] in observed and
+           (observed[c['metric']] > c['value'] if c['op'] == '>' else observed[c['metric']] < c['value'])]
     return ('confirmed' if met else 'refuted'), met

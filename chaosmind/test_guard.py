@@ -46,6 +46,14 @@ class GuardTests(unittest.TestCase):
         self.assertEqual(events[-1]['event'], 'HEALTHY')
         revert.assert_called_once()
 
+    def test_single_moderate_error_spike_needs_confirmation(self):
+        lim = guard.LIMITS
+        spike = GOOD | {'error_rate': 0.07}
+        self.assertIsNone(guard.watch_breach(spike, GOOD, lim))                      # one noisy poll: ignore
+        self.assertEqual(guard.watch_breach(spike, spike, lim)[0], 'error_rate')     # two in a row: trip
+        self.assertEqual(guard.watch_breach(GOOD | {'error_rate': 0.3}, GOOD, lim)[0], 'error_rate')  # severe: trip now
+        self.assertEqual(guard.watch_breach(spike | {'p95_ms': 2500}, GOOD, lim)[0], 'p95_ms')  # latency unaffected
+
     def test_unhealthy_preflight_never_injects(self):
         events, apply, revert = self.exercise(snaps=[GOOD | {'unhealthy_services': ['cartservice']}])
         self.assertEqual(events[-1]['event'], 'REFUSED')

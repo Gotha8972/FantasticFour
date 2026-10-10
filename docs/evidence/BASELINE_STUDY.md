@@ -16,7 +16,7 @@ This is a completed measurement with a finding. It is not a collection failure.
 No suitable root-level `baseline.json` was published by this run.
 
 Evidence directory:
-[baseline-study-20261010T072314.832283Z](runs/baseline-study-20261010T072314.832283Z/BASELINE_RESULTS.md).
+[baseline-study-20261010T072314.832283Z](../../runs/baseline-study-20261010T072314.832283Z/BASELINE_RESULTS.md).
 
 ### Duration and coverage
 
@@ -97,13 +97,13 @@ would help establish how repeatable the results are.
 
 ### Evidence links
 
-- [Structured baseline and findings](runs/baseline-study-20261010T072314.832283Z/baseline.json)
-- [Measured snapshots](runs/baseline-study-20261010T072314.832283Z/metrics.csv)
-- [Study lifecycle](runs/baseline-study-20261010T072314.832283Z/events.jsonl)
-- [Raw Locust history](runs/baseline-study-20261010T072314.832283Z/load_stats_history.csv)
-- [Raw cumulative failure export](runs/baseline-study-20261010T072314.832283Z/load_failures.csv)
-- [Frontend logs](runs/baseline-study-20261010T072314.832283Z/frontend-logs.csv)
-- [Loadgenerator logs](runs/baseline-study-20261010T072314.832283Z/loadgenerator-logs.csv)
+- [Structured baseline and findings](../../runs/baseline-study-20261010T072314.832283Z/baseline.json)
+- [Measured snapshots](../../runs/baseline-study-20261010T072314.832283Z/metrics.csv)
+- [Study lifecycle](../../runs/baseline-study-20261010T072314.832283Z/events.jsonl)
+- [Raw Locust history](../../runs/baseline-study-20261010T072314.832283Z/load_stats_history.csv)
+- [Raw cumulative failure export](../../runs/baseline-study-20261010T072314.832283Z/load_failures.csv)
+- [Frontend logs](../../runs/baseline-study-20261010T072314.832283Z/frontend-logs.csv)
+- [Loadgenerator logs](../../runs/baseline-study-20261010T072314.832283Z/loadgenerator-logs.csv)
 
 The saved frontend log export begins at approximately 07:34:41 UTC, after the
 two failure increments. Although exports completed without errors, available

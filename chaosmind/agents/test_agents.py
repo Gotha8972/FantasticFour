@@ -49,7 +49,7 @@ class AgentTests(unittest.TestCase):
             {'vulnerability': 'V1', 'fault': 'pod_kill', 'target': 'redis-cart', 'duration_s': 30, 'criteria': []}]}
         history = [{'experiment': {'fault': 'pod_kill', 'target': 'redis-cart'}}]
         with patch.object(llm, 'ask', return_value=reply):
-            out = strategist.plan([], {}, history)
+            out = strategist.plan([], {}, history, allowed_faults={'network_delay', 'pod_kill'})
         self.assertEqual([i['experiment']['target'] for i in out['plan']], ['productcatalogservice'])
         self.assertEqual(out['plan'][0]['criteria'], [{'metric': 'p95_ms', 'op': '>', 'value': 500}])
         self.assertEqual(len(out['dropped']), 2)
@@ -84,13 +84,13 @@ class AgentTests(unittest.TestCase):
         with patch.object(llm, 'ask', return_value=reply):
             out = safety.run(EXP, {}, {}, guard_run=fake_guard)
         self.assertEqual(calls, ['100ms', '200ms'])  # never reached 400ms
-        self.assertEqual(out['breaking_point'], 200)
+        self.assertEqual((out['tolerated_up_to'], out['limit_crossed_at']), (100, 200))
         self.assertTrue(all(s['observed'] and s['observed']['recovery_s'] == 12.0 for s in out['steps']))
 
     def test_bad_ramp_replaced_and_guard_refusal_stops(self):
         reply = {'decision': 'approve', 'experiment': EXP, 'ramp': [10, 400]}  # 40x jump
         with patch.object(llm, 'ask', return_value=reply):
-            self.assertEqual(safety.review(EXP, {}, {})['ramp'], [100, 200, 400])
+            self.assertEqual(safety.review(EXP, {}, {})['ramp'], [50, 100, 200, 400])
             out = safety.run(EXP, {}, {}, guard_run=lambda step: [{'event': 'REFUSED'}])
         self.assertEqual(len(out['steps']), 1)
         self.assertEqual(out['status'], 'aborted: REFUSED')

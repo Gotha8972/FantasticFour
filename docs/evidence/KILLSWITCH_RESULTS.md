@@ -24,11 +24,11 @@ All three kill-switch checkpoints **passed**. The Redis checkpoint recorded a
 
 Primary evidence:
 
-- [Kill-switch summary](runs/c-killswitch-20261010T070521.008028Z/summary.json)
-- [Kill-switch event log](runs/c-killswitch-20261010T070521.008028Z/evidence.jsonl)
-- [Kill-switch CSV](runs/c-killswitch-20261010T070521.008028Z/evidence.csv)
-- [Redis summary](runs/c-redis-20261010T070925.577773Z/summary.json)
-- [Redis event log](runs/c-redis-20261010T070925.577773Z/evidence.jsonl)
+- [Kill-switch summary](../../runs/c-killswitch-20261010T070521.008028Z/summary.json)
+- [Kill-switch event log](../../runs/c-killswitch-20261010T070521.008028Z/evidence.jsonl)
+- [Kill-switch CSV](../../runs/c-killswitch-20261010T070521.008028Z/evidence.csv)
+- [Redis summary](../../runs/c-redis-20261010T070925.577773Z/summary.json)
+- [Redis event log](../../runs/c-redis-20261010T070925.577773Z/evidence.jsonl)
 
 PASS describes the tested safety control. It does not establish that the entire
 application is resilient to every fault or every traffic level.
@@ -96,8 +96,8 @@ the sampled user-facing aggregate metrics remain within their limits.
 The record does not establish the precise cause of the additional recovery
 delay; diagnosing that would require correlating pod events and service logs.
 
-Evidence: [guard lifecycle](runs/c-ad-health-13973e53bd-20261010T070523.440196Z/events.jsonl)
-and [guard metrics](runs/c-ad-health-13973e53bd-20261010T070523.440196Z/metrics.csv).
+Evidence: [guard lifecycle](../../runs/c-ad-health-13973e53bd-20261010T070523.440196Z/events.jsonl)
+and [guard metrics](../../runs/c-ad-health-13973e53bd-20261010T070523.440196Z/metrics.csv).
 
 ## 2. Guard crash and automatic recovery
 
@@ -142,9 +142,9 @@ The crashed guard's own log ends at `INJECTED`. It has no `REVERTED` or `HEALTHY
 event because SIGKILL prevents Python cleanup from running. The separate
 checkpoint runner supplies the recovery evidence.
 
-Evidence: [recovered Chaos Mesh resource](runs/c-killswitch-20261010T070521.008028Z/crash-resource-recovered.json),
-[resource before recovery](runs/c-killswitch-20261010T070521.008028Z/crash-resource-before.json),
-and [crashed guard log](runs/c-crash-e086f13971-20261010T070612.461827Z/events.jsonl).
+Evidence: [recovered Chaos Mesh resource](../../runs/c-killswitch-20261010T070521.008028Z/crash-resource-recovered.json),
+[resource before recovery](../../runs/c-killswitch-20261010T070521.008028Z/crash-resource-before.json),
+and [crashed guard log](../../runs/c-crash-e086f13971-20261010T070612.461827Z/events.jsonl).
 
 ## 3. Manual abort
 
@@ -206,23 +206,23 @@ Suggested follow-up: persistent Redis storage with persistence enabled, followed
 by the same test to verify retention. Replication and recovery behavior also
 need evaluation. **No persistence fix was implemented in this work.**
 
-Evidence: [live Redis deployment](runs/c-redis-20261010T070925.577773Z/redis-deployment.json),
-[cart before](runs/c-redis-20261010T070925.577773Z/cart-before.html),
-[cart after](runs/c-redis-20261010T070925.577773Z/cart-after.html),
-and [archived finding](runs/c-redis-20261010T070925.577773Z/redis-finding.txt).
+Evidence: [live Redis deployment](../../runs/c-redis-20261010T070925.577773Z/redis-deployment.json),
+[cart before](../../runs/c-redis-20261010T070925.577773Z/cart-before.html),
+[cart after](../../runs/c-redis-20261010T070925.577773Z/cart-after.html),
+and [archived finding](../../runs/c-redis-20261010T070925.577773Z/redis-finding.txt).
 
 ## Recent implementation changes
 
-These changes implement [RUN_C_TESTS.md](docs/team/RUN_C_TESTS.md):
+These changes implement [RUN_C_TESTS.md](../team/RUN_C_TESTS.md):
 
 | File | Purpose |
 | --- | --- |
-| [chaosmind/c_tests.py](chaosmind/c_tests.py) | Runs the three kill-switch checkpoints and Redis test; confirms injection/recovery and writes evidence. |
-| [tests/killswitch.sh](tests/killswitch.sh) | Executable entry point for the three kill-switch checks. |
-| [tests/redis_finding.sh](tests/redis_finding.sh) | Executable entry point for the Redis cart check. |
-| [chaosmind/test_c_tests.py](chaosmind/test_c_tests.py) | Ten offline tests for the new runner, including recovery-before-cleanup, partial log reads, scoped cleanup, and session continuity. |
-| [tests/README.md](tests/README.md) | Run commands, result meanings, cleanup scope, and evidence format. |
-| [RUN_C_TESTS.md](docs/team/RUN_C_TESTS.md) | Local implementation notes and guidance for staging ignored evidence. |
+| [chaosmind/c_tests.py](../../chaosmind/c_tests.py) | Runs the three kill-switch checkpoints and Redis test; confirms injection/recovery and writes evidence. |
+| [tests/killswitch.sh](../../tests/killswitch.sh) | Executable entry point for the three kill-switch checks. |
+| [tests/redis_finding.sh](../../tests/redis_finding.sh) | Executable entry point for the Redis cart check. |
+| [chaosmind/test_c_tests.py](../../chaosmind/test_c_tests.py) | Ten offline tests for the new runner, including recovery-before-cleanup, partial log reads, scoped cleanup, and session continuity. |
+| [tests/README.md](../../tests/README.md) | Run commands, result meanings, cleanup scope, and evidence format. |
+| [RUN_C_TESTS.md](../team/RUN_C_TESTS.md) | Local implementation notes and guidance for staging ignored evidence. |
 
 The existing guard, injection API, metric reader, and pod-log capture API are
 reused. Guard thresholds and production application code were not changed by
