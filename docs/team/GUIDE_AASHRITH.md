@@ -17,7 +17,7 @@ And keep Grafana open: `bash scripts/monitoring.sh grafana`.
 
 ## 1. AI dry run (5 min, injects nothing)
 ```bash
-python3 -m chaosmind.agents --dry-run
+.venv/bin/python -m chaosmind.graph --dry-run
 ```
 **Expect:** Cartographer vulnerabilities (Redis should be #1), the Strategist's first experiment, and the Safety Checker's decision and ramp.
 
@@ -66,7 +66,7 @@ Push the `runs/checkout-investigation-*` folder. Look for `paymentservice` or `c
 
 ## 5. The full live AI run, screen-recorded (with Smrithi + Srinavith, ≈25 min)
 ```bash
-python3 -m chaosmind.agents --budget 3 --remediate
+.venv/bin/python -m chaosmind.graph --budget 3 --remediate
 ```
 Record the terminal **and** Grafana side by side; the demo video is cut from this. Afterwards:
 ```bash

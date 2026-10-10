@@ -1,21 +1,21 @@
 # Day 2 plan: what's left, who does it
 
-## Decision on Aashrith's ADK proposal ([docs/adk/README.md](../adk/README.md))
-**We adopt its ideas now and keep our plain-Python loop. No framework migration today.** Why:
-- Our loop already does what ADK's workflow agents would orchestrate (sequential stages + a bounded re-plan loop).
-- Migrating mid-final means a new dependency, re-plumbing 5 agents and re-testing. ADK is built around Gemini, and we've standardised on OpenAI.
-- Every idea in the proposal that earns points is now implemented without it:
+## Orchestration decision: LangGraph
+We compared the plain loop, LangGraph and Google ADK, and chose **LangGraph**:
+- **Most agnostic:** nodes are plain Python calling our own `llm.py` (OpenAI or Mistral), with no LangChain.
+- **It matches our design:** a code-routed state machine with loops and branches. ADK is built around model-driven tool calling and Gemini, the opposite of "AI proposes, code acts".
+- **Two real features we'd otherwise hand-build:** a **human approval gate** before any fix touches the cluster, and **checkpoint/resume** for 15–25 min live runs.
+- **The diagram is the code** (`--draw`), which looks better in front of judges than a hand-drawn picture.
 
-| ADK proposal idea | Status |
-|---|---|
-| Customer thresholds defined before testing | ✅ `trials.CUSTOMER_CRITERIA` + Strategist criteria written before each run |
-| Baseline at the same traffic level | ✅ The loop warns when current shoppers ≠ baseline shoppers; 100-shopper reference added |
-| Separate recovery timings (service ready vs customers recovered) | ✅ `safety.observed()` now returns `service_ready_s` and `customer_recovered_s` |
-| Repeated trials → failure frequency with uncertainty | ✅ **New `chaosmind/agents/trials.py`**: X of N breaches + 95% Wilson interval; invalid runs kept, never counted as passes |
-| Stop when cleanup/recovery fails | ✅ The loop stops on `NOT_RECOVERED` / `REVERT_FAILED` / `INTERRUPTED` |
-| Narrow tools, no shell for agents | ✅ Already the design: agents return JSON only |
+All of Aashrith's ADK workflow ideas are kept: thresholds up front, matching baselines, split recovery timings, repeated trials with a confidence interval, and stopping on failed cleanup. The design doc stays in [docs/adk/](../adk/README.md).
 
-ADK stays in [docs/adk/](../adk/README.md) as our **"next step / productionisation"** story for the pitch.
+**Setup on the cluster laptop (once):**
+```bash
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+```
+```bash
+.venv/bin/python -m unittest chaosmind.test_graph
+```
 
 ## Day-2 milestones (from the brief) → status
 | Milestone | Status | Remaining action |
@@ -49,7 +49,7 @@ ADK stays in [docs/adk/](../adk/README.md) as our **"next step / productionisati
    **Target line for the pitch:** "With 1 replica, customers were hurt in X of 5 kills; with 2 replicas, in Y of 5."
 3. **The AI-driven live run (≥ 3 fault types, chosen by the AI):** this is the core Day-2 milestone.
    ```bash
-   python3 -m chaosmind.agents --budget 3 --remediate
+   .venv/bin/python -m chaosmind.graph --budget 3 --remediate
    ```
    ~15–25 min. It produces `runs/agents-*/FINDINGS.md`. Push the folder.
 4. **Verify the remaining fault types once each** and add the passing ones to `LIVE_VERIFIED` in `chaosmind/inject.py`: `catalog-loss`, `cart-redis-partition`, `redis-cpu`, `redis-disk-full` ([A_REDIS_FIX_AND_FAULTS.md](A_REDIS_FIX_AND_FAULTS.md)).

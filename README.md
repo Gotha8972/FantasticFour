@@ -14,17 +14,22 @@
 | 📊 **Live dashboard** | Grafana shows shoppers, throughput, errors, p95, confirmed faults, pod health, CPU and memory while experiments run. |
 
 ## How it works
+The agents run as a **[LangGraph](https://github.com/langchain-ai/langgraph) state machine**. The diagram below mirrors the graph exported from the code (raw export: [docs/WORKFLOW.md](docs/WORKFLOW.md)). Dashed arrows are routing decisions made by code, not by the AI.
+
 ```mermaid
-flowchart LR
-    CA[Cartographer<br/>audits config] --> ST[Strategist<br/>plan + prediction]
-    ST --> SC[Safety Checker<br/>approve + ramp]
-    SC --> GU[guard.py<br/>kill switch]
-    GU --> CM[Chaos Mesh] --> APP[Online Boutique]
-    APP --> MON[metrics + integrity checks] --> V[verdict + score<br/>code, not AI]
-    V -->|re-plan| ST
-    V -->|confirmed| RM[Remediation<br/>reviewed fix + re-run] --> GU
-    V --> AN[Analyst<br/>FINDINGS.md]
+graph TD;
+	start([start]) --> setup --> audit["audit · Cartographer"] --> plan["plan · Strategist"];
+	plan -.-> execute["execute · Safety Checker + kill switch"] --> judge["judge · verdict + score (code)"];
+	plan -.-> report["report · Analyst"];
+	judge -.->|re-plan| plan;
+	judge -.->|confirmed| propose_fix["propose_fix · Remediation"] --> approve_fix{{"approve_fix · human gate"}};
+	approve_fix -.->|yes| apply_fix["apply_fix · re-run same experiment"];
+	approve_fix -.->|no| skip_fix;
+	apply_fix -.-> plan; skip_fix -.-> plan;
+	judge -.-> report; apply_fix -.-> report; skip_fix -.-> report;
+	report --> done([end]);
 ```
+
 
 1. **Audit:** the **Cartographer** reads the live configuration (call graph, replicas, probes, storage) and ranks vulnerabilities. Every fact it cites is checked against the real config.
 2. **Hypothesise:** the **Strategist** turns each vulnerability into an experiment, predicts the blast radius and writes measurable pass/fail criteria **before** the run.
@@ -38,6 +43,7 @@ flowchart LR
 |---|---|
 | Cartographer · Strategist · Safety Checker | ✅ Running against the live cluster with OpenAI `gpt-5.6-luna` |
 | Integrity checks · resilience score · Remediation · Analyst | ✅ Built and tested |
+| Orchestration: LangGraph state machine with a **human approval gate** before any fix and **checkpoint/resume** for long runs | ✅ Built and tested (incl. resume in a fresh process) |
 | Injector + kill switch (`inject.py`, `guard.py`) | ✅ Proven live |
 | Grafana dashboard | ✅ Running |
 | Fault types: **proven live** | Pod failure · pod kill · network delay |
@@ -122,27 +128,31 @@ Run one experiment under the kill switch:
 ```bash
 python3 -m chaosmind.guard experiments/test-delay.json
 ```
+One-time: install LangGraph into a local virtual environment:
+```bash
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+```
 Let the AI audit, plan and review (add your `OPENAI_API_KEY` to `.env`):
 ```bash
-python3 -m chaosmind.agents --dry-run
+.venv/bin/python -m chaosmind.graph --dry-run
 ```
 Repeat one experiment to measure how often customers are hurt (with a 95% interval):
 ```bash
 python3 -m chaosmind.agents.trials run experiments/catalog-podkill.json --repeat 5
 ```
-Run the full AI loop, including fixing and re-testing confirmed weaknesses:
+Run the full AI workflow. It pauses for your approval before any fix; `--resume runs/agents-…` continues an interrupted run:
 ```bash
-python3 -m chaosmind.agents --budget 3 --remediate
+.venv/bin/python -m chaosmind.graph --budget 3 --remediate
 ```
 Tests (no cluster or API key needed):
 ```bash
-python3 -m chaosmind.test_guard && python3 -m unittest chaosmind.agents.test_agents chaosmind.agents.test_day2 chaosmind.test_c_tests
+python3 -m chaosmind.test_guard && python3 -m unittest chaosmind.agents.test_agents chaosmind.agents.test_day2 chaosmind.test_c_tests && .venv/bin/python -m unittest chaosmind.test_graph
 ```
 
 ## Repository layout
 ```
-chaosmind/            inject.py · guard.py (kill switch) · monitor.py · baseline.py · verify.py
-chaosmind/agents/     cartographer · strategist · safety · remediation · analyst · integrity · score · trials · loop
+chaosmind/            graph.py (LangGraph workflow) · inject.py · guard.py (kill switch) · monitor.py · baseline.py
+chaosmind/agents/     cartographer · strategist · safety · remediation · analyst · integrity · score · trials · steps (shared by graph + fallback loop)
 experiments/          one experiment per failure type in the brief
 remediation/          reviewed fix catalog (Redis persistence, replicas) + scripts/redis-fix.sh
 scripts/ deploy/ chaos/ monitoring/   cluster, Chaos Mesh, load generation, Prometheus/Grafana
@@ -158,6 +168,6 @@ docs/                 architecture, running guide, agents, evidence reports
 | Harshil | Customer simulator, integrity-check validation, demo video |
 | Smrithi | Prompt tuning, architecture overview, reproducible setup |
 
-**Software:** Online Boutique v0.10.4 (Apache-2.0), kind, Podman, Kubernetes, Chaos Mesh 2.8.4, Helm 3.19, Locust, kube-prometheus-stack 92.3.0, Python standard library (agents), `requests` + `prometheus_client` (simulator).
+**Software:** Online Boutique v0.10.4 (Apache-2.0), kind, Podman, Kubernetes, Chaos Mesh 2.8.4, Helm 3.19, Locust, kube-prometheus-stack 92.3.0, LangGraph 1.2 (orchestration), Python standard library (agents), `requests` + `prometheus_client` (simulator).
 **AI model:** OpenAI `gpt-5.6-luna`, chat completions API, JSON mode.
 **Data:** synthetic only: simulated shoppers and the app's built-in demo products.

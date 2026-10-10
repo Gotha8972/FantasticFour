@@ -52,11 +52,8 @@ def revert(fix):
     _kubectl_files('delete', fix.get('delete_on_revert', []))
 
 
-def remediate(item, baseline, guard_run=guard.run):
-    """Choose → apply → re-run the identical experiment → compare scores → keep or roll back."""
-    choice = choose(item)
-    if choice['fix_id'] == 'none':
-        return {'choice': choice, 'verdict': 'no_fix'}
+def execute(item, choice, baseline, guard_run=guard.run):
+    """Apply the chosen catalog fix → re-run the identical experiment → compare scores → keep or roll back."""
     fix = next(f for f in CATALOG if f['id'] == choice['fix_id'])
     apply(fix)
     state = integrity.prepare()
@@ -65,7 +62,7 @@ def remediate(item, baseline, guard_run=guard.run):
     observed = safety.observed(events) or {}
     violations = integrity.verify(state)
     after = score.score(observed, baseline, observed.get('recovery_s'), violations)
-    before = item.get('score', {}).get('score')
+    before = (item.get('score') or {}).get('score')
     verdict = ('improved' if before is not None and after['score'] > before else
                'no_change' if before is not None and after['score'] == before else 'worse')
     if verdict == 'worse':
@@ -74,3 +71,11 @@ def remediate(item, baseline, guard_run=guard.run):
             'after_breakdown': after['breakdown'], 'after_observed': observed, 'after_integrity': violations,
             'after_run_dir': next((e.get('artifact_dir') for e in events), None), 'verdict': verdict,
             'kept': verdict != 'worse'}
+
+
+def remediate(item, baseline, guard_run=guard.run):
+    """Choose → apply → re-run → compare (no human approval step; the LangGraph workflow adds one)."""
+    choice = choose(item)
+    if choice['fix_id'] == 'none':
+        return {'choice': choice, 'verdict': 'no_fix'}
+    return execute(item, choice, baseline, guard_run)

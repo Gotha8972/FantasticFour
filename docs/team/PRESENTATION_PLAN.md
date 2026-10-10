@@ -21,7 +21,7 @@
 
 ### Shot list: record these first (owner: Aashrith, with Harshil editing)
 1. `bash scripts/grafana-stress.sh` with Grafana and the terminal side by side.
-2. `python3 -m chaosmind.agents --dry-run` (or the live `--budget 2` run if time allows). Terminal only, readable font size.
+2. `.venv/bin/python -m chaosmind.graph --dry-run` (or the live `--budget 2` run if time allows). Terminal only, readable font size.
 3. Redis before: `bash scripts/redis-fix.sh revert` → `./tests/redis_finding.sh` (cart 1 → 0), with Grafana's error panel visible.
 4. Redis after: `bash scripts/redis-fix.sh apply` → `./tests/redis_finding.sh` (cart 1 → 1).
 5. A slow scroll of the README highlights and the architecture diagram.
@@ -41,7 +41,7 @@ Use real numbers from the recordings. If a number differs from this script, **sa
 | 6 | Fix → proof | Before/after table: cart 1 → 0 vs 1 → 1 | Fixes come from a reviewed catalog; re-run the identical experiment; keep only if the score improves |
 | 7 | Why trust it | "AI proposes → code verifies → guard wins" | 0 unverifiable claims; tests for every safety rule; every number in reports fact-checked |
 | 8 | Measured, not guessed | "Customers hurt in X/5 kills with 1 replica vs Y/5 with 2" + 95% interval | Repeated trials → failure frequency with uncertainty; invalid runs never count as passes |
-| 9 | Impact + next | Resilience score per service; ADK design | Runs on any Kubernetes app; next: Google ADK orchestration, more fixes in the catalog, CI integration |
+| 9 | Impact + next | The LangGraph diagram (generated from the code) + resilience scores | Human approval gate before any fix; resumable runs; runs on any Kubernetes app; next: more fixes in the catalog, CI integration |
 
 Speaking order: Srinavith (1–3) → Aashrith (4) → Harshil (5) → Srinavith (6) → Aashrith (8) → Smrithi (7, 9).
 
@@ -57,6 +57,7 @@ Speaking order: Srinavith (1–3) → Aashrith (4) → Harshil (5) → Srinavith
 | *Is the resilience score meaningful?* | It's plain, documented code: error, latency, recovery and integrity penalties relative to the baseline. A silent data-loss case can never score well. |
 | *Why Online Boutique? Everyone used it.* | Because it's realistic: 11 services, 5 languages, gRPC, a stateful store. What's different is what we found in it: silent data loss, and "healthy ≠ recovered". |
 | *What was the hardest part?* | Proving things are *actually* safe and *actually* fixed, rather than looking fine on a dashboard. |
+| *Why LangGraph?* | Our workflow is a state machine where code decides every transition. LangGraph models exactly that, adds a human approval gate before fixes and checkpoint/resume, and stays model-agnostic: our nodes call any LLM through one small client. |
 | *Does it work on other apps?* | Yes. The Cartographer reads any deployment's config and call graph from standard Kubernetes objects; faults are standard Chaos Mesh resources. |
 
 ---

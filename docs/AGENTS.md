@@ -20,7 +20,7 @@ Model: OpenAI `gpt-5.6-luna` via `chaosmind/agents/llm.py` (JSON mode, configura
 |---|---|---|
 | Integrity checks | `agents/integrity.py` | Catch silent failures: the cart keeps its items across the fault, and checkout really produces an order (HTTP 200 alone isn't trusted) |
 | Resilience score | `agents/score.py` | `100 − error impact − latency impact − recovery − integrity (40)`, relative to the baseline |
-| Loop | `agents/__main__.py` | audit → plan → [integrity prep → Safety Checker → integrity verify → verdict → score → optional remediation → re-plan] → Analyst |
+| Workflow | `chaosmind/graph.py` (LangGraph) · `agents/steps.py` · fallback `agents/__main__.py` | audit → plan → [execute → judge → optional fix (human-approved) → re-plan] → Analyst. Diagram: [WORKFLOW.md](WORKFLOW.md). The fallback runs the same steps without LangGraph |
 | Injector + kill switch | `inject.py`, `guard.py` | Validation, Chaos Mesh resources, 2-second polling, auto-revert, recovery confirmation |
 
 **Fault types** (`inject.py`): `pod_failure`, `pod_kill`, `network_delay`, `network_loss`, `network_partition`, `cpu_stress`, `disk_full`. Proven live so far: `pod_failure`, `network_delay` (`inject.LIVE_VERIFIED`). Add each one there after its first successful live guarded run.

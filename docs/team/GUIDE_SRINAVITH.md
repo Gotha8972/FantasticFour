@@ -17,7 +17,7 @@ Read [GUIDE_00_EVERYONE.md](GUIDE_00_EVERYONE.md) first.
 
 ## 2. Redis before/after, live (with Aashrith, ≈30 min)
 **Graceful restart: done ✅** (Aashrith, [REDIS_FIX_RESULTS.md](../evidence/REDIS_FIX_RESULTS.md): cart 1 → 0 before, 1 → 1 after). **Still to prove: the instant kill**, plus the AI choosing this fix itself:
-- **Through the AI:** `python3 -m chaosmind.agents --budget 2 --remediate`. If the Strategist picks Redis and the integrity check confirms it, Remediation should choose `redis-persistence` and the re-run should show no `cart_persistence` violation.
+- **Through the AI:** `.venv/bin/python -m chaosmind.graph --budget 2 --remediate`. If the Strategist picks Redis and the integrity check confirms it, Remediation should choose `redis-persistence` and the re-run should show no `cart_persistence` violation.
 - **Manually** (fallback): `bash scripts/redis-fix.sh apply`, then `./tests/redis_finding.sh` → the cart survives. Then the instant-kill test in [A_REDIS_FIX_AND_FAULTS.md](A_REDIS_FIX_AND_FAULTS.md), section 3B.
 
 Second target: **cart service replicas 1 → 2** (`cartservice-replicas` in the catalog), then re-run `experiments/test-down.json`. Expect the error rate and recovery time to drop. Pod failure only takes out one of the two pods (`mode: one`).

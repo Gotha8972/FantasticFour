@@ -122,7 +122,7 @@ git pull
 |---|---|
 | H0–1 | Aashrith: AI dry run with the real key; first live runs of the unverified faults. Everyone else: read your guide, then do your offline tasks |
 | H1–3 | Live: integrity checks validated (Harshil + Aashrith), prompts tuned (Smrithi), Redis before/after (Srinavith + Aashrith), second-machine setup (Smrithi) |
-| H3–4 | **Full live agent run**: `python3 -m chaosmind.agents --budget 3 --remediate`, **screen-recorded** (takes ~15–25 min, too long to run during the demo) |
+| H3–4 | **Full live agent run**: `.venv/bin/python -m chaosmind.graph --budget 3 --remediate`, **screen-recorded** (takes ~15–25 min, too long to run during the demo) |
 | H4–5 | `FINDINGS.md` reviewed; README results updated; demo video edited to ≤ 3 min |
 | H5–6 | **Feature freeze** → clean run → submit 30 min early |
 

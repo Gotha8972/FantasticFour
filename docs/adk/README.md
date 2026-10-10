@@ -1,5 +1,7 @@
 # Google ADK resilience workflow
 
+> **Decision (Day 2):** we implemented this workflow with **LangGraph** instead of ADK (model-agnostic, code-routed, with an approval gate and checkpointing). Every workflow idea below was adopted. See [docs/WORKFLOW.md](../WORKFLOW.md).
+
 This document proposes a Google Agent Development Kit (ADK) workflow for discovering application architecture, running controlled stress and fault experiments, estimating failure likelihood from evidence, and recommending fixes. **This is a design for later implementation, not an implemented ADK integration.**
 
 Build on the existing [agents](../AGENTS.md), architecture collector, incident runners, and deterministic guard. Prioritize reliable measurements and repeatable experiments before adding more agent roles.

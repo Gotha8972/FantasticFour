@@ -48,6 +48,6 @@ flowchart LR
 | Tighten-only | Runtime limit overrides may only be stricter |
 | Remediation allow-list | Only catalogued, reviewed fixes; dry-run first; automatic rollback if the score drops |
 
-**Next step (productionisation):** orchestrate the same stages with Google ADK workflow agents ([design](adk/README.md)); the agents' JSON contracts and code-side validation stay unchanged.
+**Orchestration:** the stages run as a LangGraph state machine ([diagram generated from the code](WORKFLOW.md)). LangGraph adds a human approval gate before any fix is applied and checkpointing, so an interrupted live run resumes from its last finished step. It stays model-agnostic: nodes call our own `llm.py` (OpenAI or Mistral), with no LangChain dependency. We evaluated Google ADK ([design notes](adk/README.md)) and chose LangGraph because our workflow is a code-routed state machine, while ADK is built around model-driven tool calls and Gemini.
 
 **Honest limits:** breaches are detected **~6–10 s after injection**, because Locust reports a rolling ~10 s window. Pod kills are instantaneous and can't be "reverted", only observed until recovery.

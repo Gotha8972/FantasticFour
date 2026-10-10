@@ -139,19 +139,25 @@ bash scripts/chaos.sh dashboard
 ```
 
 ### Let the agents choose and run experiments
+One-time setup:
+```bash
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+```
+The workflow pauses for approval before any fix (`--auto-approve` for recorded runs) and can resume an interrupted run with `--resume runs/agents-<time>`. Without LangGraph, `python3 -m chaosmind.agents` runs the same steps (no resume).
+
 Needs `OPENAI_API_KEY` in the environment or in `.env` (git-ignored). Model: `gpt-5.6-luna` at low reasoning effort; override with `OPENAI_MODEL` and `OPENAI_REASONING_EFFORT`.
 
 Audit, plan and safety review only; nothing is injected:
 ```bash
-python3 -m chaosmind.agents --dry-run
+.venv/bin/python -m chaosmind.graph --dry-run
 ```
 Live: up to 3 experiments. Each one is set up with an integrity check, ramped through the guard, scored and judged, and the AI re-plans after each result. Then the Analyst writes `FINDINGS.md`:
 ```bash
-python3 -m chaosmind.agents --budget 3
+.venv/bin/python -m chaosmind.graph --budget 3
 ```
 Also let Remediation apply a reviewed fix to each confirmed weakness and re-run the identical experiment (changes the cluster):
 ```bash
-python3 -m chaosmind.agents --budget 3 --remediate
+.venv/bin/python -m chaosmind.graph --budget 3 --remediate
 ```
 By default the AI may only use fault types already proven live (`inject.LIVE_VERIFIED`); add `--allow-unverified` to use all 7.
 A live run takes roughly 4–6 minutes per experiment (ramp steps + recovery), so pre-record it for the demo.
