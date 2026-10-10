@@ -23,8 +23,8 @@ python3 -m chaosmind.agents --dry-run
 
 | Error | Cause |
 |---|---|
-| `Mistral API 401` | Bad key in `.env` |
-| `Mistral API 400` | Wrong model name |
+| `OpenAI API 401` | Bad `OPENAI_API_KEY` in `.env` |
+| `OpenAI API 400` | Wrong model name or parameter |
 | `invalid JSON twice` | Send the output to Smrithi |
 
 ```bash

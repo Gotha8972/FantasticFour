@@ -10,7 +10,7 @@ Read [GUIDE_00_EVERYONE.md](GUIDE_00_EVERYONE.md) first.
 ---
 
 ## 1. Learn the agent code (≈45 min, in this order)
-1. `chaosmind/agents/llm.py`: one function, `ask()`, Mistral in JSON mode.
+1. `chaosmind/agents/llm.py`: one function, `ask()`, OpenAI chat completions in JSON mode.
 2. `facts.py`: plain code; the call graph from `*_ADDR` variables, plus a risk score. Try it:
    ```bash
    python3 -m chaosmind.agents.facts --workloads runs/baseline-study-20261010T072314.832283Z/workloads-initial.json
@@ -36,8 +36,8 @@ Read `runs/agents-<time>/vulnerabilities.json`, `plan-1.json` and `history.json`
 **Techniques:**
 - **Few-shot:** paste one ideal output into the SYSTEM prompt.
 - **Explicit rubric:** "critical = data loss or checkout outage…".
-- **Compare models:** `MISTRAL_LARGE=mistral-large-latest`.
-- **Keep temperature low.**
+- **Compare effort:** `OPENAI_REASONING_EFFORT=medium` (slower, often better plans).
+- **Reasoning models ignore temperature;** change effort or the prompt instead.
 
 Change one thing at a time, re-run `--dry-run` (Aashrith, or offline with `--workloads`), and keep a log of what improved. That log is great material for the architecture page.
 

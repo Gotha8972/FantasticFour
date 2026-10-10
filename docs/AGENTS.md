@@ -4,7 +4,7 @@ Back to the [README](../README.md) · one-page view: [ARCHITECTURE.md](ARCHITECT
 
 Every agent follows one pattern: **code gathers facts → the AI reasons and returns JSON → code verifies → code acts.**
 No agent runs `kubectl` or touches the cluster. All live actions go through `inject.py` / `guard.py` or a reviewed allow-list.
-Model: Mistral via `chaosmind/agents/llm.py` (JSON mode, one retry on bad JSON). `mistral-small-latest` by default; set `MISTRAL_LARGE=mistral-large-latest` for stronger reasoning.
+Model: OpenAI `gpt-5.6-luna` via `chaosmind/agents/llm.py` (JSON mode, low reasoning effort, one retry on bad JSON). Override with `OPENAI_MODEL` / `OPENAI_REASONING_EFFORT`.
 
 | Agent | File | AI decides | Code guarantees |
 |---|---|---|---|

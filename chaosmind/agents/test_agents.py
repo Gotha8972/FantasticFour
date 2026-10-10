@@ -54,6 +54,11 @@ class AgentTests(unittest.TestCase):
         self.assertEqual(out['plan'][0]['criteria'], [{'metric': 'p95_ms', 'op': '>', 'value': 500}])
         self.assertEqual(len(out['dropped']), 2)
 
+    def test_trivial_pod_criteria_dropped(self):
+        crit = [{'metric': 'unhealthy_count', 'op': '>', 'value': 0}, {'metric': 'error_rate', 'op': '>', 'value': 0.05}]
+        self.assertEqual([c['metric'] for c in strategist.valid_criteria(crit, 'pod_kill')], ['error_rate'])
+        self.assertEqual(len(strategist.valid_criteria(crit, 'network_delay')), 2)
+
     def test_code_decides_verdict(self):
         crit = [{'metric': 'p95_ms', 'op': '>', 'value': 500}]
         self.assertEqual(strategist.evaluate(crit, {'p95_ms': 3500})[0], 'confirmed')

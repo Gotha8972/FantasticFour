@@ -18,7 +18,9 @@ You get per-service facts and a code-computed risk_score. Find the most dangerou
 
 Rules:
 - Use ONLY the facts given. In "evidence", copy fact keys and values EXACTLY from that service's facts.
-- Rank by real impact on users and revenue (the checkout path matters most).
+- Rank by real impact on users and revenue. Rubric: critical = can lose data, or takes down checkout or the
+  whole site (the single entrypoint, e.g. frontend, is critical); high = slows or partly breaks the checkout path;
+  medium = degrades a secondary feature; low = optional feature expected to fail gracefully.
 - Don't list every single-replica service as critical. Put issues shared by all services in "systemic".
 - Include services you expect to FAIL GRACEFULLY as severity "low", with a hypothesis saying so.
 - Each hypothesis must be testable by injecting one fault (pod kill/failure, network delay/loss, CPU stress).

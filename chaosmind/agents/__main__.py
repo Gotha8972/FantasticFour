@@ -67,11 +67,13 @@ def main():
             from chaosmind.monitor import snapshot
             health = {'note': 'offline'} if args.workloads else snapshot()
             result = {**safety.review(exp, health, baseline), 'steps': []}
+            result['health_at_review'] = health
             obs, violations = None, []
         else:
             from chaosmind.monitor import snapshot
             state = integrity.prepare()                       # silent-failure check: set up before the fault
-            result = safety.run(exp, snapshot(), baseline)
+            health = snapshot()
+            result = {**safety.run(exp, health, baseline), 'health_at_review': health}
             violations = integrity.verify(state) if result['steps'] else []
             obs = next((s['observed'] for s in reversed(result['steps']) if s['observed']), None)
             if obs is not None:

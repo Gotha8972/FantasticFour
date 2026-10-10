@@ -33,9 +33,11 @@ flowchart LR
 | **Remediation**: picks a fix from a reviewed catalog, applies it after a dry run, re-runs, keeps it only if the score improves | AI + code | ✅ built, offline-tested |
 | **Analyst**: root cause from logs (quotes verified), writes a fact-checked `FINDINGS.md` | AI + code | ✅ built, offline-tested |
 | **Injector + kill switch** (`inject.py`, `guard.py`) | Code | ✅ **proven live** |
+
+**First real AI run** ([dry run, 10 Oct](runs/agents-20261010T104327Z/README.md), no faults injected): the Cartographer ranked 8 vulnerabilities with **0 rejected for unverifiable evidence** (and noticed the new Redis PVC, flagging availability rather than data loss); the Strategist produced 4 validated experiments with pre-registered criteria; the Safety Checker approved the first. Learning from it, we added a severity rubric (the frontend entrypoint is critical), a rule requiring different fault types per plan, and code that drops criteria which prove nothing (e.g. "target unhealthy" after killing that target).
 | **Grafana dashboard** (Prometheus, kube-state-metrics, Locust/Chaos exporters) | Platform | ✅ running |
 
-**Design rule:** AI agents only return JSON. **No agent touches the cluster**; deterministic code validates every decision, and the kill switch can't be loosened by any agent. AI model: Mistral (`mistral-small-latest` by default, `mistral-large-latest` optional) via the chat API in JSON mode.
+**Design rule:** AI agents only return JSON. **No agent touches the cluster**; deterministic code validates every decision, and the kill switch can't be loosened by any agent. AI model: OpenAI `gpt-5.6-luna` (low reasoning effort) via the chat completions API in JSON mode.
 
 ## Target application and dependency map
 
@@ -151,7 +153,7 @@ docs/                 architecture, running guide, agents, evidence reports, tea
 | Smrithi | Day 2: prompt tuning on live AI output, architecture overview, clean setup on a second machine |
 
 **Third-party software:** Online Boutique v0.10.4 (Apache-2.0), kind, Podman, Kubernetes, Chaos Mesh 2.8.4, Helm 3.19, Locust (bundled load generator), kube-prometheus-stack 92.3.0, Python `requests` and `prometheus_client` (simulator only). The agents use only the Python standard library.
-**AI models:** Mistral `mistral-small-latest` (default) / `mistral-large-latest` (optional), chat API in JSON mode.
+**AI models:** OpenAI `gpt-5.6-luna` (low reasoning effort), chat completions API in JSON mode. Configurable with `OPENAI_MODEL`.
 **Data:** synthetic only: simulated shoppers and the app's built-in demo products.
 
 Team task guides: [docs/team/](docs/team/GUIDE_00_EVERYONE.md).

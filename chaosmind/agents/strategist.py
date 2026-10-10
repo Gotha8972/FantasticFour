@@ -24,6 +24,11 @@ Faults you may use (exact names and limits):
 Traffic spikes are run separately (scripts/grafana-stress.sh), not as a fault here.
 duration_s: 20-60. Pick a moderate intensity; the Safety Checker ramps it up gradually.
 
+Use at least 2 DIFFERENT fault types across the plan when more than one is allowed: a plan of only pod kills tests
+one failure mode and teaches us little.
+Criteria must measure CUSTOMER impact (error_rate, p95_ms, integrity_violations). Never use unhealthy_count for a
+pod_kill/pod_failure on the target itself: the target is unhealthy by definition, so that criterion proves nothing.
+For stateful services (e.g. redis-cart) always include {{"metric": "integrity_violations", "op": ">", "value": 0}}.
 Match the fault to the weakness: stateful/no persistence -> pod_kill; high fan-in or latency propagation -> network_delay;
 flaky dependency -> network_loss; dependency down -> network_partition; overloaded database -> cpu_stress on redis-cart;
 storage/full disk -> disk_full; plain availability -> pod_failure.
@@ -50,9 +55,12 @@ def experiment_id(item):
     return re.sub(r'[^a-z0-9-]', '', raw)[:55].strip('-')
 
 
-def valid_criteria(criteria):
-    return [c for c in criteria if isinstance(c, dict) and c.get('metric') in METRICS
-            and c.get('op') in ('>', '<') and type(c.get('value')) in (int, float)]
+def valid_criteria(criteria, fault=None):
+    ok = [c for c in criteria if isinstance(c, dict) and c.get('metric') in METRICS
+          and c.get('op') in ('>', '<') and type(c.get('value')) in (int, float)]
+    if fault in ('pod_kill', 'pod_failure'):  # the target is unhealthy by definition; that proves nothing
+        ok = [c for c in ok if c['metric'] != 'unhealthy_count']
+    return ok
 
 
 def plan(vulnerabilities, baseline, history=(), budget=5, allowed_faults=None):
@@ -77,7 +85,7 @@ def plan(vulnerabilities, baseline, history=(), budget=5, allowed_faults=None):
             dropped.append({'item': item, 'reason': 'already run'})
             continue
         done.add((exp['fault'], exp['target']))
-        items.append({**item, 'experiment': exp, 'criteria': valid_criteria(item.get('criteria', []))})
+        items.append({**item, 'experiment': exp, 'criteria': valid_criteria(item.get('criteria', []), exp['fault'])})
     items.sort(key=lambda i: i.get('rank', 99))
     return {'plan': items[:budget], 'dropped': dropped, 'replan_note': reply.get('replan_note', '')}
 

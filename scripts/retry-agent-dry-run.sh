@@ -2,8 +2,7 @@
 # Reuse the fresh monitoring baseline; never restart the study or inject faults.
 set -Eeuo pipefail
 cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.."
-export MISTRAL_LARGE=mistral-small-2603
-export MISTRAL_SMALL=mistral-small-2603
+export OPENAI_MODEL="${OPENAI_MODEL:-gpt-5.6-luna}"
 baseline_path="$(cat .runtime/checklist-baseline-path.txt)"
 [[ -f "$baseline_path" ]] || { echo "Missing baseline: $baseline_path" >&2; exit 1; }
 run_dir="runs/checklist-agent-retry-$(date -u +%Y%m%dT%H%M%SZ)"

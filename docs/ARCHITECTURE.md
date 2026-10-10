@@ -2,7 +2,7 @@
 
 ```mermaid
 flowchart LR
-    subgraph AI["AI agents · Mistral, JSON mode"]
+    subgraph AI["AI agents · OpenAI gpt-5.6-luna, JSON mode"]
         CA["② Cartographer<br/>audits config → ranked vulnerabilities"] --> ST["① Strategist<br/>experiment + prediction + pass/fail criteria"]
         ST --> SC["④ Safety Checker<br/>approve / shrink / reject + intensity ramp"]
         AN["Analyst<br/>root cause from logs → FINDINGS.md"]

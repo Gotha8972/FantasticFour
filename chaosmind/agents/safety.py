@@ -18,6 +18,8 @@ Given a proposed experiment, the current health snapshot and the baseline, decid
 - "shrink" if it is too long or too intense (you may ONLY lower duration_s or the intensity value);
 - "approve" otherwise.
 Never change fault or target. Never increase anything.
+Note: pod_kill is a one-shot kill (Kubernetes recreates the pod at once). duration_s is only the observation window,
+not how long the service is down; judge its risk by what the service does, not by the duration.
 Also propose "ramp": ascending intensity steps ending at the (possibly shrunk) intensity, at most 4 steps,
 each at most 2x the previous. Use plain numbers (milliseconds for latency, percent for loss/load).
 Return JSON: {"decision": "approve|shrink|reject", "reason": "...", "experiment": {...}, "ramp": [numbers]}"""

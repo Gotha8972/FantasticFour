@@ -19,7 +19,7 @@ DNS = r'[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?'
 OWNER = 'chaosmind'
 # Faults that have actually run live through the guard on our cluster. The AI only plans these unless
 # --allow-unverified is passed. Add a fault here once a live guarded run has succeeded.
-LIVE_VERIFIED = {'pod_failure', 'network_delay'}
+LIVE_VERIFIED = {'pod_failure', 'network_delay', 'pod_kill'}  # pod_kill: Chaos Mesh kill proven live (runs/grafana-pod-kill-*)
 
 
 def kubectl(*args, stdin=None, timeout=40):

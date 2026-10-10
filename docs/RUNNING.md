@@ -139,7 +139,7 @@ bash scripts/chaos.sh dashboard
 ```
 
 ### Let the agents choose and run experiments
-Needs `MISTRAL_API_KEY` in the environment or in `.env` (git-ignored). Models default to `mistral-small-latest`; set `MISTRAL_LARGE=mistral-large-latest` for stronger reasoning.
+Needs `OPENAI_API_KEY` in the environment or in `.env` (git-ignored). Model: `gpt-5.6-luna` at low reasoning effort; override with `OPENAI_MODEL` and `OPENAI_REASONING_EFFORT`.
 
 Audit, plan and safety review only; nothing is injected:
 ```bash
