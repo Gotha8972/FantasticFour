@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 from chaosmind.agents import cartographer, facts, llm, safety, strategist
 
-WORKLOADS = next(Path('runs').glob('baseline-study-*/workloads-initial.json'))
+WORKLOADS = sorted(Path('runs').glob('baseline-study-*/workloads-initial.json'))[0]  # earliest: the original config; glob order varies by filesystem
 FACTS = facts.collect(json.loads(WORKLOADS.read_text()))
 EXP = {'id': 'v2-delay', 'fault': 'network_delay', 'target': 'productcatalogservice',
        'params': {'latency': '400ms'}, 'duration_s': 60}

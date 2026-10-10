@@ -13,7 +13,7 @@ from chaosmind import graph
 from chaosmind.agents import integrity, llm, remediation, safety
 
 ROOT = Path(__file__).resolve().parents[1]
-WORKLOADS = str(next(ROOT.glob('runs/baseline-study-*/workloads-initial.json')))
+WORKLOADS = str(sorted(ROOT.glob('runs/baseline-study-*/workloads-initial.json'))[0])  # earliest: the original config
 STEP = {'intensity': None, 'run_dir': 'runs/x', 'stopped_by': None,
         'observed': {'error_rate': 0.0, 'p95_ms': 60, 'unhealthy_count': 1, 'breach': None, 'recovery_s': 5}}
 

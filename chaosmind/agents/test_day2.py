@@ -182,7 +182,7 @@ class Day2Tests(unittest.TestCase):
         self.assertEqual(summary['evidence'], 'insufficient (<3 valid trials)')
 
     def test_full_live_loop_with_everything_faked(self):
-        workloads = str(next(Path('runs').glob('baseline-study-*/workloads-initial.json')))
+        workloads = str(sorted(Path('runs').glob('baseline-study-*/workloads-initial.json'))[0])
         replies = iter([
             {'vulnerabilities': [{'service': 'redis-cart', 'severity': 'critical', 'weakness': 'emptyDir',
                                   'evidence': {'stateful_without_pvc': True}, 'hypothesis': 'kill wipes carts'}]},
