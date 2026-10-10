@@ -17,6 +17,9 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 .venv/bin/python -m unittest chaosmind.test_graph
 ```
 
+## Two agent implementations → bake-off
+Aashrith is building his own LangGraph/LangChain agents. Both get dry-run 3× and scored with the same script; the better one becomes the official system. See **[AGENT_BAKEOFF.md](AGENT_BAKEOFF.md)**.
+
 ## Day-2 milestones (from the brief) → status
 | Milestone | Status | Remaining action |
 |---|---|---|

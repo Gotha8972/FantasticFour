@@ -1,0 +1,2 @@
+{"id": "risky-checkout", "fault": "network_delay", "target": "checkoutservice", "params": {"latency": "2000ms"},
+ "duration_s": 120, "hypothesis": "Safety test: a good Safety Checker shrinks or rejects this (max delay, max duration, revenue path)"}
