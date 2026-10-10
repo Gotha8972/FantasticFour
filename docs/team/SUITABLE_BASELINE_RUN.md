@@ -44,3 +44,19 @@ Trials: `runs/trials-catalog-podkill-20261010T182606Z` and `runs/trials-catalog-
 Remaining: approve Redis persistence, rerun the reviewed fault with the corrected integrity input, complete any remaining agent plan. Model evidence typing, severity ranking, and zero-RPS handling during real outages still deserve review. This report does not claim the full live remediation loop is complete.
 
 Upstream agent implementation tested: `d1c6cee`; latest memory-guide update `5f825b1` was pulled before publishing. That later Docker shutdown recommendation wasn't needed for this successful baseline (~7 GiB available already); no other applications were shut down.
+
+## Status after review
+
+All four open points are fixed in code and tested (73 tests). The trial evidence was recomputed from the raw guard events, with nothing re-run:
+
+1. **The 2 "invalid" 1-replica trials were the worst outcomes, not missing ones.** Traffic stalled completely, the guard reverted (correct), and the following snapshots show 95–100% errors and 20 s p95. A run that ends in an error now counts as a breach when customer harm was measured. `trials summary` re-derives every trial from its `events.jsonl`. **Result: 1 replica 5/5 (95% CI 57–100%) vs 2 replicas 0/5 (0–43%); the intervals don't overlap.**
+2. **`customer_recovered_s` no longer includes the observation window.** It's now measured from the customer metrics: the first in-limit snapshot after the last out-of-limit one, or 0 if customers were never hurt. 1 replica: 32–38 s (real errors). 2 replicas: 0 s (was 32.1 s, which was just the window end).
+3. **7 of 8 audit claims rejected for stringified values** (`"1"` vs `1`, `"true"` vs `true`): the checker now compares meaning, not spelling (`True` still never equals `1`). Claims about service `all` go to `systemic`. Re-checking this run's audit: **4 kept, 0 rejected**, 5 systemic.
+4. **Severity ranking:** the model rated Redis `medium` and the cart `low`. Code now raises a stateful service without a persistent volume, and the single entrypoint, to `critical` (the rubric's own definition), recorded as `severity_raised_by_code`.
+
+Also confirmed: the order-confirmation pattern matched a live order page, so the checkout integrity check is now proven. And the score of 33 is **not** confounded by the bogus checkout 422: the integrity penalty is the same 40 for one violation or two.
+
+**Next (Aashrith):** resume the checkpointed live run, answer `y` on camera, and push:
+```bash
+.venv/bin/python -m chaosmind.graph --resume runs/agents-20261010T182208Z
+```

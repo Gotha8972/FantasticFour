@@ -51,7 +51,7 @@ Aashrith is building his own LangGraph/LangChain agents. Both get dry-run 3× an
    ```bash
    python3 -m chaosmind.agents.trials summary
    ```
-   **Target line for the pitch:** "With 1 replica, customers were hurt in X of 5 kills; with 2 replicas, in Y of 5."
+   **Pitch line (measured):** "With 1 replica, customers were hurt in **5 of 5** kills; with 2 replicas, in **0 of 5**. The 95% intervals don't overlap."
 3. **The AI-driven live run (≥ 3 fault types, chosen by the AI):** this is the core Day-2 milestone.
    ```bash
    .venv/bin/python -m chaosmind.graph --budget 3 --remediate

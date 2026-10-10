@@ -50,16 +50,33 @@ def claims_data_loss(text):
     return any(not NEGATED.search(text[max(0, m.start() - 40):m.start()]) for m in DATA_LOSS.finditer(text))
 
 
+def same(claimed, real):
+    """Exact meaning, tolerant spelling: models often write "1" for 1 and "true" for true. True never equals 1."""
+    if isinstance(claimed, str) and not isinstance(real, str):
+        try:
+            claimed = json.loads(claimed.strip().lower())
+        except ValueError:
+            return False
+    return json.dumps(claimed, sort_keys=True) == json.dumps(real, sort_keys=True)
+
+
+CLUSTER_WIDE = {'all', '*', 'all services', 'cluster', 'systemic'}
+
+
 def verify(reply, facts):
     """Keep only claims whose evidence matches the real facts exactly, and that don't contradict them."""
     services, kept, rejected = facts['services'], [], []
+    systemic = list(reply.get('systemic', []))
     for v in reply.get('vulnerabilities', []):
+        if str(v.get('service', '')).strip().lower() in CLUSTER_WIDE:  # shared by every service: belongs in systemic
+            systemic.append(v.get('weakness') or json.dumps(v.get('evidence')))
+            continue
         s = services.get(v.get('service'))
         if s is None:
             rejected.append({**v, 'rejected_because': 'unknown service'})
             continue
         evidence = v.get('evidence') if isinstance(v.get('evidence'), dict) else {}
-        good = {k: val for k, val in evidence.items() if k in s and s[k] == val}
+        good = {k: s[k] for k, val in evidence.items() if k in s and same(val, s[k])}
         bad = {k: val for k, val in evidence.items() if k not in good}
         if not good:
             rejected.append({**v, 'rejected_because': 'no evidence matches the real config'})
@@ -67,15 +84,22 @@ def verify(reply, facts):
         if 'persistentVolumeClaim' in s['volumes'] and claims_data_loss(f"{v.get('weakness', '')} {v.get('hypothesis', '')}"):
             rejected.append({**v, 'rejected_because': 'claims data loss, but the service mounts a persistent volume'})
             continue
+        severity = v.get('severity') if v.get('severity') in SEVERITIES else 'medium'
+        # The rubric, applied from facts: these two are critical whatever the model rated them.
+        floor = ('stateful without a persistent volume: a restart loses data' if s['stateful_without_pvc'] else
+                 'single entrypoint: its failure takes down the whole site' if s['entrypoint'] else None)
+        if floor and severity != 'critical':
+            v = {**v, 'severity_raised_by_code': f'{severity} → critical ({floor})'}
+            severity = 'critical'
         kept.append({**v, 'evidence': good, 'unverified_evidence_dropped': bad,
-                     'severity': v.get('severity') if v.get('severity') in SEVERITIES else 'medium',
+                     'severity': severity,
                      'blast_radius': [b for b in v.get('blast_radius', []) if b in services],
                      'risk_score': s['risk_score'], 'status': 'untested'})
     kept.sort(key=lambda v: (SEVERITIES.index(v['severity']), -v['risk_score']))
     for i, v in enumerate(kept, 1):
         v['id'] = f'V{i}'
     return {'vulnerabilities': kept, 'rejected': rejected,
-            'systemic': reply.get('systemic', []), 'blind_spots': reply.get('blind_spots', [])}
+            'systemic': systemic, 'blind_spots': reply.get('blind_spots', [])}
 
 
 def audit(facts):

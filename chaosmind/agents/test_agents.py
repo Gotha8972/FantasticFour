@@ -126,6 +126,22 @@ class AgentTests(unittest.TestCase):
             safety.review(EXP, {'error_rate': 0.0, 'checkout_success': 0.989, 'failures': 21}, {})
         self.assertEqual(seen['current_health'], {'error_rate': 0.0})
 
+    def test_cartographer_accepts_stringified_facts_and_files_cluster_wide_claims_as_systemic(self):
+        # Real gpt-oss output: correct facts written as strings; 7 of 8 claims were rejected for the type alone.
+        reply = {'vulnerabilities': [
+            {'service': 'frontend', 'severity': 'critical', 'evidence': {'replicas': '1', 'entrypoint': 'true', 'pdb': 'false'}},
+            {'service': 'all', 'weakness': 'no PDBs anywhere', 'evidence': {'pdb': 'false'}},
+            {'service': 'cartservice', 'severity': 'high', 'evidence': {'replicas': True}},  # True is not 1
+            {'service': 'redis-cart', 'severity': 'medium', 'evidence': {'volumes': ['emptyDir']}}]}
+        with patch.object(llm, 'ask', return_value=reply):
+            out = cartographer.audit(FACTS)
+        kept = {v['service']: v for v in out['vulnerabilities']}
+        self.assertEqual(kept['frontend']['evidence'], {'replicas': 1, 'entrypoint': True, 'pdb': False})
+        self.assertEqual(kept['redis-cart']['severity'], 'critical')  # rated medium; facts say it loses data
+        self.assertIn('medium → critical', kept['redis-cart']['severity_raised_by_code'])
+        self.assertIn('no PDBs anywhere', out['systemic'])
+        self.assertEqual([r['service'] for r in out['rejected']], ['cartservice'])
+
     def test_cartographer_rejects_data_loss_claim_when_persisted(self):
         persisted = {**FACTS, 'services': {**FACTS['services'], 'redis-cart': {
             **FACTS['services']['redis-cart'], 'volumes': ['persistentVolumeClaim'], 'stateful_without_pvc': False}}}

@@ -97,7 +97,7 @@ Chosen by a real availability check ([MODEL_CHECK_FINDINGS.md](MODEL_CHECK_FINDI
    ```bash
    .venv/bin/python -m chaosmind.graph --dry-run
    ```
-6. **Safety test:** must print `shrink`, `500ms`, `30`:
+6. **Safety test:** must print `reject`, or `shrink` with `500ms` and `30` (both safe; the model chose `reject` in the live check):
    ```bash
    python3 -m chaosmind.agents.safety experiments/risky-checkout.json --review-only
    ```

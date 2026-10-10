@@ -94,6 +94,17 @@ class Day2Tests(unittest.TestCase):
         self.assertEqual((obs['error_rate'], obs['p95_ms']), (1.0, 2700.0))  # worst moment is after the revert
         self.assertLess(obs['service_ready_s'], obs['customer_recovered_s'])  # capacity back before customers
 
+    def test_stalled_traffic_counts_as_breach_and_unhurt_customers_recover_at_zero(self):
+        from chaosmind.agents import trials
+        # Real 1-replica catalog kill: traffic stalled, the guard reverted with ERROR, then 96% errors and 20 s p95.
+        stalled = {'trial': 3, 'outcome': 'invalid', 'reason': 'ERROR', 'observed': {},
+                   'run_dir': 'runs/catalog-podkill-t3-20261010T182825.624453Z'}
+        self.assertEqual(trials.reobserve(stalled)['outcome'], 'breach')
+        # Real 2-replica kill: customers never crossed a limit, so they "recovered" at 0 s, not at the window's end.
+        held = {'trial': 1, 'outcome': 'held', 'observed': {'integrity_violations': 0},
+                'run_dir': 'runs/catalog-podkill-t1-20261010T183122.447363Z'}
+        self.assertEqual(trials.reobserve(held)['observed']['customer_recovered_s'], 0.0)
+
     def test_trials_wilson_and_invalid_runs(self):
         from chaosmind.agents import trials
         self.assertEqual(trials.wilson(0, 5), (0.0, 0.434))  # 0 of 5 still allows up to ~43%

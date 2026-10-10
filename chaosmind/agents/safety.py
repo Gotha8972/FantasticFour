@@ -121,8 +121,10 @@ def observed(events):
     """Worst metrics seen while the fault was active (None if nothing was measured), plus separate recovery
     timings, all in seconds from confirmed injection:
       service_ready_s     the target stopped appearing as unhealthy (capacity back)
-      customer_recovered_s  HEALTHY: health AND customer metrics back within limits
-    They differ: a killed catalog pod was Ready in ~3 s while customers were affected for ~30 s more."""
+      customer_recovered_s  error rate and p95 back within the guard limits for good (0 = customers never hurt;
+                            None = still hurt at the last snapshot). Measured from snapshots, not from the guard's
+                            HEALTHY event, which waits out a pod kill's observation window.
+    They differ: a killed catalog pod was Ready in ~3 s while customers were affected for ~35 s."""
     active = [e for e in events if e['event'] == 'SNAPSHOT' and e.get('stage') in ('injecting', 'injected')]
     if not active:
         return None
@@ -139,13 +141,18 @@ def observed(events):
             service_ready = round(e.get('t', 0) - t0, 1)
             break
     healthy = next((e for e in events if e['event'] == 'HEALTHY'), None)
+    after = [e for e in events if e['event'] == 'SNAPSHOT' and e.get('t', 0) >= t0]
+    hurt = [i for i, e in enumerate(after) if e['error_rate'] > guard.LIMITS['error_rate']
+            or e['p95_ms'] > guard.LIMITS['p95_ms']]
+    customer_recovered = (0.0 if not hurt else None if hurt[-1] == len(after) - 1
+                          else round(after[hurt[-1] + 1].get('t', 0) - t0, 1))
     return {'error_rate': max(e['error_rate'] for e in snaps),
             'p95_ms': max(e['p95_ms'] for e in snaps),
             'unhealthy_count': max(len(e['unhealthy_services']) for e in snaps),
             'breach': next(({k: e[k] for k in ('metric', 'value', 'limit')} for e in events if e['event'] == 'BREACH'), None),
             'recovery_s': healthy['recovery_s'] if healthy else None,
             'service_ready_s': service_ready,
-            'customer_recovered_s': round(healthy['t'] - t0, 1) if healthy and 't' in healthy else None,
+            'customer_recovered_s': customer_recovered,
             'users': snaps[0].get('users')}
 
 

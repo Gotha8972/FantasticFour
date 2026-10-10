@@ -40,7 +40,7 @@ Use real numbers from the recordings. If a number differs from this script, **sa
 | 5 | What we found | Findings 1–4 with icons | Silent data loss; cart outage; "healthy ≠ recovered" (3 s vs 34 s); latency spreads everywhere |
 | 6 | Fix → proof | Before/after table: cart 1 → 0 vs 1 → 1 | Fixes come from a reviewed catalog; re-run the identical experiment; keep only if the score improves |
 | 7 | Why trust it | "AI proposes → code verifies → guard wins" | 0 unverifiable claims; tests for every safety rule; every number in reports fact-checked |
-| 8 | Measured, not guessed | "Customers hurt in X/5 kills with 1 replica vs Y/5 with 2" + 95% interval | Repeated trials → failure frequency with uncertainty; invalid runs never count as passes |
+| 8 | Measured, not guessed | "Customers hurt in **5/5** kills with 1 replica vs **0/5** with 2" + 95% intervals (57–100% vs 0–43%, no overlap) | Repeated trials → failure frequency with uncertainty; invalid runs never count as passes |
 | 9 | Impact + next | The LangGraph diagram (generated from the code) + resilience scores | Human approval gate before any fix; resumable runs; runs on any Kubernetes app; next: more fixes in the catalog, CI integration |
 
 Speaking order: Srinavith (1–3) → Aashrith (4) → Harshil (5) → Srinavith (6) → Aashrith (8) → Smrithi (7, 9).

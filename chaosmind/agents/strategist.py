@@ -144,6 +144,6 @@ def evaluate(criteria, observed):
         return 'inconclusive', []
     if not criteria:
         return 'needs_integrity_check', []
-    met = [c for c in criteria if c['metric'] in observed and
+    met = [c for c in criteria if observed.get(c['metric']) is not None and
            (observed[c['metric']] > c['value'] if c['op'] == '>' else observed[c['metric']] < c['value'])]
     return ('confirmed' if met else 'refuted'), met

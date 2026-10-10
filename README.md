@@ -5,7 +5,7 @@
 **Findings report:** [FINDINGS.md](FINDINGS.md) · **Architecture (1 page):** [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · **Run it:** [docs/RUNNING.md](docs/RUNNING.md) · **Agents:** [docs/AGENTS.md](docs/AGENTS.md) · **Team form:** [docs/TEAM_FORM.md](docs/TEAM_FORM.md)
 
 ## Project status: complete
-All components are built and tested (**71 automated tests**): the AI agents, LangGraph workflow with a human approval gate and resume, kill switch, integrity checks, resilience score, repeated-trial statistics, Remediation and the Analyst report. The kill switch and the Redis fix are **proven on the live cluster**. The agents run on an **open-weight model**, `gpt-oss-20b`, hosted by NVIDIA. A full agent dry run (audit + plan + safety review) takes **about 45 seconds**. See [FINDINGS.md](FINDINGS.md) for results.
+All components are built and tested (**73 automated tests**): the AI agents, LangGraph workflow with a human approval gate and resume, kill switch, integrity checks, resilience score, repeated-trial statistics, Remediation and the Analyst report. The kill switch and the Redis fix are **proven on the live cluster**, and the full AI loop has **confirmed the Redis cart loss live** (the AI planned the kill, the cart went 1 → 0, code ruled it confirmed). The agents run on an **open-weight model**, `gpt-oss-20b`, hosted by NVIDIA. A full agent dry run (audit + plan + safety review) takes **about 45 seconds**. See [FINDINGS.md](FINDINGS.md) for results.
 
 ## Highlights
 | | |
@@ -13,6 +13,7 @@ All components are built and tested (**71 automated tests**): the AI agents, Lan
 | 🔍 **Found a silent data-loss bug, then fixed it** | Restarting Redis emptied shoppers' carts with **zero HTTP errors**; error-rate monitoring alone would never notice. Our integrity checks caught it, and our fix made the cart survive the same experiment (**1 → 0 before, 1 → 1 after**). |
 | 🛑 **Kill switch: detects in ~8–10 s, reverts in ~0.3 s** | Every experiment runs under a guard that polls every 2 s and reverts automatically on error rate, latency or service-health breaches. Proven live on all three triggers, plus a crash fail-safe (`kill -9` on the guard) and manual abort. |
 | 🧠 **AI that can't hallucinate its way into the cluster** | Agents only return JSON. Code verifies every cited fact (**0 unverifiable claims** across live AI runs), the verdict is computed by code against criteria written *before* each run, and no agent can enlarge an experiment or loosen a safety limit. |
+| 📈 **Measured, not guessed** | Catalog pod kill, 5 trials each: **1 replica → customers hurt 5 of 5 times** (errors for 32–38 s although the pod was back in ~3 s); **2 replicas → 0 of 5** (never hurt). The 95% intervals (57–100% vs 0–43%) don't overlap. |
 | 🔁 **Reproducible results** | A catalog-latency experiment repeated twice: guard tripped at **9.6 s** both times, recovery **14.1 s / 14.0 s**. |
 | 📊 **Live dashboard** | Grafana shows shoppers, throughput, errors, p95, confirmed faults, pod health, CPU and memory while experiments run. |
 
@@ -44,7 +45,7 @@ graph TD;
 
 | Component | Status |
 |---|---|
-| Cartographer · Strategist · Safety Checker | ✅ Validated in 14 dry runs against the live cluster; now running on NVIDIA-hosted `openai/gpt-oss-20b` (full dry run passed) |
+| Cartographer · Strategist · Safety Checker | ✅ Validated in 14 dry runs, then a **live run** on NVIDIA-hosted `openai/gpt-oss-20b`: Redis kill planned, approved by the Safety Checker, cart loss confirmed by code |
 | Integrity checks · resilience score · Remediation · Analyst | ✅ Built and tested |
 | Orchestration: LangGraph state machine with a **human approval gate** before any fix and **checkpoint/resume** for long runs | ✅ Built and tested (incl. resume in a fresh process) |
 | **Chosen by measurement:** two independent agent implementations, 12 real dry runs on frozen identical inputs, scored by one script | ✅ This one won ([bake-off](docs/team/BAKEOFF_RESULT.md)): 0 hallucinated facts, 100% valid experiments, 3 fault types per plan, integrity checks on every Redis test |
@@ -94,10 +95,11 @@ graph TD;
 | Study | Shoppers | Samples | Req/s | Errors | p95 latency | Checkout success | Unhealthy / restarts |
 |---|---|---|---|---|---|---|---|
 | [15 min, before monitoring](docs/evidence/BASELINE_STUDY.md) | 20 | 181 | 4.37 | 0.05% (2 / 3,933) | 78 ms mean | 98.8% (166/168) | 0 / 0 |
-| [5 min, with monitoring](runs/baseline-study-20261010T093022.185681Z/BASELINE_RESULTS.md) → [`baseline.json`](baseline.json), used by the agents | 20 | 62 | 4.55 | 0.07% (1 / 1,372) | 35 ms mean | 98.6% (68/69) | 0 / 0 |
+| [5 min, with monitoring](runs/baseline-study-20261010T093022.185681Z/BASELINE_RESULTS.md) | 20 | 62 | 4.55 | 0.07% (1 / 1,372) | 35 ms mean | 98.6% (68/69) | 0 / 0 |
+| [5 min, final](runs/baseline-study-20261010T181454.739973Z/BASELINE_RESULTS.md) → [`baseline.json`](baseline.json), used by the agents | 20 | 61 | 4.36 | **0% (0 / 1,308)** | 27 ms mean | **100% (55/55)** | 0 / 0 |
 | 90 s steady phase of the [stress runs](runs/grafana-stress-20261010T083902Z/high-load.txt) | **100** | 2 runs | 22.3–22.4 | 0.05% (1 / ~2,015 each) | ~210 ms (cumulative) | — | — |
 
-The lower p95 in the second 20-shopper study follows the monitoring install, which redeployed the load generator; both are far below the 1,000 ms limit, and the agents use the newer one. Each experiment is compared with the baseline at the **same load**.
+The lower p95 in the second 20-shopper study follows the monitoring install, which redeployed the load generator; all are far below the 1,000 ms limit, and the agents use the final one. Each experiment is compared with the baseline at the **same load**.
 
 **At 20 shoppers**
 
@@ -118,12 +120,21 @@ The lower p95 in the second 20-shopper study follows the monitoring install, whi
 | 500 ms delay on catalog, run twice | p95 **4,300 / 4,400 ms** (reference ~210 ms) | Tripped on **p95** at 9.6 s both times, removed 0.30–0.32 s later | **14.1 / 14.0 s** |
 | `productcatalogservice` pod killed | Replacement pod up in ~3 s, but **66 HTTP 500s** and checkout 16/179 failed | Pre-flight + recovery checks (a kill can't be reverted) | Customers back after **~34 s** |
 
+**Repeated trials: catalog pod kill, 1 vs 2 replicas** (20 shoppers, 5 trials each, customer limits fixed before testing: errors > 5% or p95 > 1,000 ms)
+
+| Catalog replicas | Customers hurt | 95% interval | Pod back | Customers recovered |
+|---|---|---|---|---|
+| 1 | **5 of 5** | 57–100% | ~3 s | after **32–38 s** (errors up to 96%, p95 up to 20 s) |
+| 2 | **0 of 5** | 0–43% | ~3 s | **never hurt** (errors ≤ 2.4%) |
+
+Raw guard events per trial: [1 replica](runs/trials-catalog-podkill-20261010T182606Z/trials.json), [2 replicas](runs/trials-catalog-podkill-20261010T183121Z/trials.json); `python3 -m chaosmind.agents.trials summary` recomputes this table from them. In two of the 1-replica trials traffic stalled completely, so the kill switch reverted early; those count as breaches because the errors that followed were measured.
+
 ### Findings (most severe first)
 1. 🔴 **Silent cart data loss: fixed and verified ✅.** Redis kept every cart on a temporary `emptyDir` volume that's deleted with the pod, so a restart wiped all carts while the site kept answering HTTP 200. **Fix** (`bash scripts/redis-fix.sh apply`): a PersistentVolumeClaim for `/data`, Redis append-only logging, and the `Recreate` rollout strategy. **Re-test:** the cart survives the same experiment ([before/after](docs/evidence/REDIS_FIX_RESULTS.md)).
 2. 🟠 **A cart outage takes the shop down.** Losing `cartservice` drives errors to 35% and takes ~55 s to recover. *Fix:* 2+ replicas with a PodDisruptionBudget (in our [fix catalog](remediation/catalog.json)).
-3. 🟠 **"Healthy" ≠ recovered.** After a catalog pod kill, Kubernetes reported the service healthy in ~3 s, yet customers saw errors and 10 s responses for ~30 s more. Health checks alone would have hidden it. *Fix:* 2+ replicas so one kill isn't an outage; frontend retries with backoff.
+3. 🟠 **"Healthy" ≠ recovered.** After a catalog pod kill, Kubernetes reported the service healthy in ~3 s, yet customers saw errors and 10–20 s responses for ~30 s more, in **5 of 5** repeated trials. Health checks alone would have hidden it. *Fix, measured:* **2 replicas → customers hurt in 0 of 5** trials; frontend retries with backoff would help further.
 4. 🟡 **Catalog latency spreads everywhere.** 500 ms on one service pushes the whole site's p95 to 3.5–4.4 s, as the map predicted for the service with the most callers. *Fix:* client-side timeouts and caching of catalog reads.
-5. 🟡 **Checkout fails ~1.3% of the time with nothing broken (under investigation).** 3 HTTP 500s in 237 checkouts across both baselines, always on `POST /cart/checkout`. We've ruled out the load generator's card data (expiry and card numbers are always valid); payment and checkout logs are being captured to find the cause.
+5. 🟡 **Checkout fails ~1.3% of the time with nothing broken (under investigation).** 3 HTTP 500s in 237 checkouts across both baselines, always on `POST /cart/checkout`. We've ruled out the load generator's card data (expiry and card numbers are always valid). **Lead:** in a baseline taken under host memory pressure, `paymentservice` failed its liveness probe and restarted while **4 of 56** checkouts failed; the final baseline, with memory headroom, had **0 of 55**. Resource pressure on payment is the likely cause, not application logic.
 6. 🟢 **Ads fail gracefully**, exactly as the map predicted.
 
 Full evidence: [`docs/evidence/`](docs/evidence/) and the `runs/` directory (CSV + JSONL for every run).

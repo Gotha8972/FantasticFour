@@ -6,6 +6,8 @@ python3 -m chaosmind.agents.trials summary        # every trial so far, grouped 
 Result: "customer threshold breached in X of N comparable trials", with a 95% Wilson interval.
 This is a measured likelihood under one fault, load and configuration; it is not a production outage probability.
 Trials with failed injection, missing telemetry or no recovery are kept but marked invalid, never counted as passes.
+A run that ended in an error still counts as a breach if customers were measurably hurt (traffic stalling completely
+is the worst outcome, not a missing one). Summaries re-derive every trial from its raw guard events.
 """
 import argparse
 from datetime import datetime, timezone
@@ -47,7 +49,7 @@ def one_trial(exp, n, guard_run=guard.run):
     problem = next((e['event'] for e in events if e['event'] in INVALID), None)
     obs = safety.observed(events)
     violations = integrity.verify(state) if obs else []
-    if problem or obs is None:
+    if obs is None or (problem and not hurt(obs)):
         return {'trial': n, 'outcome': 'invalid', 'reason': problem or 'no measurements', 'observed': obs,
                 'run_dir': next((e.get('artifact_dir') for e in events), None)}, problem
     obs = {**obs, 'integrity_violations': len(violations)}
@@ -57,7 +59,23 @@ def one_trial(exp, n, guard_run=guard.run):
             'run_dir': next((e.get('artifact_dir') for e in events), None)}, None
 
 
+def hurt(obs):
+    return strategist.evaluate(CUSTOMER_CRITERIA, obs)[0] == 'confirmed'
+
+
+def reobserve(trial):
+    """Re-derive a trial from its raw guard events, so improved analysis also applies to evidence already recorded."""
+    path = Path(trial.get('run_dir') or '-') / 'events.jsonl'
+    obs = safety.observed([json.loads(l) for l in path.read_text().splitlines() if l.strip()]) if path.exists() else None
+    if obs is None:
+        return trial
+    obs = {**obs, 'integrity_violations': (trial.get('observed') or {}).get('integrity_violations')}
+    outcome = 'breach' if hurt(obs) else 'invalid' if trial['outcome'] == 'invalid' else 'held'
+    return {**trial, 'observed': obs, 'outcome': outcome}
+
+
 def summarize(trials):
+    trials = [reobserve(t) for t in trials]
     valid = [t for t in trials if t['outcome'] != 'invalid']
     k = sum(t['outcome'] == 'breach' for t in valid)
     timing = lambda key: sorted(t['observed'][key] for t in valid if t['observed'].get(key) is not None)

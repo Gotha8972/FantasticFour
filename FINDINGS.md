@@ -12,9 +12,9 @@
 |---|---|---|---|---|---|---|
 | 1 | **Silent cart data loss** on Redis restart | 🔴 Critical | Cart **1 → 0 items** with **0 HTTP errors** | **58** (integrity violation) | PVC for `/data` + Redis append-only log + `Recreate` strategy | ✅ **Fixed and re-tested:** cart **1 → 1** |
 | 2 | **Cart service is a single point of failure** | 🟠 High | Cart down → errors peak 100%, p95 2,700 ms, customers recovered after ~62 s | **21** | 2 replicas + PodDisruptionBudget (in the [fix catalog](remediation/catalog.json)) | Fix ready |
-| 3 | **"Healthy" ≠ recovered** after a catalog pod kill | 🟠 High | At 100 shoppers: replacement pod up in **~3 s**, but **66 HTTP 500s**, checkout 16/179 failed, customers recovered after **~34 s** | — | 2 catalog replicas; frontend retries with backoff | Fix ready |
+| 3 | **"Healthy" ≠ recovered** after a catalog pod kill | 🟠 High | At 100 shoppers: replacement pod up in **~3 s**, but **66 HTTP 500s**, checkout 16/179 failed, customers recovered after **~34 s**. Repeated at 20 shoppers: customers hurt in **5 of 5** kills (95% CI 57–100%) | — | 2 catalog replicas; frontend retries with backoff | ✅ **Fix measured:** 2 replicas → hurt in **0 of 5** (95% CI 0–43%) |
 | 4 | **Catalog latency spreads to the whole site** | 🟡 Medium | +500 ms on the catalog → site p95 **3,500 ms** at 20 shoppers, **4,300 / 4,400 ms** at 100 (two identical runs) | **71** | Client-side timeouts + caching catalog reads in the frontend | Recommended |
-| 5 | **Background checkout failures** | 🟡 Medium | 3 HTTP 500s in 237 checkouts with **no fault injected** (~1.3%) | — | Root cause under investigation (load-generator card data ruled out) | Investigating |
+| 5 | **Background checkout failures** | 🟡 Medium | 3 HTTP 500s in 237 checkouts with **no fault injected** (~1.3%); 4 of 56 under host memory pressure with `paymentservice` restarts; **0 of 55** with memory headroom | — | Resource headroom for `paymentservice` (memory limits/requests); card data ruled out | Likely cause found |
 | 6 | Ads service outage | 🟢 Low | Ad service down → **0% errors**; the frontend degrades gracefully | **90** | None needed | ✅ Resilient |
 
 ## Details
@@ -36,7 +36,8 @@
 - **What we did:** killed one `productcatalogservice` pod at 100 shoppers.
 - **What happened:** Kubernetes had a replacement Ready in ~3 s, but customers saw **66 HTTP 500s**, a checkout failure rate of 8.9% and peak p95 of 10 s, for ~34 s in total.
 - **Why it matters:** pod health alone would have reported this as a 3-second blip. Customer metrics show it was a 34-second outage.
-- **Fix:** 2 catalog replicas, so a single kill is absorbed; frontend retries with backoff. Evidence: [monitoring results](monitoring/README.md#recorded-pod-kill-results--october-10-2026), `runs/grafana-pod-kill-1a0c612c9e`.
+- **Repeated and measured:** 5 kills with 1 replica and 5 with 2 (20 shoppers, same customer limits). With **1 replica, customers were hurt every time (5/5, 95% CI 57–100%)**: errors up to 96%, p95 up to 20 s, customers recovered after 32–38 s while the pod was back in ~3 s. With **2 replicas, never (0/5, 95% CI 0–43%)**: errors stayed ≤ 2.4%. The intervals don't overlap. Evidence: `runs/trials-catalog-podkill-20261010T182606Z` (1 replica) and `runs/trials-catalog-podkill-20261010T183121Z` (2 replicas).
+- **Fix:** 2 catalog replicas, so a single kill is absorbed (**measured above**); frontend retries with backoff. Evidence: [monitoring results](monitoring/README.md#recorded-pod-kill-results--october-10-2026), `runs/grafana-pod-kill-1a0c612c9e`.
 
 ### 4. Catalog latency spreads everywhere
 - **What we did:** +500 ms network delay on `productcatalogservice`.
