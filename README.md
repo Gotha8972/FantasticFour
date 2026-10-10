@@ -7,6 +7,7 @@ A chaos testing and resilience verification platform for the microservices-based
 ## 📑 Table of Contents
 
 - [Overview](#overview)
+- [Dependency Map](#️-dependency-map)
 - [Architecture & Components](#architecture--components)
 - [Customer Simulator (`customer_simulator.py`)](#customer-simulator-customer_simulatorpy)
   - [Features](#features)
@@ -28,6 +29,30 @@ This repository provides tools for testing the resilience of the **Google Online
 2. **Prometheus Metrics Exporter**: Emits live metrics on requests, latencies, checkout successes/failures, and active sessions.
 3. **Deep Error Diagnostics**: Captures detailed HTTP failure paths, status codes, error bodies, and network exceptions to pinpoint broken services during chaos experiments.
 4. **Chaos Injection & Safeguards**: Automated fault injection (latency, pod kill) with threshold monitoring and automatic kill-switch guards.
+
+---
+
+## 🗺️ Dependency Map
+
+![Online Boutique dependency graph](docs/dependency-graph.webp)
+
+Based on Google's architecture diagram. We **checked it against the deployment manifest** by extracting every `*_ADDR` environment variable (each one is a service-to-service call). All 17 edges in the diagram match:
+
+| Caller | Calls |
+| :--- | :--- |
+| loadgenerator | frontend |
+| frontend | ad, recommendation, productcatalog, cart, shipping, currency, checkout |
+| checkout | productcatalog, cart, shipping, currency, payment, email |
+| recommendation | productcatalog |
+| cart | redis-cart |
+
+**Manual correction:** the upstream `main` manifest also gives `frontend` a `SHOPPING_ASSISTANT_SERVICE_ADDR` (an optional AI assistant service). It isn't in the diagram and isn't part of our deployed release, so it's excluded.
+
+**What the map tells us before any testing:**
+- `productcatalog` has the most callers (3), so it's the widest blast radius.
+- `checkout` depends on 6 services, so it's the most fragile path.
+- `redis-cart` is a single store behind `cart`. Confirmed data loss on restart, see [KILLSWITCH_RESULTS.md](KILLSWITCH_RESULTS.md).
+- `ad` and `recommendation` are optional. Confirmed: `ad` down caused 0 user-facing errors.
 
 ---
 
