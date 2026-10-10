@@ -8,7 +8,7 @@ Same agents and deterministic safety code as `python3 -m chaosmind.agents`; Lang
   • a human approval gate before any fix touches the cluster (interrupt; --auto-approve to skip),
   • checkpointing: an interrupted run resumes from its last finished step (--resume runs/agents-…),
   • the workflow diagram exported from the real graph (--draw).
-Model-agnostic: nodes call chaosmind/agents/llm.py (NVIDIA NIM, Mistral-7B by default; NIM_MODEL to swap), no LangChain.
+Model-agnostic: nodes call chaosmind/agents/llm.py (NVIDIA NIM, gpt-oss-20b by default; NIM_MODEL to swap), no LangChain.
 
 .venv/bin/python -m chaosmind.graph --dry-run
 .venv/bin/python -m chaosmind.graph --budget 3 --remediate

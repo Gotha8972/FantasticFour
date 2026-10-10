@@ -145,7 +145,7 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 ```
 The workflow pauses for approval before any fix (`--auto-approve` for recorded runs) and can resume an interrupted run with `--resume runs/agents-<time>`. Without LangGraph, `python3 -m chaosmind.agents` runs the same steps (no resume).
 
-Needs `NVIDIA_API_KEY` in the environment or in `.env` (copy `.env.example`; git-ignored). Model: NVIDIA NIM `mistralai/mistral-7b-instruct-v0.3`; swap with `NIM_MODEL` (≤ 7B). Check the key with `python3 -m chaosmind.agents.llm --ping`.
+Needs `NVIDIA_API_KEY` in the environment or in `.env` (copy `.env.example`; git-ignored). Model: NVIDIA-hosted `openai/gpt-oss-20b`; swap with `NIM_MODEL` (plus `NIM_EXTRA_BODY` for models that need extra request fields). Check the key with `python3 -m chaosmind.agents.llm --ping`.
 
 Audit, plan and safety review only; nothing is injected:
 ```bash

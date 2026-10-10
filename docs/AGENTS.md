@@ -4,7 +4,7 @@ Back to the [README](../README.md) · one-page view: [ARCHITECTURE.md](ARCHITECT
 
 Every agent follows one pattern: **code gathers facts → the AI reasons and returns JSON → code verifies → code acts.**
 No agent runs `kubectl` or touches the cluster. All live actions go through `inject.py` / `guard.py` or a reviewed allow-list.
-Model: NVIDIA NIM `mistralai/mistral-7b-instruct-v0.3` (7B) via `chaosmind/agents/llm.py` (NVIDIA's OpenAI-compatible API; system prompt folded into the user turn, JSON extracted from the reply, one corrective retry). Swap with `NIM_MODEL`.
+Model: NVIDIA-hosted `openai/gpt-oss-20b` (open weights; 21B total, 3.6B active) via `chaosmind/agents/llm.py` (NVIDIA's OpenAI-compatible API; system prompt folded into the user turn, JSON extracted from the reply, one corrective retry). Swap with `NIM_MODEL`.
 
 | Agent | File | AI decides | Code guarantees |
 |---|---|---|---|

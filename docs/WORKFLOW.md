@@ -56,4 +56,4 @@ graph TD;
 | `report` | **Analyst** (AI + fact-check) | `FINDINGS.md` |
 
 **Checkpointing:** every finished node is saved to `runs/agents-…/checkpoints.sqlite`; `--resume runs/agents-…` continues an interrupted run, including one paused at the approval gate.
-**Model-agnostic:** nodes call `chaosmind/agents/llm.py` (NVIDIA NIM, Mistral-7B by default); no LangChain dependency.
+**Model-agnostic:** nodes call `chaosmind/agents/llm.py` (NVIDIA NIM, gpt-oss-20b by default); no LangChain dependency.

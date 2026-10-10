@@ -52,12 +52,23 @@ def revert(fix):
     _kubectl_files('delete', fix.get('delete_on_revert', []))
 
 
+def rerun_experiment(item):
+    """The step the 'before' score was measured on: the Safety Checker's reviewed experiment (never the raw proposal),
+    at that step's intensity and length. Anything else would bypass the review and compare different experiments."""
+    s = item.get('safety') or {}
+    exp = s.get('experiment') or item['experiment']
+    level = next((st['intensity'] for st in reversed(s.get('steps', [])) if st.get('observed')), None)
+    if level is not None:
+        exp = safety.with_intensity(exp, level)
+    return {**exp, 'id': f"{exp['id']}-after"[:63], 'duration_s': min(exp['duration_s'], safety.STEP_DURATION_S)}
+
+
 def execute(item, choice, baseline, guard_run=guard.run):
     """Apply the chosen catalog fix → re-run the identical experiment → compare scores → keep or roll back."""
     fix = next(f for f in CATALOG if f['id'] == choice['fix_id'])
     apply(fix)
     state = integrity.prepare()
-    exp = {**item['experiment'], 'id': f"{item['experiment']['id']}-after"[:63]}
+    exp = rerun_experiment(item)
     events = guard_run(exp)
     observed = safety.observed(events) or {}
     violations = integrity.verify(state)

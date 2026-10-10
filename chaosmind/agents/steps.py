@@ -45,8 +45,15 @@ def setup(state):
     wl = state.get('workloads')
     f = facts_mod.collect(json.loads(Path(wl).read_text()) if wl else None)
     save(state, 'facts.json', f)
-    return {'baseline': load_baseline(state['baseline_path']), 'facts': f, 'history': [], 'plan_round': 0,
-            'stop_reason': None}
+    baseline = load_baseline(state['baseline_path'])
+    if baseline.get('baseline_suitable') is False and not state.get('dry_run'):
+        raise SystemExit(f"Baseline {baseline['source']} is marked unsuitable: re-run scripts/baseline.sh before live runs")
+    return {'baseline': baseline, 'facts': f, 'history': [], 'plan_round': 0, 'stop_reason': None}
+
+
+def revenue_path(facts):
+    """Services a purchase depends on: the checkout path plus the entrypoint (safety hard bounds apply here)."""
+    return sorted(n for n, s in facts['services'].items() if s.get('on_checkout_path') or s.get('entrypoint'))
 
 
 def audit(state):
@@ -76,7 +83,8 @@ def execute(state):
     print(f"\nStrategist → {exp['id']}: {item.get('reason', '')}")
     if state.get('dry_run'):
         health = {'note': 'offline'} if state.get('workloads') else _health()
-        result = {**safety.review(exp, health, baseline), 'steps': [], 'health_at_review': health}
+        result = {**safety.review(exp, health, baseline, revenue_path(state['facts'])), 'steps': [],
+                  'health_at_review': health}
         return {'current': {'item': item, 'result': result, 'observed': None, 'integrity': []}}
     health = _health()
     base_users = ((baseline.get('metrics') or {}).get('users') or {}).get('mean')
@@ -84,7 +92,7 @@ def execute(state):
         print(f"⚠ Load differs from the baseline ({health['users']} vs {base_users:.0f} shoppers); "
               "results won't be comparable. Re-run the baseline at this load.")
     check = integrity.prepare()  # silent-failure check: set up before the fault
-    result = {**safety.run(exp, health, baseline), 'health_at_review': health}
+    result = {**safety.run(exp, health, baseline, revenue_path=revenue_path(state['facts'])), 'health_at_review': health}
     violations = integrity.verify(check) if result['steps'] else []
     obs = next((s['observed'] for s in reversed(result['steps']) if s['observed']), None)
     if obs is not None:

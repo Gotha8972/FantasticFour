@@ -5,7 +5,7 @@
 **Findings report:** [FINDINGS.md](FINDINGS.md) · **Architecture (1 page):** [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · **Run it:** [docs/RUNNING.md](docs/RUNNING.md) · **Agents:** [docs/AGENTS.md](docs/AGENTS.md) · **Team form:** [docs/TEAM_FORM.md](docs/TEAM_FORM.md)
 
 ## Project status: complete
-All components are built and tested (**66 automated tests**): the AI agents, LangGraph workflow with a human approval gate and resume, kill switch, integrity checks, resilience score, repeated-trial statistics, Remediation and the Analyst report. The kill switch and the Redis fix are **proven on the live cluster**. The agents run on a **7B open model** (Mistral-7B via NVIDIA NIM). See [FINDINGS.md](FINDINGS.md) for results.
+All components are built and tested (**69 automated tests**): the AI agents, LangGraph workflow with a human approval gate and resume, kill switch, integrity checks, resilience score, repeated-trial statistics, Remediation and the Analyst report. The kill switch and the Redis fix are **proven on the live cluster**. The agents run on an **open-weight model**, `gpt-oss-20b`, hosted by NVIDIA, and a full agent dry run on it passed. See [FINDINGS.md](FINDINGS.md) for results.
 
 ## Highlights
 | | |
@@ -44,7 +44,7 @@ graph TD;
 
 | Component | Status |
 |---|---|
-| Cartographer · Strategist · Safety Checker | ✅ Validated in 14 dry runs against the live cluster; now running on NVIDIA NIM `mistralai/mistral-7b-instruct-v0.3` (7B) |
+| Cartographer · Strategist · Safety Checker | ✅ Validated in 14 dry runs against the live cluster; now running on NVIDIA-hosted `openai/gpt-oss-20b` (full dry run passed) |
 | Integrity checks · resilience score · Remediation · Analyst | ✅ Built and tested |
 | Orchestration: LangGraph state machine with a **human approval gate** before any fix and **checkpoint/resume** for long runs | ✅ Built and tested (incl. resume in a fresh process) |
 | **Chosen by measurement:** two independent agent implementations, 12 real dry runs on frozen identical inputs, scored by one script | ✅ This one won ([bake-off](docs/team/BAKEOFF_RESULT.md)): 0 hallucinated facts, 100% valid experiments, 3 fault types per plan, integrity checks on every Redis test |
@@ -82,6 +82,10 @@ graph TD;
 - **Kill switch:** polls every 2 s; reverts on **error rate > 5%**, **p95 > 1,000 ms** or **> 2 unhealthy services**. A breach is detected ~8–10 s after injection (the guard reads the load generator's rolling ~10 s window), and the fault is removed ~0.3–0.4 s later. Moderate error spikes must persist two polls, so background noise doesn't cause false trips.
 - **Fail-safe:** every fault carries Chaos Mesh's own `duration`, so it ends even if the guard is killed (`kill -9` tested).
 - **Always revert** on errors and Ctrl-C; **scoped abort**; runtime limits can only be **tightened**; AI agents never touch the cluster.
+- **Code overrules the model** (none of these depend on the prompt):
+  - experiments on the checkout/revenue path are capped at 500 ms delay and shrunk to 30 s when longer than 60 s
+  - a baseline marked unsuitable means every experiment is rejected and live runs refuse to start
+  - a "data loss" claim against a service with a persistent volume is rejected as contradicting the facts
 
 ## Results
 **Steady-state baselines** (no faults):
@@ -174,5 +178,5 @@ chaosmind/portable/   prototype: the same workflow for any app via profiles + an
 | Smrithi | Prompt tuning, architecture overview, reproducible setup |
 
 **Software:** Online Boutique v0.10.4 (Apache-2.0), kind, Podman, Kubernetes, Chaos Mesh 2.8.4, Helm 3.19, Locust, kube-prometheus-stack 92.3.0, LangGraph 1.2 (orchestration), Python standard library (agents), `requests` + `prometheus_client` (simulator).
-**AI model:** NVIDIA NIM `mistralai/mistral-7b-instruct-v0.3` (7B parameters) via NVIDIA's OpenAI-compatible API. Any ≤ 7B NIM model can be swapped in with `NIM_MODEL`.
+**AI model:** `openai/gpt-oss-20b`, open weights, hosted by NVIDIA (21B total parameters, mixture-of-experts with 3.6B active per token), via NVIDIA's OpenAI-compatible API with `NVIDIA_API_KEY`. Swap with `NIM_MODEL`; it was the smallest model that completed the whole agent workflow on our account ([model check](docs/team/MODEL_CHECK_FINDINGS.md)).
 **Data:** synthetic only: simulated shoppers and the app's built-in demo products.

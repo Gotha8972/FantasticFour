@@ -1,12 +1,16 @@
 """Chat client for NVIDIA NIM (OpenAI-compatible API). Stdlib only; secrets stay local.
 
-Default model: mistralai/mistral-7b-instruct-v0.3 (7B). Any NIM chat model ≤ 7B can be set with NIM_MODEL,
-e.g. nvidia/nemotron-mini-4b-instruct or microsoft/phi-3-mini-128k-instruct.
+Default model: openai/gpt-oss-20b, an open-weight model hosted by NVIDIA (21B total parameters, mixture-of-experts with
+3.6B active per token). It uses NVIDIA_API_KEY and NVIDIA's endpoint, never the OpenAI API. It was the smallest
+model that completed the whole agent workflow on our account (docs/team/MODEL_CHECK_FINDINGS.md).
+Other models: NIM_MODEL. Extra request fields a model needs: NIM_EXTRA_BODY (JSON), e.g. for Nemotron
+  NIM_MODEL=nvidia/nemotron-3.5-lightning-30b-a3b NIM_EXTRA_BODY='{"chat_template_kwargs": {"enable_thinking": false}}'
 Key: NVIDIA_API_KEY (environment or .env). Check the key with one tiny call:  python3 -m chaosmind.agents.llm --ping
 
-Small models are less disciplined than large ones, so this client: folds the system prompt into the user turn
-(Mistral's chat template has no system role), doesn't depend on a JSON mode, extracts the JSON object from the reply,
-and retries once if it's invalid. Everything the model says is still validated by code downstream.
+The client doesn't trust the model's formatting: it folds the system prompt into the user turn (works on every chat
+template), doesn't depend on a JSON mode, extracts the JSON object from the reply, and retries once if it's invalid.
+Reasoning models spend output tokens on thinking first, so max_tokens is generous. Everything the model says is
+still validated by code downstream.
 """
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
@@ -40,9 +44,10 @@ def setting(name, default=None):
 
 LABEL = 'NVIDIA NIM'
 API = setting('NIM_BASE_URL', 'https://integrate.api.nvidia.com/v1').rstrip('/') + '/chat/completions'
-MODEL = setting('NIM_MODEL', 'mistralai/mistral-7b-instruct-v0.3')
-MODELS = {'large': MODEL, 'small': MODEL}  # call sites ask for 'large'/'small'; one small model serves both
-MAX_TOKENS = int(setting('NIM_MAX_TOKENS', '4096'))
+MODEL = setting('NIM_MODEL', 'openai/gpt-oss-20b')
+MODELS = {'large': MODEL, 'small': MODEL}  # call sites ask for 'large'/'small'; one model serves both
+MAX_TOKENS = int(setting('NIM_MAX_TOKENS', '8192'))  # reasoning tokens count against this
+EXTRA_BODY = json.loads(setting('NIM_EXTRA_BODY', '{}'))
 
 
 def api_key():
@@ -69,13 +74,16 @@ def extract_json(text):
 
 def _post(messages):
     body = json.dumps({'model': MODEL, 'messages': messages, 'temperature': 0.2, 'top_p': 0.9,
-                       'max_tokens': MAX_TOKENS, 'stream': False}).encode()
+                       'max_tokens': MAX_TOKENS, 'stream': False, **EXTRA_BODY}).encode()
     request = urllib.request.Request(API, body, {'Content-Type': 'application/json', 'Accept': 'application/json',
                                                  'Authorization': f'Bearer {api_key()}'})
     for retry in range(5):
         try:
-            with urllib.request.urlopen(request, timeout=180) as response:
-                return json.load(response)['choices'][0]['message']['content']
+            with urllib.request.urlopen(request, timeout=300) as response:
+                choice = json.load(response)['choices'][0]
+            if choice.get('finish_reason') == 'length' and not choice['message'].get('content'):
+                print(f'{LABEL}: output limit reached while reasoning; raise NIM_MAX_TOKENS.', file=sys.stderr)
+            return choice['message'].get('content') or ''  # reasoning models can return content None
         except urllib.error.HTTPError as error:
             code, retry_after = error.code, error.headers.get('Retry-After') if error.headers else None
             message = error.read().decode(errors='replace')[:300]
@@ -96,6 +104,11 @@ def _post(messages):
                 delay = max(delay, requested)
             print(f'{LABEL} API {code}; retry {retry + 1}/4 in {delay:.0f}s.', file=sys.stderr, flush=True)
             time.sleep(delay)
+        except (urllib.error.URLError, TimeoutError) as error:  # network blip or slow reply: retry, don't kill the run
+            if retry == 4:
+                raise RuntimeError(f'{LABEL} unreachable: {error}') from None
+            print(f'{LABEL} {error}; retry {retry + 1}/4 in 15s.', file=sys.stderr, flush=True)
+            time.sleep(15)
 
 
 def ask(system, user, model='large'):
@@ -107,7 +120,7 @@ def ask(system, user, model='large'):
         reply = extract_json(content)
         if reply is not None:
             return reply
-        messages += [{'role': 'assistant', 'content': content or ''},
+        messages += [{'role': 'assistant', 'content': content},
                      {'role': 'user', 'content': 'That was not a single valid JSON object. Reply with only the JSON object, no prose.'}]
     raise RuntimeError(f'{LABEL} returned invalid JSON twice')
 

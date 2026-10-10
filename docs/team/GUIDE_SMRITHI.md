@@ -10,7 +10,7 @@ Read [GUIDE_00_EVERYONE.md](GUIDE_00_EVERYONE.md) first.
 ---
 
 ## 1. Learn the agent code (≈45 min, in this order)
-1. `chaosmind/agents/llm.py`: one function, `ask()`, NVIDIA NIM (Mistral-7B); it extracts the JSON object from the reply.
+1. `chaosmind/agents/llm.py`: one function, `ask()`, NVIDIA NIM (gpt-oss-20b); it extracts the JSON object from the reply.
 2. `facts.py`: plain code; the call graph from `*_ADDR` variables, plus a risk score. Try it:
    ```bash
    python3 -m chaosmind.agents.facts --workloads runs/baseline-study-20261010T072314.832283Z/workloads-initial.json
@@ -36,7 +36,7 @@ Read `runs/agents-<time>/vulnerabilities.json`, `plan-1.json` and `history.json`
 **Techniques:**
 - **Few-shot:** paste one ideal output into the SYSTEM prompt.
 - **Explicit rubric:** "critical = data loss or checkout outage…".
-- **Compare models (≤ 7B):** `NIM_MODEL=nvidia/nemotron-mini-4b-instruct` or `microsoft/phi-3-mini-128k-instruct`.
+- **Compare models:** `NIM_MODEL=nvidia/nemotron-3.5-lightning-30b-a3b NIM_EXTRA_BODY='{"chat_template_kwargs": {"enable_thinking": false}}'` (see [MODEL_CHECK_FINDINGS.md](MODEL_CHECK_FINDINGS.md) for which models our account can reach).
 - **Reasoning models ignore temperature;** change effort or the prompt instead.
 
 Change one thing at a time, re-run `--dry-run` (Aashrith, or offline with `--workloads`), and keep a log of what improved. That log is great material for the architecture page.

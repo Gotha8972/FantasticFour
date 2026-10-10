@@ -2,7 +2,7 @@
 
 ```mermaid
 flowchart LR
-    subgraph AI["AI agents · NVIDIA NIM Mistral-7B"]
+    subgraph AI["AI agents · gpt-oss-20b on NVIDIA NIM"]
         CA["② Cartographer<br/>audits config → ranked vulnerabilities"] --> ST["① Strategist<br/>experiment + prediction + pass/fail criteria"]
         ST --> SC["④ Safety Checker<br/>approve / shrink / reject + intensity ramp"]
         AN["Analyst<br/>root cause from logs → FINDINGS.md"]
@@ -48,6 +48,6 @@ flowchart LR
 | Tighten-only | Runtime limit overrides may only be stricter |
 | Remediation allow-list | Only catalogued, reviewed fixes; dry-run first; automatic rollback if the score drops |
 
-**Orchestration:** the stages run as a LangGraph state machine ([diagram generated from the code](WORKFLOW.md)). LangGraph adds a human approval gate before any fix is applied and checkpointing, so an interrupted live run resumes from its last finished step. It stays model-agnostic: nodes call our own `llm.py` (NVIDIA NIM, Mistral-7B by default), with no LangChain dependency. We evaluated Google ADK ([design notes](adk/README.md)) and chose LangGraph because our workflow is a code-routed state machine, while ADK is built around model-driven tool calls and Gemini.
+**Orchestration:** the stages run as a LangGraph state machine ([diagram generated from the code](WORKFLOW.md)). LangGraph adds a human approval gate before any fix is applied and checkpointing, so an interrupted live run resumes from its last finished step. It stays model-agnostic: nodes call our own `llm.py` (NVIDIA NIM, gpt-oss-20b by default), with no LangChain dependency. We evaluated Google ADK ([design notes](adk/README.md)) and chose LangGraph because our workflow is a code-routed state machine, while ADK is built around model-driven tool calls and Gemini.
 
 **Honest limits:** breaches are detected **~6–10 s after injection**, because Locust reports a rolling ~10 s window. Pod kills are instantaneous and can't be "reverted", only observed until recovery.

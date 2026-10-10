@@ -11,6 +11,8 @@ from chaosmind.agents import llm
 STEP_DURATION_S = 30
 MAX_STEPS = 4
 STOP_EVENTS = {'REFUSED', 'ERROR', 'NOT_RECOVERED', 'REVERT_FAILED', 'INTERRUPTED'}
+# Hard bounds on the checkout/revenue path, enforced in code whatever the model says.
+MAX_REVENUE_DELAY_MS, MAX_REVENUE_DURATION_S, SHRUNK_DURATION_S = 500, 60, 30
 
 SYSTEM = """You are the Safety Checker for a chaos-engineering system running in a local sandbox.
 Given a proposed experiment, the current health snapshot and the baseline, decide:
@@ -82,7 +84,22 @@ def current_health(snapshot):
     return {k: v for k, v in (snapshot or {}).items() if k not in CUMULATIVE}
 
 
-def review(exp, snapshot, baseline):
+def hard_bounds(exp, revenue_path=None):
+    """Delay > 500 ms → 500 ms; duration > 60 s → 30 s, for targets on the revenue path (None = unknown: assume it is)."""
+    if revenue_path is not None and exp['target'] not in revenue_path:
+        return exp
+    if exp['duration_s'] > MAX_REVENUE_DURATION_S:
+        exp = {**exp, 'duration_s': SHRUNK_DURATION_S}
+    if exp['fault'] == 'network_delay' and intensity(exp) > MAX_REVENUE_DELAY_MS:
+        exp = with_intensity(exp, MAX_REVENUE_DELAY_MS)
+    return exp
+
+
+def review(exp, snapshot, baseline, revenue_path=None):
+    # An unsuitable baseline means "normal" is unknown, so no verdict could be trusted. Code decides, not the model.
+    if (baseline or {}).get('baseline_suitable') is False:
+        return {'decision': 'reject', 'reason': 'baseline is marked unsuitable; re-run scripts/baseline.sh',
+                'experiment': exp, 'ramp': []}
     reply = llm.ask(SYSTEM, {'experiment': exp, 'current_health': current_health(snapshot), 'baseline': baseline})
     decision = reply.get('decision')
     proposed = reply.get('experiment') if isinstance(reply.get('experiment'), dict) else exp
@@ -91,10 +108,13 @@ def review(exp, snapshot, baseline):
     if decision != 'reject' and not only_smaller(exp, {**exp, **proposed}):
         return {'decision': 'reject', 'reason': 'agent tried to enlarge or alter the experiment',
                 'experiment': exp, 'ramp': []}
-    final = {**exp, **proposed, 'id': exp['id']}
+    final, reason = {**exp, **proposed, 'id': exp['id']}, reply.get('reason', '')
+    if decision != 'reject' and hard_bounds(final, revenue_path) != final:
+        final, decision = hard_bounds(final, revenue_path), 'shrink'
+        reason += f' [code: hard bound ≤{MAX_REVENUE_DELAY_MS} ms / ≤{MAX_REVENUE_DURATION_S} s on the revenue path]'
     top = intensity(final)
     ramp = [] if decision == 'reject' else ([None] if top is None else clean_ramp(reply.get('ramp'), top))
-    return {'decision': decision, 'reason': reply.get('reason', ''), 'experiment': final, 'ramp': ramp}
+    return {'decision': decision, 'reason': reason, 'experiment': final, 'ramp': ramp}
 
 
 def observed(events):
@@ -129,8 +149,8 @@ def observed(events):
             'users': snaps[0].get('users')}
 
 
-def run(exp, snapshot, baseline, guard_run=guard.run):
-    verdict = review(exp, snapshot, baseline)
+def run(exp, snapshot, baseline, guard_run=guard.run, revenue_path=None):
+    verdict = review(exp, snapshot, baseline, revenue_path)
     # tolerated_up_to: highest step that stayed inside the guard limits.
     # limit_crossed_at: first step where the guard tripped. "Crossed our safety limit", not "the system died".
     result = {**verdict, 'steps': [], 'tolerated_up_to': None, 'limit_crossed_at': None, 'status': verdict['decision']}

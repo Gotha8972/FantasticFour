@@ -66,7 +66,7 @@ class AgentTests(unittest.TestCase):
         self.assertEqual(strategist.evaluate([], {'p95_ms': 90})[0], 'needs_integrity_check')
         self.assertEqual(strategist.evaluate(crit, None)[0], 'inconclusive')
 
-    def test_llm_calls_nvidia_nim_with_a_small_model(self):
+    def test_llm_calls_nvidia_nim_gpt_oss(self):
         import io
         sent = []
 
@@ -82,8 +82,8 @@ class AgentTests(unittest.TestCase):
             self.assertEqual(llm.ask('SYSTEM RULES', {'x': 1}), {'ok': True})
         url, body = sent[0]
         self.assertEqual(url, 'https://integrate.api.nvidia.com/v1/chat/completions')
-        self.assertEqual(body['model'], 'mistralai/mistral-7b-instruct-v0.3')
-        self.assertEqual([m['role'] for m in body['messages']], ['user'])  # system folded in: Mistral has no system role
+        self.assertEqual(body['model'], 'openai/gpt-oss-20b')  # open weights on NVIDIA's endpoint, not the OpenAI API
+        self.assertEqual([m['role'] for m in body['messages']], ['user'])  # system folded in: works on any chat template
         self.assertTrue(body['messages'][0]['content'].startswith('SYSTEM RULES'))
         self.assertNotIn('openai', url)
 
@@ -92,6 +92,34 @@ class AgentTests(unittest.TestCase):
         with patch.object(llm, 'ask', side_effect=lambda system, user: seen.update(user) or {'decision': 'reject'}):
             safety.review(EXP, {'error_rate': 0.0, 'checkout_success': 0.989, 'failures': 21}, {})
         self.assertEqual(seen['current_health'], {'error_rate': 0.0})
+
+    def test_cartographer_rejects_data_loss_claim_when_persisted(self):
+        persisted = {**FACTS, 'services': {**FACTS['services'], 'redis-cart': {
+            **FACTS['services']['redis-cart'], 'volumes': ['persistentVolumeClaim'], 'stateful_without_pvc': False}}}
+        reply = {'vulnerabilities': [
+            {'service': 'redis-cart', 'severity': 'critical', 'weakness': 'single replica',
+             'evidence': {'replicas': 1}, 'hypothesis': 'a pod kill wipes all carts'},
+            {'service': 'redis-cart', 'severity': 'high', 'weakness': 'single replica',
+             'evidence': {'replicas': 1}, 'hypothesis': 'a pod kill makes cartservice lose connection; cart page errors'}]}
+        with patch.object(llm, 'ask', return_value=reply):
+            out = cartographer.audit(persisted)
+        self.assertEqual([v['severity'] for v in out['vulnerabilities']], ['high'])  # availability claim kept
+        self.assertIn('persistent volume', out['rejected'][0]['rejected_because'])
+        with patch.object(llm, 'ask', return_value=reply):  # same claim, no PVC (original emptyDir): kept
+            self.assertEqual(len(cartographer.audit(FACTS)['vulnerabilities']), 2)
+
+    def test_safety_hard_bounds_and_baseline_enforced_in_code(self):
+        risky = json.loads(Path('experiments/risky-checkout.json').read_text())
+        with patch.object(llm, 'ask', return_value={'decision': 'approve', 'experiment': risky, 'ramp': [2000]}):
+            out = safety.review(risky, {}, {})
+        self.assertEqual((out['decision'], out['experiment']['params']['latency'], out['experiment']['duration_s']),
+                         ('shrink', '500ms', 30))
+        self.assertEqual(out['ramp'], [62.5, 125, 250, 500])
+        ads = {**risky, 'target': 'adservice'}
+        with patch.object(llm, 'ask', return_value={'decision': 'approve', 'experiment': ads}):
+            self.assertEqual(safety.review(ads, {}, {}, revenue_path=['checkoutservice'])['decision'], 'approve')
+        with patch.object(llm, 'ask', side_effect=AssertionError('model must not be asked')):
+            self.assertEqual(safety.review(EXP, {}, {'baseline_suitable': False})['decision'], 'reject')
 
     def test_safety_cannot_enlarge(self):
         bigger = {'decision': 'shrink', 'experiment': {**EXP, 'params': {'latency': '1500ms'}}, 'ramp': [100]}

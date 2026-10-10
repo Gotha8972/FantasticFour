@@ -63,6 +63,14 @@ class Day2Tests(unittest.TestCase):
         revert.assert_called_once()
         self.assertEqual((out['verdict'], out['kept']), ('worse', False))
 
+    def test_remediation_reruns_the_reviewed_step_not_the_raw_proposal(self):
+        raw = {'id': 'cat', 'fault': 'network_delay', 'target': 'productcatalogservice',
+               'params': {'latency': '2000ms'}, 'duration_s': 120}
+        item = {'experiment': raw, 'safety': {'experiment': {**raw, 'params': {'latency': '500ms'}, 'duration_s': 30},
+                'steps': [{'intensity': 62.5, 'observed': {}}, {'intensity': 125, 'observed': {'p95_ms': 2400}}]}}
+        exp = remediation.rerun_experiment(item)
+        self.assertEqual((exp['params']['latency'], exp['duration_s'], exp['id']), ('125ms', 30, 'cat-after'))
+
     def test_analyst_keeps_only_real_evidence_and_flags_invented_numbers(self):
         with tempfile.TemporaryDirectory() as d:
             history = [{'vulnerability': 'V2', 'experiment': {'id': 'cart-down', 'fault': 'pod_failure', 'target': 'cartservice'},

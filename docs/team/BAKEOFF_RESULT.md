@@ -1,6 +1,6 @@
 # Agent bakeoff result — 2026-10-10
 
-> **Historical.** The bake-off ran on OpenAI `gpt-5.6-luna`. The team now uses **our implementation only**, on NVIDIA NIM `mistral-7b-instruct-v0.3`; the alternative's best prompt rules were merged in, and its code was removed (recoverable at commit `709bd13`). See [MODEL_AND_IMPLEMENTATION.md](MODEL_AND_IMPLEMENTATION.md).
+> **Historical.** The bake-off ran on OpenAI `gpt-5.6-luna`. The team now uses **our implementation only**, on NVIDIA-hosted `openai/gpt-oss-20b`; the alternative's best prompt rules were merged in, and its code was removed (recoverable at commit `709bd13`). See [MODEL_AND_IMPLEMENTATION.md](MODEL_AND_IMPLEMENTATION.md).
 
 ## Decision
 
