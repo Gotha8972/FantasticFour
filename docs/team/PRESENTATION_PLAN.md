@@ -16,7 +16,7 @@
 | 0:40–0:55 | **Safety Checker** shrinking the risky checkout test to 500 ms / 30 s | "A Safety Checker can only make experiments smaller, and code enforces hard limits whatever the model says." | Smrithi |
 | 0:55–1:25 | **AI's Redis kill** → kill switch → `integrity violations=1` → **confirmed** | "The AI kills Redis. Pages still load, but the cart is gone, and nothing reports it. Our integrity check does." | Harshil |
 | 1:25–1:55 | **Approval banner in the UI** → click *Approve fix* → re-run → cart 1 → 1 | "The AI proposes a reviewed fix, a human approves it, and the identical experiment re-runs. The cart survives." | Aashrith |
-| 1:55–2:20 | **Frontend: 100% errors → 0%**, score 18 → 96, hypothesis **refuted after the fix** | "And it can say no: after the fix, the same criteria are refuted. Four fixes, four better scores." | Aashrith |
+| 1:55–2:20 | **Frontend: 100% errors → 0%**, score 17 → 96 in the recorded run, hypothesis **refuted after the fix** | "And it can say no: after the fix, the same criteria are refuted. Four fixes, four better scores." | Aashrith |
 | 2:20–2:40 | Scoreboard + trials table (5/5 vs 0/5) | "Measured, not guessed: one replica hurt customers 5 times in 5, two replicas never." | Srinavith |
 | 2:40–3:00 | Architecture diagram | "Honest limit: the Redis fix stops data loss, but a restart is still slow with one replica. AI proposes, code verifies, the kill switch always wins." | Srinavith |
 
@@ -38,7 +38,7 @@ Use the recorded numbers. If one differs from this script, **say the recorded on
 | 3 | How our AI thinks | 6-step loop (audit → hypothesise → inject → judge → fix → report) | Hypotheses and criteria are written *before* each run; code decides the verdict |
 | 4 | Breaking things safely | Guard timeline: breach detected at 9.6 s → fault removed 0.3 s later → healthy at 14 s | 9 safety layers; fail-safe even if our own guard crashes; AI can't loosen limits |
 | 5 | What we found | Findings 1–5 with icons | Silent data loss; frontend single point of failure (found by the AI); cart outage; "healthy ≠ recovered" (3 s vs 34 s); latency spreads everywhere |
-| 6 | Fix → proof | 4 AI-loop fixes, each approved and re-run: frontend **18 → 96**, cart **31 → 78**, catalog **70 → 99**, Redis **13 → 50**; trials 29 → 100 | Fixes come from a reviewed catalog; re-run the identical experiment; keep only if the score improves |
+| 6 | Fix → proof | 4 AI-loop fixes, each approved and re-run: frontend **18 → 96**, cart **31 → 78**, catalog **70 → 98**, Redis **13 → 50**; trials 29 → 99 | Fixes come from a reviewed catalog; re-run the identical experiment; keep only if the score improves |
 | 7 | Why trust it | "AI proposes → code verifies → guard wins" | Cited facts checked against the live config; noise can't confirm a criterion; 2 hypotheses refuted after fixes; report claims the measurements contradict are flagged |
 | 8 | Measured, not guessed | "Customers hurt in **5/5** kills with 1 replica vs **0/5** with 2" + 95% intervals (57–100% vs 0–43%, no overlap) | Repeated trials → failure frequency with uncertainty; invalid runs never count as passes |
 | 9 | Impact + next | The LangGraph diagram (generated from the code) + resilience scores | Human approval gate before any fix; resumable runs; runs on any Kubernetes app; next: more fixes in the catalog, CI integration |

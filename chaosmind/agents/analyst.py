@@ -88,6 +88,16 @@ CONFIG_CLAIMS = [(re.compile(r'\b(?:PDB|PodDisruptionBudget)s?\b'), lambda c: c.
                   'it says emptyDir, but the service mounts a persistent volume')]
 
 
+# "All three failures were mitigated", "every weakness was fixed": a claim about the whole run.
+ALL_FIXED = re.compile(r'\b(?:all|every|each|both)\b[^.]{0,80}?\b(?:fixed|mitigated|resolved|eliminated|remediated)\b', re.I)
+
+
+def unfixed(facts):
+    """Confirmed weaknesses no fix was applied to (and re-run) in this run."""
+    return [e['experiment_id'] for e in facts['experiments']
+            if e.get('verdict') == 'confirmed' and (e.get('remediation') or {}).get('after') is None]
+
+
 def contradictions(text, e):
     """Claims in the AI's explanation that the measurements or the collected config contradict."""
     out = [('measurements', 'it claims data loss, but the integrity checks passed (the cart was kept)')
@@ -154,7 +164,13 @@ def fact_check(prose, facts):
 
 
 def render(facts, reply):
-    lines = ['# Findings report', '', reply.get('summary', ''), '',
+    summary = reply.get('summary', '')
+    open_ = unfixed(facts) if ALL_FIXED.search(summary) else []
+    lines = ['# Findings report', '', summary, '']
+    if open_:
+        lines += [f"> ⚠ **Contradicted by the run:** not every weakness was fixed; no fix was applied to "
+                  f"{', '.join(f'`{x}`' for x in open_)}.", '']
+    lines += [
              f"**AI hypotheses:** {facts['scorecard']['hypotheses']} tested, {facts['scorecard']['confirmed']} confirmed, "
              f"{facts['scorecard']['refuted']} refuted; **{facts['scorecard']['refuted_after_fix']} refuted after their fix** "
              "(same criteria, re-run after the approved fix). Verdicts are decided by code against criteria written before "

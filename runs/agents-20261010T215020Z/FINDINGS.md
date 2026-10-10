@@ -2,6 +2,8 @@
 
 The chaos experiments confirmed that a single‑replica frontend pod failure caused a 100% error rate for all user‑facing services, and a single‑replica checkoutservice crash produced a 7.1% error rate and integrity violations. A pod kill of redis‑cart resulted in cart data loss and a 1800 ms p95 latency spike, proving the emptyDir volume is non‑persistent. All three failures were mitigated by adding replicas or persistent storage, restoring service health and eliminating integrity violations.
 
+> ⚠ **Contradicted by the run:** not every weakness was fixed; no fix was applied to `v3-pod-failure-checkoutservice`.
+
 **AI hypotheses:** 3 tested, 3 confirmed, 0 refuted; **1 refuted after their fix** (same criteria, re-run after the approved fix). Verdicts are decided by code against criteria written before each run.
 
 | Experiment | Fault | Verdict | Criteria met | Worst error rate | Worst p95 | Recovery | Integrity | Score |
@@ -51,3 +53,5 @@ Evidence: `runs/v3-pod-failure-checkoutservice-s1-20261010T215536.918896Z`
 ## Fact-check
 
 Every number above appears in the measured data.
+
+1 claim(s) contradicted by the measurements or the collected config are marked above.

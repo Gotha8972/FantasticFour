@@ -124,6 +124,8 @@ class Day2Tests(unittest.TestCase):
         clean = {'summary': 's', 'findings': [{'experiment_id': 'v2-redis', 'what_happened': 'brief errors',
                                                'root_cause': 'one replica and no PodDisruptionBudget'}]}
         self.assertNotIn('Contradicted', analyst.render(facts, clean))
+        # Real gpt-oss summary of the recorded run: "All three failures were mitigated", but checkout got no fix.
+        self.assertIn('no fix was applied to `v2-redis`', analyst.render(facts, {**clean, 'summary': 'All three failures were mitigated.'}))
         self.assertIn('| 1 of 3 | 0.0% | 3200 ms |', text)  # same numbers as the verdict, and how many criteria held
         self.assertIn('no fix applied (not_approved)', text)
 

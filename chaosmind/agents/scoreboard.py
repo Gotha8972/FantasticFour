@@ -34,15 +34,15 @@ EVIDENCE = [
     (5, 'catalog pod kill, chosen and run by the AI', '1 replica', 'agent', f'{AI_RUN}#productcatalogservice'),
     (5, 'catalog pod kill, chosen and run by the AI', FIXED, 'agent-after', f'{AI_RUN}#productcatalogservice'),
     (6, 'paymentservice pod kill, chosen and run by the AI', '1 replica', 'agent', f'{AI_RUN3}#paymentservice'),
-    (7, '+500 ms delay on productcatalogservice', 'no fix', 'guard', 'runs/test-delay-20261010T062255.501508Z'),
-    (9, 'adservice unavailable', 'no fix needed', 'guard', 'runs/c-ad-health-13973e53bd-20261010T070523.440196Z'),
+    (8, '+500 ms delay on productcatalogservice', 'no fix', 'guard', 'runs/test-delay-20261010T062255.501508Z'),
+    (10, 'adservice unavailable', 'no fix needed', 'guard', 'runs/c-ad-health-13973e53bd-20261010T070523.440196Z'),
     (None, 'checkoutservice pod kill, chosen and run by the AI (hypothesis refuted)', '1 replica', 'agent',
      f'{AI_RUN3}#checkoutservice'),
     (1, 'Redis pod kill, recorded AI run', 'before fix', 'agent', f'{AI_RUN4}#redis-cart'),
     (1, 'Redis pod kill, recorded AI run', FIXED, 'agent-after', f'{AI_RUN4}#redis-cart'),
     (2, 'frontend unavailable, recorded AI run', '1 replica', 'agent', f'{AI_RUN4}#frontend'),
     (2, 'frontend unavailable, recorded AI run', FIXED, 'agent-after', f'{AI_RUN4}#frontend'),
-    (None, 'checkoutservice unavailable, recorded AI run (no reviewed fix)', '1 replica', 'agent',
+    (7, 'checkoutservice unavailable, recorded AI run (no reviewed fix)', '1 replica', 'agent',
      f'{AI_RUN4}#checkoutservice'),
 ]
 
