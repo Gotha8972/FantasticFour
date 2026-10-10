@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ChaosMind · Mission Control</title>
+<style>
+:root{--bg:#0a0e16;--card:#111826;--card2:#0d1420;--line:#1f2a3d;--text:#e6edf7;--muted:#8a97ad;--accent:#5b8cff;
+--crit:#ff4d5e;--high:#ff9f43;--med:#ffd166;--low:#5ad1a0;--ok:#35d07f;--bad:#ff4d5e;--run:#5b8cff;--warn:#ffb020}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{display:flex;align-items:center;gap:16px;padding:14px 22px;border-bottom:1px solid var(--line);background:#0c121d;position:sticky;top:0;z-index:5}
+.brand{font-weight:800;font-size:18px;letter-spacing:.3px}.brand span{color:var(--accent)}
+.sub{color:var(--muted);font-size:12px}.grow{flex:1}
+select{background:var(--card);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:7px 10px;font:inherit;max-width:360px}
+.pill{border-radius:999px;padding:4px 11px;font-size:12px;font-weight:700;border:1px solid var(--line);color:var(--muted)}
+.pill.live{color:#fff;background:#3a0d14;border-color:var(--crit)}.pill.live:before{content:"● ";color:var(--crit);animation:blink 1.2s infinite}
+.pill.done{color:var(--ok);border-color:#1d4b34}@keyframes blink{50%{opacity:.25}}
+nav{display:flex;gap:6px;padding:12px 22px;overflow-x:auto}
+.step{flex:1;min-width:110px;text-align:center;padding:8px 6px;border-radius:9px;background:var(--card2);border:1px solid var(--line);color:var(--muted);font-size:12px;font-weight:600}
+.step.done{color:var(--text);border-color:#2a3b58}.step.now{color:#fff;background:#14244a;border-color:var(--accent);box-shadow:0 0 0 2px #5b8cff33}
+#approval{margin:0 22px 8px;padding:16px 18px;border-radius:12px;background:#2a1c05;border:1px solid var(--warn);animation:glow 1.6s infinite alternate}
+@keyframes glow{to{box-shadow:0 0 18px #ffb02055}}
+#approval h3{margin:0 0 6px;font-size:16px}#approval p{margin:3px 0;color:#f3e3c3}
+.btn{border:0;border-radius:9px;padding:10px 18px;font-weight:700;font-size:14px;cursor:pointer;margin:10px 8px 0 0}
+.btn.yes{background:var(--ok);color:#06210f}.btn.no{background:#2b3446;color:var(--text)}
+main{display:grid;grid-template-columns:repeat(12,1fr);gap:14px;padding:8px 22px 22px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;min-width:0}
+.card h2{margin:0 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted)}
+.c7{grid-column:span 7}.c5{grid-column:span 5}.c12{grid-column:span 12}
+@media(max-width:1100px){.c7,.c5{grid-column:span 12}}
+svg{display:block;width:100%;height:auto}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:var(--muted);margin-top:6px}.dot{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+ol,ul{margin:0;padding:0;list-style:none}
+.v{display:flex;gap:10px;padding:8px 0;border-top:1px solid var(--line)}.v:first-child{border-top:0}
+.sev{font-size:10px;font-weight:800;text-transform:uppercase;border-radius:6px;padding:2px 7px;height:fit-content;color:#0a0e16;white-space:nowrap}
+.v b{display:block}.v small{color:var(--muted)}
+.tag{display:inline-block;font-size:11px;border:1px solid var(--line);border-radius:6px;padding:1px 6px;margin:3px 4px 0 0;color:var(--muted);white-space:nowrap}
+.tag.code{border-color:#3d4f7a;color:#a9c0ff}.tag.raised{border-color:#6b4d16;color:#ffcf7a}
+.exp{border:1px solid var(--line);border-radius:11px;padding:10px 12px;margin-bottom:9px;background:var(--card2);cursor:pointer}
+.exp.sel{border-color:var(--accent);box-shadow:0 0 0 2px #5b8cff22}.exp .top{display:flex;align-items:center;gap:8px}
+.exp .title{font-weight:700;flex:1}.verdict{font-size:11px;font-weight:800;border-radius:6px;padding:2px 8px;text-transform:uppercase}
+.verdict.confirmed{background:#3a0d14;color:#ff8c97}.verdict.refuted{background:#0d3321;color:#6ff0a8}.verdict.running{background:#14244a;color:#9db8ff}
+.verdict.planned,.verdict.inconclusive,.verdict.needs_integrity_check{background:#1d2534;color:var(--muted)}
+.score{font:700 15px ui-monospace,SFMono-Regular,Menlo,monospace;min-width:38px;text-align:right}
+.fix{margin-top:7px;font-size:12px;color:#cfe0ff}.fix b{color:#fff}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px;margin-bottom:10px}
+.tile{background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:8px 10px}.tile small{color:var(--muted);display:block;font-size:11px}
+.tile b{font:700 16px ui-monospace,SFMono-Regular,Menlo,monospace}
+.tabs{display:flex;gap:6px;margin-bottom:8px}.tab{font-size:12px;padding:4px 10px;border-radius:7px;border:1px solid var(--line);cursor:pointer;color:var(--muted)}
+.tab.on{color:#fff;border-color:var(--accent);background:#14244a}
+.bar{display:flex;height:10px;border-radius:6px;overflow:hidden;background:#1d2534;margin:4px 0 2px}.bar i{display:block;height:100%}
+.trust li{padding:6px 0;border-top:1px solid var(--line);font-size:13px}.trust li:first-child{border-top:0}.trust b{color:#a9c0ff}
+table{width:100%;border-collapse:collapse;font-size:12.5px}td,th{padding:5px 6px;border-top:1px solid var(--line);text-align:left;vertical-align:top}
+th{color:var(--muted);font-weight:600;border-top:0}td.n{font:700 13px ui-monospace,Menlo,monospace;text-align:right}
+.muted{color:var(--muted)}footer{text-align:center;color:var(--muted);font-size:12px;padding:0 0 22px}
+</style>
+</head>
+<body>
+<header>
+  <div><div class="brand">Chaos<span>Mind</span></div><div class="sub">AI chaos engineering · Online Boutique</div></div>
+  <div class="grow"></div>
+  <select id="runs" aria-label="Agent run"></select>
+  <span id="status" class="pill">loading</span>
+  <span class="pill" title="NVIDIA-hosted open-weight model">gpt-oss-20b</span>
+</header>
+<nav id="stages"></nav>
+<section id="approval" hidden></section>
+<main>
+  <section class="card c7"><h2>Architecture · blast radius</h2><svg id="map" viewBox="0 0 640 330" role="img" aria-label="Service dependency map"></svg>
+    <div class="legend"><span><i class="dot" style="background:var(--crit)"></i>critical</span><span><i class="dot" style="background:var(--high)"></i>high</span>
+    <span><i class="dot" style="background:var(--med)"></i>medium</span><span><i class="dot" style="background:var(--low)"></i>low</span>
+    <span><i class="dot" style="background:#2b3446"></i>no finding</span><span>✕ confirmed · ✓ refuted · 🔧 fixed</span><span>outlined: blast radius of the selected experiment</span></div></section>
+  <section class="card c5"><h2>Weak spots found by the AI</h2><ol id="vulns"></ol></section>
+  <section class="card c5"><h2>Experiments · ranked by blast radius × criticality</h2><div id="exps"></div></section>
+  <section class="card c7"><h2 id="live-title">Customer impact</h2><div id="live"></div></section>
+  <section class="card c5"><h2>Code overruled the AI</h2><ul id="trust" class="trust"></ul></section>
+  <section class="card c7"><h2>Resilience scoreboard · all runs, from raw evidence</h2><div id="scores"></div></section>
+</main>
+<footer>AI proposes · code verifies · the kill switch always wins</footer>
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const api = p => fetch(p, {cache: 'no-store'}).then(r => r.ok ? r.json() : Promise.reject(r.status));
+const SEV = {critical: 'var(--crit)', high: 'var(--high)', medium: 'var(--med)', low: 'var(--low)'};
+const STAGES = [['audit', 'Audit architecture'], ['plan', 'Plan experiments'], ['inject', 'Inject safely'],
+                ['approve', 'Human approves fix'], ['report', 'Report']];
+const FAULT = {pod_kill: 'Pod kill', pod_failure: 'Pod down', network_delay: 'Network delay', network_loss: 'Packet loss',
+               network_partition: 'Partition', cpu_stress: 'CPU stress', disk_full: 'Disk full'};
+const short = n => String(n).replace(/service$/, '');
+const pct = x => x == null ? '–' : (x * 100).toFixed(x < 0.1 ? 1 : 0) + '%';
+const ms = x => x == null ? '–' : x >= 1000 ? (x / 1000).toFixed(1) + ' s' : Math.round(x) + ' ms';
+const secs = x => x == null ? '–' : (+x).toFixed(1) + ' s';
+const base = p => String(p || '').split('/').pop();
+let S = {run: null, data: null, sel: null, tab: 0, pinned: false, timer: null, evTimer: null};
+
+async function init() {
+  const runs = await api('/api/runs');
+  const want = new URLSearchParams(location.search).get('run');
+  const pick = runs.find(r => r.name === want) || runs.find(r => r.live) || runs.find(r => r.experiments && !r.dry_run) || runs[0];
+  $('#runs').innerHTML = runs.map(r => `<option value="${esc(r.name)}">${esc(r.name.replace('agents-', ''))} · ${
+    r.live ? 'LIVE' : r.dry_run ? 'dry run' : r.experiments + ' experiments'}</option>`).join('');
+  $('#runs').onchange = e => { S.pinned = true; S.sel = null; load(e.target.value); };
+  if (pick) { $('#runs').value = pick.name; load(pick.name); }
+  scores();
+  setInterval(async () => {  // follow a new live run automatically unless the viewer picked one
+    const r = (await api('/api/runs').catch(() => [])).find(x => x.live);
+    if (r && !S.pinned && r.name !== S.run) { if (![...$('#runs').options].some(o => o.value === r.name)) init(); else { $('#runs').value = r.name; S.sel = null; load(r.name); } }
+  }, 5000);
+}
+
+async function load(name) {
+  S.run = name; clearTimeout(S.timer);
+  try { S.data = await api('/api/run?name=' + encodeURIComponent(name)); } catch { return; }
+  render();
+  if (S.data.live) S.timer = setTimeout(() => S.run === name && load(name), 2000);
+}
+
+function experiments(d) {
+  const done = d.history.map(h => ({...h, state: h.verdict}));
+  const ids = new Set(done.map(h => h.experiment.id));
+  const last = (d.plans[d.plans.length - 1] || {}).plan || [];
+  const planned = d.live ? last.filter(i => !ids.has(i.experiment.id)).map((i, n) => ({...i, criteria: i.criteria,
+    state: n === 0 && d.current && d.current.id === i.experiment.id ? 'running' : 'planned'})) : [];
+  return [...done, ...planned];
+}
+
+function render() {
+  const d = S.data, list = experiments(d);
+  $('#status').className = 'pill ' + (d.live ? 'live' : 'done');
+  $('#status').textContent = d.live ? 'LIVE' : d.history.length && d.history.every(h => !h.observed) ? 'Dry run' : 'Completed';
+  const at = STAGES.findIndex(s => s[0] === d.stage);
+  $('#stages').innerHTML = STAGES.map(([k, label], i) =>
+    `<div class="step ${i < at || (!d.live && d.stage === 'report') ? 'done' : ''} ${i === at && d.live ? 'now' : ''}">${i + 1}. ${label}</div>`).join('');
+  approval(d);
+  if (!S.sel || !list.some(e => e.experiment.id === S.sel)) {
+    const running = list.find(e => e.state === 'running');
+    S.sel = (running || list.filter(e => e.observed)[list.filter(e => e.observed).length - 1] || list[0] || {experiment: {}}).experiment.id;
+    S.tab = 0;
+  }
+  const sel = list.find(e => e.experiment.id === S.sel);
+  map(d, list, sel); vulns(d); exps(list); live(d, sel); trust(d);
+}
+
+function approval(d) {
+  const box = $('#approval'), p = d.pending;
+  box.hidden = !p;
+  if (!p) return;
+  box.innerHTML = `<h3>⏸ Waiting for a human: ${esc(p.question)}</h3><p><b>Why:</b> ${esc(p.reason)}</p><p><b>Expected:</b> ${esc(p.expected_effect)}</p>` +
+    (p.via === 'ui' ? `<button class="btn yes" data-a="y">Approve fix</button><button class="btn no" data-a="n">Reject</button>`
+                    : `<p class="muted">Answer y / N in the terminal running the agents (start it with --ui to approve here).</p>`);
+  box.querySelectorAll('button').forEach(b => b.onclick = async () => {
+    box.querySelectorAll('button').forEach(x => x.disabled = true);
+    await fetch('/api/approve', {method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({run: S.run, answer: b.dataset.a})});
+    load(S.run);
+  });
+}
+
+function map(d, list, sel) {
+  const svc = (d.facts || {}).services || {}, names = Object.keys(svc);
+  if (!names.length) { $('#map').innerHTML = ''; return; }
+  const depth = {}, queue = names.filter(n => svc[n].entrypoint);
+  queue.forEach(n => depth[n] = 0);
+  for (let i = 0; i < queue.length; i++) for (const c of svc[queue[i]].calls || []) if (!(c in depth)) { depth[c] = depth[queue[i]] + 1; queue.push(c); }
+  const maxd = Math.max(0, ...Object.values(depth)); names.forEach(n => { if (!(n in depth)) depth[n] = maxd + 1; });
+  const cols = {}; names.forEach(n => (cols[depth[n]] = cols[depth[n]] || []).push(n));
+  const ncol = Object.keys(cols).length, W = 640, H = 330, pos = {};
+  Object.entries(cols).forEach(([c, ns], ci) => ns.sort().forEach((n, i) => pos[n] = {x: 70 + ci * (W - 140) / Math.max(1, ncol - 1), y: (i + 1) * H / (ns.length + 1)}));
+  const sevOf = {}, rank = {critical: 4, high: 3, medium: 2, low: 1};
+  ((d.audit || {}).vulnerabilities || []).forEach(v => { if ((rank[v.severity] || 0) > (rank[sevOf[v.service]] || 0)) sevOf[v.service] = v.severity; });
+  const mark = {};
+  list.forEach(e => { const t = e.experiment.target; if (e.state === 'confirmed') mark[t] = '✕'; if (e.state === 'refuted') mark[t] = mark[t] || '✓';
+    if (e.remediation && e.remediation.kept) mark[t] = '🔧'; });
+  const target = sel && sel.experiment.target, blast = new Set(target && svc[target] ? svc[target].blast_radius || [] : []);
+  let out = '<defs><marker id="ar" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0L8,4L0,8z" fill="#33415c"/></marker></defs>';
+  names.forEach(a => (svc[a].calls || []).forEach(b => { if (!pos[b]) return;
+    const p = pos[a], q = pos[b], hot = blast.has(a) && blast.has(b);
+    out += `<path d="M${p.x + 46},${p.y} C${(p.x + q.x) / 2},${p.y} ${(p.x + q.x) / 2},${q.y} ${q.x - 48},${q.y}" fill="none" stroke="${hot ? '#5b8cff' : '#26324a'}" stroke-width="${hot ? 2 : 1.2}" marker-end="url(#ar)"/>`; }));
+  names.forEach(n => { const p = pos[n], c = sevOf[n] ? SEV[sevOf[n]] : '#2b3446', isT = n === target, inB = blast.has(n);
+    out += `<g><rect x="${p.x - 46}" y="${p.y - 14}" width="92" height="28" rx="8" fill="${c}" fill-opacity="${sevOf[n] ? .9 : 1}" stroke="${isT ? '#fff' : inB ? '#5b8cff' : 'none'}" stroke-width="${isT ? 3 : 2}"/>
+      <text x="${p.x}" y="${p.y + 4}" text-anchor="middle" font-size="11" font-weight="700" fill="${sevOf[n] ? '#0a0e16' : '#c9d4e6'}">${esc(short(n))}</text>
+      ${mark[n] ? `<text x="${p.x + 46}" y="${p.y - 10}" text-anchor="middle" font-size="13">${mark[n]}</text>` : ''}</g>`; });
+  $('#map').innerHTML = out;
+}
+
+function vulns(d) {
+  const a = d.audit || {}, vs = a.vulnerabilities || [];
+  $('#vulns').innerHTML = vs.map(v => `<li class="v"><span class="sev" style="background:${SEV[v.severity] || '#2b3446'}">${esc(v.severity)}</span><div>
+    <b>${esc(v.service)}</b>${esc(v.weakness)}<br><small>${Object.entries(v.evidence || {}).map(([k, x]) => `<span class="tag">${esc(k)} = ${esc(JSON.stringify(x))}</span>`).join('')}
+    ${v.severity_raised_by_code ? '<span class="tag code">severity raised by code</span>' : ''}${v.status && v.status !== 'untested' ? `<span class="tag">${esc(v.status)}</span>` : ''}</small></div></li>`).join('')
+    + `<li class="v muted" style="font-size:12px">${(a.rejected || []).length} claim(s) rejected because they didn't match the real config · ${(a.systemic || []).length} cluster-wide issue(s)</li>`;
+}
+
+function exps(list) {
+  if (!list.length) { $('#exps').innerHTML = '<p class="muted">No experiments yet.</p>'; return; }
+  $('#exps').innerHTML = list.map((e, i) => {
+    const x = e.experiment, pr = e.priority, r = e.remediation, s = e.score;
+    const crit = (e.criteria || []).map(c => `<span class="tag ${c.raised_from != null ? 'raised' : ''}" title="${c.raised_from != null ? 'AI wrote ' + c.raised_from + '; raised above baseline noise by code' : ''}">${
+      esc(c.metric.replace('_', ' '))} ${esc(c.op)} ${c.metric === 'error_rate' ? pct(c.value) : c.metric === 'p95_ms' ? ms(c.value) : esc(c.value)}${c.raised_from != null ? ' ↑' : ''}</span>`).join('');
+    const params = x.params && x.params.latency ? ' ' + x.params.latency : '';
+    const fix = r && r.fix ? `<div class="fix">🔧 <b>${esc(r.fix)}</b> approved → same experiment re-run: score <b>${esc(r.before)} → ${esc(r.after)}</b>${
+      r.after_verdict ? ` · hypothesis <b>${esc(r.after_verdict)}</b> after the fix` : ''}</div>`
+      : r && r.verdict ? `<div class="fix muted">No fix applied (${esc(r.verdict.replace('_', ' '))})</div>` : '';
+    return `<div class="exp ${x.id === S.sel ? 'sel' : ''}" data-id="${esc(x.id)}"><div class="top"><span class="title">${esc(FAULT[x.fault] || x.fault)}${esc(params)} → ${esc(x.target)}</span>
+      <span class="verdict ${esc(e.state)}">${esc(e.state)}</span><span class="score">${s ? esc(s.score) : ''}</span></div>
+      <div>${pr ? `<span class="tag code">blast ${pr.blast_radius} × ${esc(pr.criticality)} = ${pr.score}</span>` : ''}${crit}
+      ${e.safety && e.safety.decision ? `<span class="tag">safety: ${esc(e.safety.decision)}</span>` : ''}${(e.integrity || []).length ? '<span class="tag" style="color:#ff8c97;border-color:#5a1c25">integrity violated</span>' : ''}</div>${fix}</div>`;
+  }).join('');
+  document.querySelectorAll('.exp').forEach(el => el.onclick = () => { S.sel = el.dataset.id; S.tab = 0; render(); });
+}
+
+async function live(d, e) {
+  clearTimeout(S.evTimer);
+  const box = $('#live');
+  if (!e) { box.innerHTML = '<p class="muted">Select an experiment.</p>'; return; }
+  const steps = ((e.safety || {}).steps || []).map(s => s.run_dir).filter(Boolean);
+  const after = e.remediation && e.remediation.after_run_dir;
+  const tabs = e.state === 'running' && d.current ? [['Live', d.current.dir]] : [...steps.slice(-1).map(x => ['Experiment', base(x)]), ...(after ? [['After the fix', base(after)]] : [])];
+  $('#live-title').textContent = `Customer impact · ${FAULT[e.experiment.fault] || e.experiment.fault} → ${e.experiment.target}`;
+  if (!tabs.length) { box.innerHTML = `<p class="muted">${e.state === 'planned' ? 'Not run yet.' : 'Dry run: reviewed by the Safety Checker, nothing injected.'}</p>` +
+    (e.safety ? `<p>Safety Checker: <b>${esc(e.safety.decision)}</b> ${esc(e.safety.reason)}</p>` : ''); return; }
+  const [label, dir] = tabs[Math.min(S.tab, tabs.length - 1)];
+  const ev = await api('/api/events?dir=' + encodeURIComponent(dir)).catch(() => []);
+  if (S.data !== d || S.sel !== e.experiment.id) return;
+  const t0 = (ev.find(x => x.event === 'INJECTED') || ev[0] || {t: 0}).t;
+  const snaps = ev.filter(x => x.event === 'SNAPSHOT').map(x => ({t: x.t - t0, err: x.error_rate, p95: x.p95_ms}));
+  const marks = ev.filter(x => ['INJECTED', 'BREACH', 'REVERTED', 'HEALTHY', 'ENDED', 'NOT_RECOVERED', 'ERROR'].includes(x.event)).map(x => ({t: x.t - t0, ev: x.event}));
+  const isAfter = label === 'After the fix', o = isAfter ? (e.remediation.after_observed || {}) : e.observed || {};
+  const integ = isAfter ? e.remediation.after_integrity || [] : e.integrity || [];
+  const sc = isAfter ? {score: e.remediation.after, breakdown: e.remediation.after_breakdown} : e.score;
+  const isLive = label === 'Live';
+  const worst = (k, f) => snaps.length ? f(Math.max(...snaps.map(s => s[k]))) : '–';
+  box.innerHTML = (tabs.length > 1 ? `<div class="tabs">${tabs.map((t, i) => `<span class="tab ${i === S.tab ? 'on' : ''}" data-i="${i}">${t[0]}</span>`).join('')}</div>` : '') +
+    `<div class="tiles"><div class="tile"><small>Worst error rate</small><b>${isLive ? worst('err', pct) : pct(o.error_rate)}</b></div>
+     <div class="tile"><small>Worst p95 latency</small><b>${isLive ? worst('p95', ms) : ms(o.p95_ms)}</b></div>
+     <div class="tile"><small>Pod back after</small><b>${isLive ? '…' : secs(o.service_ready_s)}</b></div>
+     <div class="tile"><small>Customers back after</small><b>${isLive ? '…' : o.customer_recovered_s === 0 ? 'never hurt' : secs(o.customer_recovered_s)}</b></div>
+     <div class="tile"><small>Cart / checkout integrity</small><b style="color:${integ.length ? 'var(--bad)' : 'var(--ok)'}">${isLive ? '…' : integ.length ? '✕ ' + esc(integ[0].check.replace('_', ' ')) : '✓ intact'}</b></div>
+     <div class="tile"><small>Resilience score</small><b>${sc && sc.score != null ? esc(sc.score) + ' / 100' : '…'}</b></div></div>` +
+    chart(snaps, marks, 'err', 'Error rate', 0.05, pct, '#ff6b7a') + chart(snaps, marks, 'p95', 'p95 latency', 1000, ms, '#ffb020') +
+    (sc && sc.breakdown ? breakdown(sc.breakdown) : '');
+  box.querySelectorAll('.tab').forEach(t => t.onclick = () => { S.tab = +t.dataset.i; live(d, e); });
+  if (isLive && d.live) S.evTimer = setTimeout(() => live(S.data, e), 1500);
+}
+
+function chart(snaps, marks, key, label, limit, fmt, color) {
+  const W = 620, H = 120, L = 52, R = 10, T = 16, B = 18;
+  if (!snaps.length) return `<p class="muted">${label}: waiting for measurements…</p>`;
+  const tmin = Math.min(-2, ...snaps.map(s => s.t)), tmax = Math.max(30, ...snaps.map(s => s.t), ...marks.map(m => m.t));
+  const vmax = Math.max(limit * 1.4, ...snaps.map(s => s[key])) * 1.05;
+  const X = t => L + (t - tmin) / (tmax - tmin) * (W - L - R), Y = v => T + (1 - v / vmax) * (H - T - B);
+  const pts = snaps.map(s => `${X(s.t).toFixed(1)},${Y(s[key]).toFixed(1)}`).join(' ');
+  const col = {INJECTED: '#5b8cff', BREACH: '#ff4d5e', REVERTED: '#ffb020', HEALTHY: '#35d07f', ENDED: '#8a97ad', NOT_RECOVERED: '#ff4d5e', ERROR: '#ff4d5e'};
+  let g = `<text x="4" y="12" font-size="11" fill="#8a97ad">${label}</text>`;
+  for (let i = 0; i <= 2; i++) { const v = vmax * i / 2; g += `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" stroke="#1b2537"/><text x="${L - 5}" y="${Y(v) + 4}" font-size="10" fill="#6c7891" text-anchor="end">${fmt(v)}</text>`; }
+  for (let t = Math.ceil(tmin / 10) * 10; t <= tmax; t += 10) g += `<text x="${X(t)}" y="${H - 4}" font-size="10" fill="#6c7891" text-anchor="middle">${t}s</text>`;
+  g += `<line x1="${L}" x2="${W - R}" y1="${Y(limit)}" y2="${Y(limit)}" stroke="#ff4d5e" stroke-dasharray="5 4" stroke-width="1.2"/><text x="${W - R}" y="${Y(limit) - 4}" font-size="10" fill="#ff8c97" text-anchor="end">kill-switch limit ${fmt(limit)}</text>`;
+  marks.forEach((m, i) => g += `<line x1="${X(m.t)}" x2="${X(m.t)}" y1="${T}" y2="${H - B}" stroke="${col[m.ev]}" stroke-width="1.4"/><text x="${X(m.t) + 3}" y="${T + 9 + (i % 3) * 10}" font-size="9" fill="${col[m.ev]}">${m.ev}</text>`);
+  g += `<polygon points="${X(snaps[0].t)},${Y(0)} ${pts} ${X(snaps[snaps.length - 1].t)},${Y(0)}" fill="${color}" fill-opacity=".12"/><polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2.2"/>`;
+  snaps.forEach(s => g += `<circle cx="${X(s.t)}" cy="${Y(s[key])}" r="2.4" fill="${color}"/>`);
+  return `<svg viewBox="0 0 ${W} ${H}" style="margin-bottom:6px">${g}</svg>`;
+}
+
+function breakdown(b) {
+  const parts = [['E', 'errors', '#ff6b7a'], ['L', 'latency', '#ffb020'], ['R', 'recovery', '#9b7bff'], ['B', 'blast radius', '#5b8cff'], ['I', 'integrity', '#ff2d55']];
+  return `<div class="muted" style="font-size:12px;margin-top:4px">Points lost (100 − penalties):</div><div class="bar">${parts.map(([k, , c]) => `<i style="width:${b[k] || 0}%;background:${c}" title="${k}"></i>`).join('')}</div>
+    <div class="legend">${parts.map(([k, n, c]) => `<span><i class="dot" style="background:${c}"></i>${n} −${(+(b[k] || 0)).toFixed(1)}</span>`).join('')}</div>`;
+}
+
+function trust(d) {
+  const out = [], a = d.audit || {};
+  (a.rejected || []).forEach(v => out.push(`<b>Claim rejected</b> · ${esc(v.service)}: ${esc(v.rejected_because)}`));
+  (a.vulnerabilities || []).filter(v => v.severity_raised_by_code).forEach(v => out.push(`<b>Severity raised</b> · ${esc(v.service)}: ${esc(v.severity_raised_by_code)}`));
+  d.plans.forEach(p => (p.dropped || []).forEach(x => out.push(`<b>Experiment dropped</b> · ${esc((x.item || {}).fault)} on ${esc((x.item || {}).target)}: ${esc(x.reason)}`)));
+  d.plans.filter(p => p.feedback).forEach(() => out.push('<b>Sent back to the AI</b> · dropped proposals returned with code’s reasons; corrected ones added'));
+  [...d.history, ...((d.plans[d.plans.length - 1] || {}).plan || [])].forEach(e => (e.criteria || []).filter(c => c.raised_from != null).forEach(c =>
+    out.push(`<b>Threshold raised</b> · ${esc(e.experiment.target)}: AI wrote ${esc(c.metric)} > ${esc(c.raised_from)}; code requires > ${c.metric === 'error_rate' ? pct(c.value) : ms(c.value)} (above baseline noise)`)));
+  d.history.forEach(h => { const s = h.safety || {}, r = (h.remediation || {}).choice || {};
+    if ((s.reason || '').includes('[code:')) out.push(`<b>Safety bound enforced</b> · ${esc(h.experiment.target)}: ${esc(s.decision)} to 500 ms / 30 s`);
+    if (s.decision === 'reject' && /baseline/.test(s.reason || '')) out.push(`<b>Experiment blocked</b> · baseline unsuitable`);
+    if (/already applied/.test(r.reason || '')) out.push(`<b>Fix not offered</b> · ${esc(r.reason)}`); });
+  const seen = [...new Set(out)];
+  $('#trust').innerHTML = seen.length ? seen.slice(0, 14).map(x => `<li>${x}</li>`).join('') : '<li class="muted">Nothing to overrule in this run.</li>';
+}
+
+async function scores() {
+  const rows = await api('/api/scoreboard').catch(() => []);
+  if (!rows.length) { $('#scores').innerHTML = '<p class="muted">No scoreboard evidence found.</p>'; return; }
+  const col = s => s >= 80 ? 'var(--ok)' : s >= 50 ? 'var(--med)' : 'var(--bad)';
+  const pairs = {}; rows.forEach(r => (pairs[r.experiment] = pairs[r.experiment] || []).push(r));
+  const fixes = Object.entries(pairs).filter(([, v]) => v.length === 2).map(([k, v]) => { const [b, a] = v.sort((x, y) => x.score - y.score);
+    return `<tr><td>${esc(k)}</td><td class="n" style="color:${col(b.score)}">${b.score}</td><td class="n" style="color:${col(a.score)}">${a.score}</td><td class="n" style="color:var(--ok)">+${a.score - b.score}</td></tr>`; });
+  $('#scores').innerHTML = `<table><tr><th>Fix proven by re-running the same experiment</th><th>Before</th><th>After</th><th>Gain</th></tr>${fixes.join('')}</table>
+    <details style="margin-top:10px"><summary class="muted" style="cursor:pointer">All ${rows.length} scored experiments, worst first</summary><table>
+    ${rows.map(r => `<tr><td class="n" style="color:${col(r.score)}">${r.score}</td><td>${esc(r.experiment)}</td><td class="muted">${esc(r.condition)}</td></tr>`).join('')}</table></details>`;
+}
+
+init();
+</script>
+</body>
+</html>

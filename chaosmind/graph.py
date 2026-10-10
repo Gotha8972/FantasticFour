@@ -14,10 +14,13 @@ Model-agnostic: nodes call chaosmind/agents/llm.py (NVIDIA NIM, gpt-oss-20b by d
 .venv/bin/python -m chaosmind.graph --budget 3 --remediate
 .venv/bin/python -m chaosmind.graph --resume runs/agents-20261011T101500Z
 .venv/bin/python -m chaosmind.graph --draw
+.venv/bin/python -m chaosmind.graph --budget 3 --remediate --ui     (approve fixes in python3 -m chaosmind.ui)
 """
 import argparse
 from datetime import datetime, timezone
+import json
 from pathlib import Path
+import time
 from typing import Any, TypedDict
 
 from langgraph.checkpoint.sqlite import SqliteSaver
@@ -83,8 +86,24 @@ def build():
     return g
 
 
-def drive(app, config, first_input: Any, ask=input):
-    """Run until the graph finishes, answering approval interrupts on the terminal."""
+def ui_ask(out_dir, poll_s=1.0):
+    """Answer approvals from the web UI (python3 -m chaosmind.ui): wait for the approval.json it writes."""
+    answer_file = Path(out_dir) / 'approval.json'
+
+    def ask(_prompt):
+        print('   Waiting for approval in the UI: python3 -m chaosmind.ui', flush=True)
+        while not answer_file.exists():
+            time.sleep(poll_s)
+        answer = (json.loads(answer_file.read_text()) or {}).get('answer', 'n')
+        answer_file.unlink()
+        print(f'   Answered in the UI: {answer}', flush=True)
+        return answer
+    return ask
+
+
+def drive(app, config, first_input: Any, ask=input, out_dir=None, via='terminal'):
+    """Run until the graph finishes, answering approval interrupts (terminal by default, or the UI).
+    While a question is open it is also published as pending_approval.json, so the UI can show it."""
     payload = first_input
     while True:
         result = app.invoke(payload, config)
@@ -93,7 +112,16 @@ def drive(app, config, first_input: Any, ask=input):
             return result
         info = pending[0].value
         print(f"\n⏸  {info['question']}\n   Why: {info['reason']}\n   Expected: {info['expected_effect']}")
-        payload = Command(resume=ask('   Approve? [y/N] '))
+        files = (Path(out_dir) / 'pending_approval.json', Path(out_dir) / 'approval.json') if out_dir else ()
+        if files:
+            files[1].unlink(missing_ok=True)  # never act on a stale answer
+            files[0].write_text(json.dumps({**info, 'via': via, 'since': time.time()}))
+        try:
+            answer = ask('   Approve? [y/N] ')
+        finally:
+            if files:
+                files[0].unlink(missing_ok=True)
+        payload = Command(resume=answer)
 
 
 def main():
@@ -107,6 +135,7 @@ def main():
     parser.add_argument('--allow-unverified', action='store_true', help='let the AI use fault types not yet proven live')
     parser.add_argument('--resume', help='continue an interrupted run from its last finished step')
     parser.add_argument('--draw', action='store_true', help='print the workflow as a Mermaid diagram and exit')
+    parser.add_argument('--ui', action='store_true', help='answer fix approvals in the web UI (python3 -m chaosmind.ui)')
     args = parser.parse_args()
 
     if args.draw:
@@ -115,6 +144,7 @@ def main():
     out = Path(args.resume) if args.resume else Path('runs') / f"agents-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}"
     out.mkdir(parents=True, exist_ok=bool(args.resume))
     config = {'configurable': {'thread_id': str(out)}}
+    ask, via = (ui_ask(out), 'ui') if args.ui else (input, 'terminal')
     with SqliteSaver.from_conn_string(str(out / 'checkpoints.sqlite')) as saver:
         app = build().compile(checkpointer=saver)
         if args.resume:
@@ -122,13 +152,13 @@ def main():
                 print(f'{out} has nothing left to resume.')
                 return
             print(f'Resuming {out} at: {", ".join(app.get_state(config).next)}')
-            drive(app, config, None)
+            drive(app, config, None, ask, out, via)
         else:
             print(f'Artifacts: {out}')
             drive(app, config, {'out_dir': str(out), 'budget': args.budget, 'dry_run': args.dry_run,
                                 'remediate': args.remediate, 'auto_approve': args.auto_approve,
                                 'allow_unverified': args.allow_unverified, 'workloads': args.workloads,
-                                'baseline_path': args.baseline})
+                                'baseline_path': args.baseline}, ask, out, via)
 
 
 if __name__ == '__main__':

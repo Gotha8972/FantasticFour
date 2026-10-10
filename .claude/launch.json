@@ -1,0 +1,6 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {"name": "chaosmind-ui", "runtimeExecutable": "python3", "runtimeArgs": ["-m", "chaosmind.ui", "--port", "8090"], "port": 8090}
+  ]
+}
