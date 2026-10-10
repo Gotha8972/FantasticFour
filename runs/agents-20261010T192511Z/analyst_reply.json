@@ -1,0 +1,39 @@
+{
+ "summary": "The chaos experiments confirmed that single\u2011replica services are vulnerable to outages and performance degradation. A pod failure in the frontend caused a critical site outage, while killing the cartservice led to a high\u2011severity error spike and service disruption. Redis\u2011cart pod termination produced a high\u2011latency slowdown but no data loss, highlighting the need for persistence and replication.",
+ "findings": [
+  {
+   "experiment_id": "v1-pod-failure-frontend",
+   "title": "Frontend pod failure caused site outage",
+   "severity": "critical",
+   "what_happened": "The sole frontend pod crashed, making the service unhealthy and blocking all downstream traffic. Error rate spiked to 0.2045 and p95 latency reached 1100 ms during the fault.",
+   "root_cause": "Single\u2011replica entrypoint with no pod disruption budget caused the entire frontend to become unhealthy.",
+   "evidence": [
+    "redis-cart: 1:C 10 Oct 2026 19:31:11.500 # WARNING Memory overcommit must be enabled! Without it, a background save or replication may fail under low memory condition. Being disabled, it can also cause failures without low memory condition, see https://github.com/jemalloc/jemalloc/issues/1328. To fix this issue"
+   ],
+   "fix": "Add a second replica to the frontend deployment (frontend-replicas) to provide redundancy and prevent single\u2011point failure."
+  },
+  {
+   "experiment_id": "v3-pod-kill-cartservice",
+   "title": "Cartservice pod kill caused high error rate and outage",
+   "severity": "high",
+   "what_happened": "Killing the only cartservice pod caused error_rate to breach 0.05 and p95 latency to spike to 2900 ms. The service remained unhealthy for 50.583 seconds before recovering.",
+   "root_cause": "Single\u2011replica cartservice with no pod disruption budget led to a service outage when the pod was killed.",
+   "evidence": [
+    "frontend: {\"error\":\"could not retrieve cart: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.109.18:7070: connect: connection refused\\\"\",\"http.req.id\":\"f4b31b7f-8a3d-44b6-bd5f-5952919ca36e\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/OLJCESP\"}"
+   ],
+   "fix": "Increase cartservice replicas to 2 (cartservice-replicas) to eliminate single\u2011point failure."
+  },
+  {
+   "experiment_id": "v2-pod-kill-redis-cart",
+   "title": "Redis-cart pod kill caused high latency but no data loss",
+   "severity": "medium",
+   "what_happened": "Killing the redis-cart pod caused p95 latency to reach 3200 ms, breaching the 1000 ms threshold. No integrity violations were recorded.",
+   "root_cause": "Redis-cart is a stateful service using an emptyDir volume; pod termination loses in\u2011memory state and causes latency spikes.",
+   "evidence": [
+    "redis-cart: 1:C 10 Oct 2026 19:31:11.500 * Running mode=standalone, port=6379.",
+    "redis-cart: 1:C 10 Oct 2026 19:31:11.500 * WARNING Memory overcommit must be enabled! Without it, a background save or replication may fail under low memory condition. Being disabled, it can also cause failures without low memory condition, see https://github.com/jemalloc/jemalloc/issues/1328. To fix this issue"
+   ],
+   "fix": "Add persistent storage via a PVC (redis-persistence) to preserve cart state across pod restarts and reduce latency."
+  }
+ ]
+}

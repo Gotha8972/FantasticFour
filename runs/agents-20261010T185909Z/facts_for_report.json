@@ -113,6 +113,28 @@
      "unhealthy": []
     }
    },
+   "observed": {
+    "error_rate": 1.0,
+    "p95_ms": 20000.0,
+    "unhealthy_count": 1,
+    "breach": {
+     "metric": "error_rate",
+     "value": 0.23076923076923078,
+     "limit": 0.05
+    },
+    "recovery_s": 34.699,
+    "service_ready_s": 19.7,
+    "customer_recovered_s": 40.5,
+    "users": 20,
+    "integrity_violations": 0
+   },
+   "criteria_met": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0
+    }
+   ],
    "recovery_s": 34.699,
    "integrity_violations": [],
    "score": {
@@ -133,39 +155,7 @@
     }
    },
    "run_dir": "runs/v3-pod-failure-frontend-s1-20261010T185929.812984Z",
-   "log_errors": [
-    "frontend: {\"error\":\"could not retrieve cart: rpc error: code = FailedPrecondition desc = Can't access cart storage. StackExchange.Redis.RedisConnectionException: The message timed out in the backlog attempting to send because no connection became available (5000ms) - Last Connection Exception: It was not poss  (x9)",
-    "frontend: {\"http.req.id\":\"a5bf083e-6403-4486-87c0-b11735f66be3\",\"http.req.method\":\"GET\",\"http.req.path\":\"/cart\",\"http.resp.bytes\":6368,\"http.resp.status\":500,\"http.resp.took_ms\":5984,\"message\":\"request complete\",\"session\":\"2601a197-d59d-48fa-8416-391908379bb4\",\"severity\":\"debug\",\"timestamp\":\"2026-10-10T19:00:",
-    "frontend: {\"http.req.id\":\"0be99ed5-e62f-4f0a-a945-004a8b81532e\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/66VCHSJNUP\",\"http.resp.bytes\":6408,\"http.resp.status\":500,\"http.resp.took_ms\":5795,\"message\":\"request complete\",\"session\":\"d2f596b8-692f-42b8-acc1-f77bae6c3db9\",\"severity\":\"debug\",\"timestamp\":\"202",
-    "frontend: {\"http.req.id\":\"de87c1ee-87b3-4cee-9ba9-f4731e4f3404\",\"http.req.method\":\"GET\",\"http.req.path\":\"/cart\",\"http.resp.bytes\":6409,\"http.resp.status\":500,\"http.resp.took_ms\":5366,\"message\":\"request complete\",\"session\":\"14f459d6-2c08-42cb-ab18-9defaa968486\",\"severity\":\"debug\",\"timestamp\":\"2026-10-10T19:00:",
-    "frontend: {\"http.req.id\":\"193355fb-37fb-4f3a-b7ac-c662b446aa14\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/2ZYFJ3GM2N\",\"http.resp.bytes\":6408,\"http.resp.status\":500,\"http.resp.took_ms\":5670,\"message\":\"request complete\",\"session\":\"fb80670c-0880-4c9a-a73f-da7027502aee\",\"severity\":\"debug\",\"timestamp\":\"202",
-    "frontend: {\"http.req.id\":\"a34590be-81a5-45f7-ae94-5126f93ff59b\",\"http.req.method\":\"GET\",\"http.req.path\":\"/cart\",\"http.resp.bytes\":6368,\"http.resp.status\":500,\"http.resp.took_ms\":5344,\"message\":\"request complete\",\"session\":\"84be83cb-ee42-4b3d-aa37-cb43bfce5e73\",\"severity\":\"debug\",\"timestamp\":\"2026-10-10T19:02:",
-    "frontend: {\"http.req.id\":\"d83d6b66-665e-4ecb-9718-7cb651324ddb\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/0PUK6V6EV0\",\"http.resp.bytes\":6401,\"http.resp.status\":500,\"http.resp.took_ms\":5272,\"message\":\"request complete\",\"session\":\"fb80670c-0880-4c9a-a73f-da7027502aee\",\"severity\":\"debug\",\"timestamp\":\"202",
-    "frontend: {\"http.req.id\":\"826739af-33d1-4252-9684-3905a9d722bc\",\"http.req.method\":\"GET\",\"http.req.path\":\"/\",\"http.resp.bytes\":6397,\"http.resp.status\":500,\"http.resp.took_ms\":5937,\"message\":\"request complete\",\"session\":\"e4166fc2-6b19-49a4-8241-6f16ec15dbbd\",\"severity\":\"debug\",\"timestamp\":\"2026-10-10T19:02:34.0",
-    "frontend: {\"http.req.id\":\"923296eb-1caa-42a4-9431-71a6ed5f02be\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/L9ECAV7KIM\",\"http.resp.bytes\":6408,\"http.resp.status\":500,\"http.resp.took_ms\":5496,\"message\":\"request complete\",\"session\":\"7e313a25-e930-4404-b02b-b2d35acee6e8\",\"severity\":\"debug\",\"timestamp\":\"202",
-    "frontend: {\"http.req.id\":\"640ae983-6283-4de1-b5f1-3ec498fe44d4\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/6E92ZMYYFZ\",\"http.resp.bytes\":6408,\"http.resp.status\":500,\"http.resp.took_ms\":5264,\"message\":\"request complete\",\"session\":\"9f95c15e-3b86-46b5-a73e-c26524a459a3\",\"severity\":\"debug\",\"timestamp\":\"202",
-    "frontend: {\"message\":\"Failed to fetch the name of the cluster in which the pod is runningGet \\\"http://169.254.169.254/computeMetadata/v1/instance/attributes/cluster-name\\\": dial tcp 169.254.169.254:80: i/o timeout\",\"severity\":\"error\",\"timestamp\":\"2026-10-10T19:02:38.696236418Z\"}",
-    "frontend: {\"error\":\"could not retrieve products: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.223.78:3550: connect: connection refused\\\"\",\"http.req.id\":\"3525473b-3b63-4ea5-b626-c4a2e1504063\",\"http.req.method\":\"GET\",\"http.req.path\":\"/\",\"message\"",
-    "frontend: {\"http.req.id\":\"3525473b-3b63-4ea5-b626-c4a2e1504063\",\"http.req.method\":\"GET\",\"http.req.path\":\"/\",\"http.resp.bytes\":5040,\"http.resp.status\":500,\"http.resp.took_ms\":2,\"message\":\"request complete\",\"session\":\"9f95c15e-3b86-46b5-a73e-c26524a459a3\",\"severity\":\"debug\",\"timestamp\":\"2026-10-10T19:03:05.2298",
-    "frontend: {\"error\":\"could not retrieve product: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.223.78:3550: connect: connection refused\\\"\",\"http.req.id\":\"1bfd2965-ed71-4c79-b907-7f058188c7f9\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/9SIQ",
-    "frontend: {\"http.req.id\":\"1bfd2965-ed71-4c79-b907-7f058188c7f9\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/9SIQT8TOJO\",\"http.resp.bytes\":5043,\"http.resp.status\":500,\"http.resp.took_ms\":0,\"message\":\"request complete\",\"session\":\"e21846fc-854a-4c9e-831f-6e7757307153\",\"severity\":\"debug\",\"timestamp\":\"2026-1",
-    "frontend: {\"error\":\"could not retrieve product: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.223.78:3550: connect: connection refused\\\"\",\"http.req.id\":\"b8c38a90-75bf-453d-9f99-ae55dc5bcfce\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/1YMW",
-    "frontend: {\"http.req.id\":\"b8c38a90-75bf-453d-9f99-ae55dc5bcfce\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/1YMWWN1N4O\",\"http.resp.bytes\":5043,\"http.resp.status\":500,\"http.resp.took_ms\":0,\"message\":\"request complete\",\"session\":\"14f459d6-2c08-42cb-ab18-9defaa968486\",\"severity\":\"debug\",\"timestamp\":\"2026-1",
-    "frontend: {\"error\":\"could not retrieve product: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.223.78:3550: connect: connection refused\\\"\",\"http.req.id\":\"7e625708-cd41-4885-a6cd-e2a784524675\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/1YMW",
-    "frontend: {\"http.req.id\":\"7e625708-cd41-4885-a6cd-e2a784524675\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/1YMWWN1N4O\",\"http.resp.bytes\":5043,\"http.resp.status\":500,\"http.resp.took_ms\":0,\"message\":\"request complete\",\"session\":\"7cc586e3-215a-40d9-87f6-f65f92eae92c\",\"severity\":\"debug\",\"timestamp\":\"2026-1",
-    "frontend: {\"error\":\"could not retrieve product: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.223.78:3550: connect: connection refused\\\"\",\"http.req.id\":\"9e02129b-cb60-466c-a9d2-d3ce4c4f6c19\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/9SIQ",
-    "frontend: {\"http.req.id\":\"9e02129b-cb60-466c-a9d2-d3ce4c4f6c19\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/9SIQT8TOJO\",\"http.resp.bytes\":5043,\"http.resp.status\":500,\"http.resp.took_ms\":0,\"message\":\"request complete\",\"session\":\"d2f596b8-692f-42b8-acc1-f77bae6c3db9\",\"severity\":\"debug\",\"timestamp\":\"2026-1",
-    "frontend: {\"error\":\"failed to get recommended product info (#LS4PSXUNUM): rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.223.78:3550: connect: connection refused\\\"\",\"http.req.id\":\"ad6560aa-3b2d-4c63-abab-f11c72f54df5\",\"http.req.method\":\"GET\",\"htt",
-    "frontend: {\"error\":\"could not retrieve product #1YMWWN1N4O: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.223.78:3550: connect: connection refused\\\"\",\"http.req.id\":\"ad6560aa-3b2d-4c63-abab-f11c72f54df5\",\"http.req.method\":\"GET\",\"http.req.path\":\"/",
-    "frontend: {\"http.req.id\":\"ad6560aa-3b2d-4c63-abab-f11c72f54df5\",\"http.req.method\":\"GET\",\"http.req.path\":\"/cart\",\"http.resp.bytes\":5056,\"http.resp.status\":500,\"http.resp.took_ms\":11,\"message\":\"request complete\",\"session\":\"61849fd3-2ea5-4799-afe0-e2eb7c60c865\",\"severity\":\"debug\",\"timestamp\":\"2026-10-10T19:03:07",
-    "frontend: {\"error\":\"failed to get recommended product info (#6E92ZMYYFZ): rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.223.78:3550: connect: connection refused\\\"\",\"http.req.id\":\"dbd44500-7a06-4ba0-b522-ced2318ad5f7\",\"http.req.method\":\"GET\",\"htt",
-    "frontend: {\"error\":\"could not retrieve product: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.223.78:3550: connect: connection refused\\\"\",\"http.req.id\":\"9d8a521d-abb8-4482-b0fc-57234b06b9f5\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/2ZYF",
-    "frontend: {\"http.req.id\":\"9d8a521d-abb8-4482-b0fc-57234b06b9f5\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/2ZYFJ3GM2N\",\"http.resp.bytes\":5043,\"http.resp.status\":500,\"http.resp.took_ms\":0,\"message\":\"request complete\",\"session\":\"14f459d6-2c08-42cb-ab18-9defaa968486\",\"severity\":\"debug\",\"timestamp\":\"2026-1",
-    "frontend: {\"http.req.id\":\"dd04f783-7a3c-4c23-89a5-ad26b1b05608\",\"http.req.method\":\"GET\",\"http.req.path\":\"/\",\"http.resp.bytes\":10392,\"http.resp.status\":200,\"http.resp.took_ms\":509,\"message\":\"request complete\",\"session\":\"61978733-baf1-4d20-b3a8-434e37286d64\",\"severity\":\"debug\",\"timestamp\":\"2026-10-10T19:05:19.1",
-    "frontend: {\"message\":\"Failed to fetch the Zone of the node where the pod is scheduledGet \\\"http://169.254.169.254/computeMetadata/v1/instance/zone\\\": dial tcp 169.254.169.254:80: i/o timeout\",\"severity\":\"error\",\"timestamp\":\"2026-10-10T19:05:39.91011822Z\"}",
-    "frontend: {\"error\":\"failed to complete the order: rpc error: code = Internal desc = failed to charge card: could not charge the card: rpc error: code = Code(400) desc = Sorry, we cannot process visa_electron credit cards. Only VISA or MasterCard is accepted.\",\"http.req.id\":\"044be18b-c7cd-4da4-a49c-92556c92b50",
-    "frontend: {\"http.req.id\":\"044be18b-c7cd-4da4-a49c-92556c92b50b\",\"http.req.method\":\"POST\",\"http.req.path\":\"/cart/checkout\",\"http.resp.bytes\":5155,\"http.resp.status\":500,\"http.resp.took_ms\":12,\"message\":\"request complete\",\"session\":\"7cc586e3-215a-40d9-87f6-f65f92eae92c\",\"severity\":\"debug\",\"timestamp\":\"2026-10-1"
-   ]
+   "log_errors": []
   },
   {
    "experiment_id": "v1-pod-kill-redis-cart",
@@ -220,6 +210,33 @@
      "unhealthy": []
     }
    },
+   "observed": {
+    "error_rate": 0.125,
+    "p95_ms": 5800.0,
+    "unhealthy_count": 1,
+    "breach": {
+     "metric": "p95_ms",
+     "value": 5800.0,
+     "limit": 1000
+    },
+    "recovery_s": 16.483,
+    "service_ready_s": 3.2,
+    "customer_recovered_s": 24.9,
+    "users": 20,
+    "integrity_violations": 1
+   },
+   "criteria_met": [
+    {
+     "metric": "integrity_violations",
+     "op": ">",
+     "value": 0
+    },
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0
+    }
+   ],
    "recovery_s": 16.483,
    "integrity_violations": [
     {
@@ -272,46 +289,11 @@
     "after_integrity": [],
     "after_run_dir": "runs/v1-pod-kill-redis-cart-after-20261010T190234.446628Z",
     "verdict": "improved",
-    "kept": true
+    "kept": true,
+    "after_verdict": "confirmed"
    },
    "run_dir": "runs/v1-pod-kill-redis-cart-s1-20261010T190025.868949Z",
-   "log_errors": [
-    "frontend: {\"error\":\"could not retrieve cart: rpc error: code = FailedPrecondition desc = Can't access cart storage. StackExchange.Redis.RedisConnectionException: The message timed out in the backlog attempting to send because no connection became available (5000ms) - Last Connection Exception: It was not poss  (x9)",
-    "frontend: {\"http.req.id\":\"a5bf083e-6403-4486-87c0-b11735f66be3\",\"http.req.method\":\"GET\",\"http.req.path\":\"/cart\",\"http.resp.bytes\":6368,\"http.resp.status\":500,\"http.resp.took_ms\":5984,\"message\":\"request complete\",\"session\":\"2601a197-d59d-48fa-8416-391908379bb4\",\"severity\":\"debug\",\"timestamp\":\"2026-10-10T19:00:",
-    "frontend: {\"http.req.id\":\"0be99ed5-e62f-4f0a-a945-004a8b81532e\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/66VCHSJNUP\",\"http.resp.bytes\":6408,\"http.resp.status\":500,\"http.resp.took_ms\":5795,\"message\":\"request complete\",\"session\":\"d2f596b8-692f-42b8-acc1-f77bae6c3db9\",\"severity\":\"debug\",\"timestamp\":\"202",
-    "frontend: {\"http.req.id\":\"de87c1ee-87b3-4cee-9ba9-f4731e4f3404\",\"http.req.method\":\"GET\",\"http.req.path\":\"/cart\",\"http.resp.bytes\":6409,\"http.resp.status\":500,\"http.resp.took_ms\":5366,\"message\":\"request complete\",\"session\":\"14f459d6-2c08-42cb-ab18-9defaa968486\",\"severity\":\"debug\",\"timestamp\":\"2026-10-10T19:00:",
-    "frontend: {\"http.req.id\":\"193355fb-37fb-4f3a-b7ac-c662b446aa14\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/2ZYFJ3GM2N\",\"http.resp.bytes\":6408,\"http.resp.status\":500,\"http.resp.took_ms\":5670,\"message\":\"request complete\",\"session\":\"fb80670c-0880-4c9a-a73f-da7027502aee\",\"severity\":\"debug\",\"timestamp\":\"202",
-    "frontend: {\"http.req.id\":\"a34590be-81a5-45f7-ae94-5126f93ff59b\",\"http.req.method\":\"GET\",\"http.req.path\":\"/cart\",\"http.resp.bytes\":6368,\"http.resp.status\":500,\"http.resp.took_ms\":5344,\"message\":\"request complete\",\"session\":\"84be83cb-ee42-4b3d-aa37-cb43bfce5e73\",\"severity\":\"debug\",\"timestamp\":\"2026-10-10T19:02:",
-    "frontend: {\"http.req.id\":\"d83d6b66-665e-4ecb-9718-7cb651324ddb\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/0PUK6V6EV0\",\"http.resp.bytes\":6401,\"http.resp.status\":500,\"http.resp.took_ms\":5272,\"message\":\"request complete\",\"session\":\"fb80670c-0880-4c9a-a73f-da7027502aee\",\"severity\":\"debug\",\"timestamp\":\"202",
-    "frontend: {\"http.req.id\":\"826739af-33d1-4252-9684-3905a9d722bc\",\"http.req.method\":\"GET\",\"http.req.path\":\"/\",\"http.resp.bytes\":6397,\"http.resp.status\":500,\"http.resp.took_ms\":5937,\"message\":\"request complete\",\"session\":\"e4166fc2-6b19-49a4-8241-6f16ec15dbbd\",\"severity\":\"debug\",\"timestamp\":\"2026-10-10T19:02:34.0",
-    "frontend: {\"http.req.id\":\"923296eb-1caa-42a4-9431-71a6ed5f02be\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/L9ECAV7KIM\",\"http.resp.bytes\":6408,\"http.resp.status\":500,\"http.resp.took_ms\":5496,\"message\":\"request complete\",\"session\":\"7e313a25-e930-4404-b02b-b2d35acee6e8\",\"severity\":\"debug\",\"timestamp\":\"202",
-    "frontend: {\"http.req.id\":\"640ae983-6283-4de1-b5f1-3ec498fe44d4\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/6E92ZMYYFZ\",\"http.resp.bytes\":6408,\"http.resp.status\":500,\"http.resp.took_ms\":5264,\"message\":\"request complete\",\"session\":\"9f95c15e-3b86-46b5-a73e-c26524a459a3\",\"severity\":\"debug\",\"timestamp\":\"202",
-    "frontend: {\"message\":\"Failed to fetch the name of the cluster in which the pod is runningGet \\\"http://169.254.169.254/computeMetadata/v1/instance/attributes/cluster-name\\\": dial tcp 169.254.169.254:80: i/o timeout\",\"severity\":\"error\",\"timestamp\":\"2026-10-10T19:02:38.696236418Z\"}",
-    "frontend: {\"error\":\"could not retrieve products: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.223.78:3550: connect: connection refused\\\"\",\"http.req.id\":\"3525473b-3b63-4ea5-b626-c4a2e1504063\",\"http.req.method\":\"GET\",\"http.req.path\":\"/\",\"message\"",
-    "frontend: {\"http.req.id\":\"3525473b-3b63-4ea5-b626-c4a2e1504063\",\"http.req.method\":\"GET\",\"http.req.path\":\"/\",\"http.resp.bytes\":5040,\"http.resp.status\":500,\"http.resp.took_ms\":2,\"message\":\"request complete\",\"session\":\"9f95c15e-3b86-46b5-a73e-c26524a459a3\",\"severity\":\"debug\",\"timestamp\":\"2026-10-10T19:03:05.2298",
-    "frontend: {\"error\":\"could not retrieve product: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.223.78:3550: connect: connection refused\\\"\",\"http.req.id\":\"1bfd2965-ed71-4c79-b907-7f058188c7f9\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/9SIQ",
-    "frontend: {\"http.req.id\":\"1bfd2965-ed71-4c79-b907-7f058188c7f9\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/9SIQT8TOJO\",\"http.resp.bytes\":5043,\"http.resp.status\":500,\"http.resp.took_ms\":0,\"message\":\"request complete\",\"session\":\"e21846fc-854a-4c9e-831f-6e7757307153\",\"severity\":\"debug\",\"timestamp\":\"2026-1",
-    "frontend: {\"error\":\"could not retrieve product: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.223.78:3550: connect: connection refused\\\"\",\"http.req.id\":\"b8c38a90-75bf-453d-9f99-ae55dc5bcfce\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/1YMW",
-    "frontend: {\"http.req.id\":\"b8c38a90-75bf-453d-9f99-ae55dc5bcfce\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/1YMWWN1N4O\",\"http.resp.bytes\":5043,\"http.resp.status\":500,\"http.resp.took_ms\":0,\"message\":\"request complete\",\"session\":\"14f459d6-2c08-42cb-ab18-9defaa968486\",\"severity\":\"debug\",\"timestamp\":\"2026-1",
-    "frontend: {\"error\":\"could not retrieve product: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.223.78:3550: connect: connection refused\\\"\",\"http.req.id\":\"7e625708-cd41-4885-a6cd-e2a784524675\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/1YMW",
-    "frontend: {\"http.req.id\":\"7e625708-cd41-4885-a6cd-e2a784524675\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/1YMWWN1N4O\",\"http.resp.bytes\":5043,\"http.resp.status\":500,\"http.resp.took_ms\":0,\"message\":\"request complete\",\"session\":\"7cc586e3-215a-40d9-87f6-f65f92eae92c\",\"severity\":\"debug\",\"timestamp\":\"2026-1",
-    "frontend: {\"error\":\"could not retrieve product: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.223.78:3550: connect: connection refused\\\"\",\"http.req.id\":\"9e02129b-cb60-466c-a9d2-d3ce4c4f6c19\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/9SIQ",
-    "frontend: {\"http.req.id\":\"9e02129b-cb60-466c-a9d2-d3ce4c4f6c19\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/9SIQT8TOJO\",\"http.resp.bytes\":5043,\"http.resp.status\":500,\"http.resp.took_ms\":0,\"message\":\"request complete\",\"session\":\"d2f596b8-692f-42b8-acc1-f77bae6c3db9\",\"severity\":\"debug\",\"timestamp\":\"2026-1",
-    "frontend: {\"error\":\"failed to get recommended product info (#LS4PSXUNUM): rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.223.78:3550: connect: connection refused\\\"\",\"http.req.id\":\"ad6560aa-3b2d-4c63-abab-f11c72f54df5\",\"http.req.method\":\"GET\",\"htt",
-    "frontend: {\"error\":\"could not retrieve product #1YMWWN1N4O: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.223.78:3550: connect: connection refused\\\"\",\"http.req.id\":\"ad6560aa-3b2d-4c63-abab-f11c72f54df5\",\"http.req.method\":\"GET\",\"http.req.path\":\"/",
-    "frontend: {\"http.req.id\":\"ad6560aa-3b2d-4c63-abab-f11c72f54df5\",\"http.req.method\":\"GET\",\"http.req.path\":\"/cart\",\"http.resp.bytes\":5056,\"http.resp.status\":500,\"http.resp.took_ms\":11,\"message\":\"request complete\",\"session\":\"61849fd3-2ea5-4799-afe0-e2eb7c60c865\",\"severity\":\"debug\",\"timestamp\":\"2026-10-10T19:03:07",
-    "frontend: {\"error\":\"failed to get recommended product info (#6E92ZMYYFZ): rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.223.78:3550: connect: connection refused\\\"\",\"http.req.id\":\"dbd44500-7a06-4ba0-b522-ced2318ad5f7\",\"http.req.method\":\"GET\",\"htt",
-    "frontend: {\"error\":\"could not retrieve product: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.223.78:3550: connect: connection refused\\\"\",\"http.req.id\":\"9d8a521d-abb8-4482-b0fc-57234b06b9f5\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/2ZYF",
-    "frontend: {\"http.req.id\":\"9d8a521d-abb8-4482-b0fc-57234b06b9f5\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/2ZYFJ3GM2N\",\"http.resp.bytes\":5043,\"http.resp.status\":500,\"http.resp.took_ms\":0,\"message\":\"request complete\",\"session\":\"14f459d6-2c08-42cb-ab18-9defaa968486\",\"severity\":\"debug\",\"timestamp\":\"2026-1",
-    "frontend: {\"http.req.id\":\"dd04f783-7a3c-4c23-89a5-ad26b1b05608\",\"http.req.method\":\"GET\",\"http.req.path\":\"/\",\"http.resp.bytes\":10392,\"http.resp.status\":200,\"http.resp.took_ms\":509,\"message\":\"request complete\",\"session\":\"61978733-baf1-4d20-b3a8-434e37286d64\",\"severity\":\"debug\",\"timestamp\":\"2026-10-10T19:05:19.1",
-    "frontend: {\"message\":\"Failed to fetch the Zone of the node where the pod is scheduledGet \\\"http://169.254.169.254/computeMetadata/v1/instance/zone\\\": dial tcp 169.254.169.254:80: i/o timeout\",\"severity\":\"error\",\"timestamp\":\"2026-10-10T19:05:39.91011822Z\"}",
-    "frontend: {\"error\":\"failed to complete the order: rpc error: code = Internal desc = failed to charge card: could not charge the card: rpc error: code = Code(400) desc = Sorry, we cannot process visa_electron credit cards. Only VISA or MasterCard is accepted.\",\"http.req.id\":\"044be18b-c7cd-4da4-a49c-92556c92b50",
-    "frontend: {\"http.req.id\":\"044be18b-c7cd-4da4-a49c-92556c92b50b\",\"http.req.method\":\"POST\",\"http.req.path\":\"/cart/checkout\",\"http.resp.bytes\":5155,\"http.resp.status\":500,\"http.resp.took_ms\":12,\"message\":\"request complete\",\"session\":\"7cc586e3-215a-40d9-87f6-f65f92eae92c\",\"severity\":\"debug\",\"timestamp\":\"2026-10-1",
-    "redis-cart: 1:C 10 Oct 2026 19:02:36.979 # WARNING Memory overcommit must be enabled! Without it, a background save or replication may fail under low memory condition. Being disabled, it can also cause failures without low memory condition, see https://github.com/jemalloc/jemalloc/issues/1328. To fix this issue",
-    "redis-cart: 1:M 10 Oct 2026 19:02:36.983 * <bf> \t{ bf-error-rate       :      0.01 }",
-    "redis-cart: 1:M 10 Oct 2026 19:02:37.078 * <search> gc: ON, prefix min length: 2, min word length to stem: 4, prefix max expansions: 200, query timeout (ms): 500, timeout policy: return, oom policy: return, cursor read size: 1000, cursor max idle (ms): 300000, max doctable size: 1000000, max number of search re",
-    "redis-cart: 1:M 10 Oct 2026 19:02:37.079 * <search> Cluster configuration: AUTO partitions, type: 0, coordinator timeout: 0ms"
-   ]
+   "log_errors": []
   },
   {
    "experiment_id": "v5-pod-kill-productcatalogservice",
@@ -366,6 +348,28 @@
      "unhealthy": []
     }
    },
+   "observed": {
+    "error_rate": 0.16666666666666666,
+    "p95_ms": 80.0,
+    "unhealthy_count": 1,
+    "breach": {
+     "metric": "error_rate",
+     "value": 0.16666666666666666,
+     "limit": 0.05
+    },
+    "recovery_s": 9.916,
+    "service_ready_s": 3.2,
+    "customer_recovered_s": 18.9,
+    "users": 20,
+    "integrity_violations": 0
+   },
+   "criteria_met": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0
+    }
+   ],
    "recovery_s": 9.916,
    "integrity_violations": [],
    "score": {
@@ -407,36 +411,17 @@
     "after_integrity": [],
     "after_run_dir": "runs/v5-pod-kill-productcatalogservice-after-20261010T191705.809825Z",
     "verdict": "improved",
-    "kept": true
+    "kept": true,
+    "after_verdict": "refuted"
    },
    "run_dir": "runs/v5-pod-kill-productcatalogservice-s1-20261010T190304.133613Z",
-   "log_errors": [
-    "frontend: {\"error\":\"could not retrieve products: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.223.78:3550: connect: connection refused\\\"\",\"http.req.id\":\"3525473b-3b63-4ea5-b626-c4a2e1504063\",\"http.req.method\":\"GET\",\"http.req.path\":\"/\",\"message\"",
-    "frontend: {\"http.req.id\":\"3525473b-3b63-4ea5-b626-c4a2e1504063\",\"http.req.method\":\"GET\",\"http.req.path\":\"/\",\"http.resp.bytes\":5040,\"http.resp.status\":500,\"http.resp.took_ms\":2,\"message\":\"request complete\",\"session\":\"9f95c15e-3b86-46b5-a73e-c26524a459a3\",\"severity\":\"debug\",\"timestamp\":\"2026-10-10T19:03:05.2298",
-    "frontend: {\"error\":\"could not retrieve product: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.223.78:3550: connect: connection refused\\\"\",\"http.req.id\":\"1bfd2965-ed71-4c79-b907-7f058188c7f9\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/9SIQ",
-    "frontend: {\"http.req.id\":\"1bfd2965-ed71-4c79-b907-7f058188c7f9\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/9SIQT8TOJO\",\"http.resp.bytes\":5043,\"http.resp.status\":500,\"http.resp.took_ms\":0,\"message\":\"request complete\",\"session\":\"e21846fc-854a-4c9e-831f-6e7757307153\",\"severity\":\"debug\",\"timestamp\":\"2026-1",
-    "frontend: {\"error\":\"could not retrieve product: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.223.78:3550: connect: connection refused\\\"\",\"http.req.id\":\"b8c38a90-75bf-453d-9f99-ae55dc5bcfce\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/1YMW",
-    "frontend: {\"http.req.id\":\"b8c38a90-75bf-453d-9f99-ae55dc5bcfce\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/1YMWWN1N4O\",\"http.resp.bytes\":5043,\"http.resp.status\":500,\"http.resp.took_ms\":0,\"message\":\"request complete\",\"session\":\"14f459d6-2c08-42cb-ab18-9defaa968486\",\"severity\":\"debug\",\"timestamp\":\"2026-1",
-    "frontend: {\"error\":\"could not retrieve product: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.223.78:3550: connect: connection refused\\\"\",\"http.req.id\":\"7e625708-cd41-4885-a6cd-e2a784524675\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/1YMW",
-    "frontend: {\"http.req.id\":\"7e625708-cd41-4885-a6cd-e2a784524675\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/1YMWWN1N4O\",\"http.resp.bytes\":5043,\"http.resp.status\":500,\"http.resp.took_ms\":0,\"message\":\"request complete\",\"session\":\"7cc586e3-215a-40d9-87f6-f65f92eae92c\",\"severity\":\"debug\",\"timestamp\":\"2026-1",
-    "frontend: {\"error\":\"could not retrieve product: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.223.78:3550: connect: connection refused\\\"\",\"http.req.id\":\"9e02129b-cb60-466c-a9d2-d3ce4c4f6c19\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/9SIQ",
-    "frontend: {\"http.req.id\":\"9e02129b-cb60-466c-a9d2-d3ce4c4f6c19\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/9SIQT8TOJO\",\"http.resp.bytes\":5043,\"http.resp.status\":500,\"http.resp.took_ms\":0,\"message\":\"request complete\",\"session\":\"d2f596b8-692f-42b8-acc1-f77bae6c3db9\",\"severity\":\"debug\",\"timestamp\":\"2026-1",
-    "frontend: {\"error\":\"failed to get recommended product info (#LS4PSXUNUM): rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.223.78:3550: connect: connection refused\\\"\",\"http.req.id\":\"ad6560aa-3b2d-4c63-abab-f11c72f54df5\",\"http.req.method\":\"GET\",\"htt",
-    "frontend: {\"error\":\"could not retrieve product #1YMWWN1N4O: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.223.78:3550: connect: connection refused\\\"\",\"http.req.id\":\"ad6560aa-3b2d-4c63-abab-f11c72f54df5\",\"http.req.method\":\"GET\",\"http.req.path\":\"/",
-    "frontend: {\"http.req.id\":\"ad6560aa-3b2d-4c63-abab-f11c72f54df5\",\"http.req.method\":\"GET\",\"http.req.path\":\"/cart\",\"http.resp.bytes\":5056,\"http.resp.status\":500,\"http.resp.took_ms\":11,\"message\":\"request complete\",\"session\":\"61849fd3-2ea5-4799-afe0-e2eb7c60c865\",\"severity\":\"debug\",\"timestamp\":\"2026-10-10T19:03:07",
-    "frontend: {\"error\":\"failed to get recommended product info (#6E92ZMYYFZ): rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.223.78:3550: connect: connection refused\\\"\",\"http.req.id\":\"dbd44500-7a06-4ba0-b522-ced2318ad5f7\",\"http.req.method\":\"GET\",\"htt",
-    "frontend: {\"error\":\"could not retrieve product: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.223.78:3550: connect: connection refused\\\"\",\"http.req.id\":\"9d8a521d-abb8-4482-b0fc-57234b06b9f5\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/2ZYF",
-    "frontend: {\"http.req.id\":\"9d8a521d-abb8-4482-b0fc-57234b06b9f5\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/2ZYFJ3GM2N\",\"http.resp.bytes\":5043,\"http.resp.status\":500,\"http.resp.took_ms\":0,\"message\":\"request complete\",\"session\":\"14f459d6-2c08-42cb-ab18-9defaa968486\",\"severity\":\"debug\",\"timestamp\":\"2026-1",
-    "frontend: {\"http.req.id\":\"dd04f783-7a3c-4c23-89a5-ad26b1b05608\",\"http.req.method\":\"GET\",\"http.req.path\":\"/\",\"http.resp.bytes\":10392,\"http.resp.status\":200,\"http.resp.took_ms\":509,\"message\":\"request complete\",\"session\":\"61978733-baf1-4d20-b3a8-434e37286d64\",\"severity\":\"debug\",\"timestamp\":\"2026-10-10T19:05:19.1",
-    "frontend: {\"message\":\"Failed to fetch the Zone of the node where the pod is scheduledGet \\\"http://169.254.169.254/computeMetadata/v1/instance/zone\\\": dial tcp 169.254.169.254:80: i/o timeout\",\"severity\":\"error\",\"timestamp\":\"2026-10-10T19:05:39.91011822Z\"}",
-    "frontend: {\"error\":\"failed to complete the order: rpc error: code = Internal desc = failed to charge card: could not charge the card: rpc error: code = Code(400) desc = Sorry, we cannot process visa_electron credit cards. Only VISA or MasterCard is accepted.\",\"http.req.id\":\"044be18b-c7cd-4da4-a49c-92556c92b50",
-    "frontend: {\"http.req.id\":\"044be18b-c7cd-4da4-a49c-92556c92b50b\",\"http.req.method\":\"POST\",\"http.req.path\":\"/cart/checkout\",\"http.resp.bytes\":5155,\"http.resp.status\":500,\"http.resp.took_ms\":12,\"message\":\"request complete\",\"session\":\"7cc586e3-215a-40d9-87f6-f65f92eae92c\",\"severity\":\"debug\",\"timestamp\":\"2026-10-1"
-   ]
+   "log_errors": []
   }
  ],
  "scorecard": {
   "hypotheses": 3,
   "confirmed": 3,
-  "refuted": 0
+  "refuted": 0,
+  "refuted_after_fix": 1
  }
 }

@@ -1,0 +1,162 @@
+{
+ "vulnerabilities": [
+  {
+   "id": "V1",
+   "service": "redis-cart",
+   "severity": "critical",
+   "weakness": "Single replica stateful cache with no pod disruption budget, risking cart data loss and checkout failure",
+   "evidence": {
+    "replicas": 1,
+    "stateful_without_pvc": false,
+    "pdb": false,
+    "on_checkout_path": true,
+    "blast_radius": [
+     "cartservice",
+     "checkoutservice",
+     "frontend",
+     "redis-cart"
+    ]
+   },
+   "hypothesis": "if the redis-cart pod is killed, cartservice cannot retrieve cart data, causing checkout to fail",
+   "blast_radius": [
+    "cartservice",
+    "checkoutservice",
+    "frontend",
+    "redis-cart"
+   ],
+   "unverified_evidence_dropped": {},
+   "predicted_blast_radius": [
+    "cartservice",
+    "checkoutservice",
+    "frontend"
+   ],
+   "risk_score": 9,
+   "status": "untested"
+  },
+  {
+   "id": "V2",
+   "service": "paymentservice",
+   "severity": "critical",
+   "weakness": "Single replica payment endpoint without PDB, can halt entire checkout flow",
+   "evidence": {
+    "replicas": 1,
+    "pdb": false,
+    "on_checkout_path": true,
+    "blast_radius": [
+     "checkoutservice",
+     "frontend",
+     "paymentservice"
+    ]
+   },
+   "hypothesis": "if the paymentservice pod crashes, checkoutservice cannot complete payment, aborting checkout",
+   "blast_radius": [
+    "checkoutservice",
+    "frontend",
+    "paymentservice"
+   ],
+   "unverified_evidence_dropped": {},
+   "predicted_blast_radius": [
+    "checkoutservice",
+    "frontend"
+   ],
+   "risk_score": 8,
+   "status": "untested"
+  },
+  {
+   "id": "V3",
+   "service": "currencyservice",
+   "severity": "high",
+   "weakness": "Single replica currency conversion without PDB, may delay or abort checkout",
+   "evidence": {
+    "replicas": 1,
+    "pdb": false,
+    "on_checkout_path": true
+   },
+   "hypothesis": "if the currencyservice pod is unavailable, checkoutservice stalls, causing checkout timeout",
+   "blast_radius": [
+    "checkoutservice",
+    "currencyservice",
+    "frontend"
+   ],
+   "unverified_evidence_dropped": {
+    "blast_radius": [
+     "checkoutservice",
+     "frontend",
+     "currencyservice"
+    ]
+   },
+   "predicted_blast_radius": [
+    "checkoutservice",
+    "frontend"
+   ],
+   "risk_score": 8,
+   "status": "untested"
+  },
+  {
+   "id": "V4",
+   "service": "emailservice",
+   "severity": "medium",
+   "weakness": "Single replica email sender without PDB, failure may delay order confirmation but not block checkout",
+   "evidence": {
+    "replicas": 1,
+    "pdb": false,
+    "on_checkout_path": true
+   },
+   "hypothesis": "if the emailservice pod fails, checkout completes but order confirmation email is delayed",
+   "blast_radius": [
+    "checkoutservice",
+    "emailservice",
+    "frontend"
+   ],
+   "unverified_evidence_dropped": {
+    "blast_radius": [
+     "checkoutservice",
+     "frontend",
+     "emailservice"
+    ]
+   },
+   "predicted_blast_radius": [
+    "checkoutservice",
+    "frontend"
+   ],
+   "risk_score": 8,
+   "status": "untested"
+  },
+  {
+   "id": "V5",
+   "service": "shippingservice",
+   "severity": "medium",
+   "weakness": "Single replica shipping estimator without PDB, can delay shipping cost calculation",
+   "evidence": {
+    "replicas": 1,
+    "pdb": false,
+    "on_checkout_path": true,
+    "blast_radius": [
+     "checkoutservice",
+     "frontend",
+     "shippingservice"
+    ]
+   },
+   "hypothesis": "if the shippingservice pod is down, checkout stalls waiting for shipping cost",
+   "blast_radius": [
+    "checkoutservice",
+    "frontend",
+    "shippingservice"
+   ],
+   "unverified_evidence_dropped": {},
+   "predicted_blast_radius": [
+    "checkoutservice",
+    "frontend"
+   ],
+   "risk_score": 8,
+   "status": "untested"
+  }
+ ],
+ "rejected": [],
+ "systemic": [
+  "All services have a single replica and no pod disruption budget, exposing the entire system to single point failures during maintenance or unexpected crashes"
+ ],
+ "blind_spots": [
+  "The facts do not reveal internal retry logic, timeout settings, or circuit breaker configurations that could mitigate transient failures; they also omit observability metrics that would indicate how long a failure would impact users"
+ ]
+}

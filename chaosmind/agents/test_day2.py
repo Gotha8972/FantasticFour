@@ -63,6 +63,7 @@ class Day2Tests(unittest.TestCase):
         bad_events = [{'event': 'SNAPSHOT', 'stage': 'injected', 'error_rate': 0.9, 'p95_ms': 9000,
                        'unhealthy_services': ['cartservice']}]
         with patch.object(llm, 'ask', return_value={'fix_id': 'cartservice-replicas'}), \
+             patch.object(remediation, 'applied', return_value=False), \
              patch.object(remediation, 'apply') as apply, patch.object(remediation, 'revert') as revert, \
              patch.object(remediation, 'settle', return_value=True), \
              patch.object(remediation.integrity, 'prepare', return_value={}), \

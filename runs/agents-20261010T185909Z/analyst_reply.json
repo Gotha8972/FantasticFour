@@ -1,0 +1,34 @@
+{
+ "summary": "The Redis\u2011cart pod kill caused cart data loss and a 12.5% error rate, confirming the critical vulnerability V1. A frontend pod failure brought the entire site down, validating V3\u2019s single\u2011replica risk. Killing the product catalog pod increased error rate to 16.7% and latency to 80\u202fms, demonstrating V5\u2019s impact on checkout flow.",
+ "findings": [
+  {
+   "experiment_id": "v1-pod-kill-redis-cart",
+   "title": "Redis\u2011cart pod kill",
+   "severity": "critical",
+   "what_happened": "Killing the redis\u2011cart pod removed all cart items, causing a 12.5% error rate and a 5800\u202fms p95 latency spike.",
+   "root_cause": "The pod was running with an emptyDir volume that does not persist data across restarts.",
+   "evidence": [
+    "same session, cart emptied by the fault"
+   ],
+   "fix": "Apply a persistent volume claim to the redis\u2011cart deployment (fix_id: redis-persistence) to preserve cart data across pod restarts."
+  },
+  {
+   "experiment_id": "v3-pod-failure-frontend",
+   "title": "Frontend pod failure",
+   "severity": "critical",
+   "what_happened": "The frontend pod crashed, making the entire site unreachable and raising error_rate to 23.1% during the fault.",
+   "root_cause": "The frontend service runs as a single replica with no PDB/HPA, so a pod failure brings the whole site down.",
+   "evidence": [],
+   "fix": "Introduce a second replica and a PodDisruptionBudget for the frontend service to ensure high availability."
+  },
+  {
+   "experiment_id": "v5-pod-kill-productcatalogservice",
+   "title": "Product catalog pod kill",
+   "severity": "medium",
+   "what_happened": "Killing the sole productcatalogservice pod caused a 16.7% error rate and 80\u202fms p95 latency, breaching the 5% error threshold.",
+   "root_cause": "The service is a single replica with no PDB/HPA, creating a single point of failure for product data.",
+   "evidence": [],
+   "fix": "Add additional replicas to productcatalogservice (fix_id: productcatalog-replicas) and configure a PodDisruptionBudget to eliminate the outage."
+  }
+ ]
+}

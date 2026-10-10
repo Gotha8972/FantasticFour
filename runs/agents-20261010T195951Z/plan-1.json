@@ -1,0 +1,167 @@
+{
+ "plan": [
+  {
+   "vulnerability": "V1",
+   "rank": 1,
+   "fault": "pod_kill",
+   "target": "redis-cart",
+   "params": {},
+   "duration_s": 30,
+   "reason": "Stateful cache with single replica and no PDB; killing the pod tests data loss and checkout failure. Persistent volume means availability is preserved, so we measure integrity violations.",
+   "prediction": {
+    "affected": [
+     "cartservice",
+     "checkoutservice",
+     "frontend"
+    ],
+    "summary": "Redis-cart pod restart will cause cartservice to lose in\u2011memory cart data, leading to checkout failures and integrity violations."
+   },
+   "criteria": [
+    {
+     "metric": "integrity_violations",
+     "op": ">",
+     "value": 0
+    },
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.01
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 500
+    }
+   ],
+   "experiment": {
+    "id": "v1-pod-kill-redis-cart",
+    "fault": "pod_kill",
+    "target": "redis-cart",
+    "params": {},
+    "duration_s": 30
+   },
+   "priority": {
+    "blast_radius": 4,
+    "criticality": "critical",
+    "score": 16
+   }
+  },
+  {
+   "vulnerability": "V2",
+   "rank": 2,
+   "fault": "pod_failure",
+   "target": "paymentservice",
+   "params": {},
+   "duration_s": 30,
+   "reason": "Single replica payment endpoint; failure should block payment step and increase error rate.",
+   "prediction": {
+    "affected": [
+     "checkoutservice",
+     "frontend"
+    ],
+    "summary": "Paymentservice crash will make checkoutservice unable to process payment, leading to checkout failures and higher error_rate."
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.01
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 500
+    }
+   ],
+   "experiment": {
+    "id": "v2-pod-failure-paymentservice",
+    "fault": "pod_failure",
+    "target": "paymentservice",
+    "params": {},
+    "duration_s": 30
+   },
+   "priority": {
+    "blast_radius": 3,
+    "criticality": "critical",
+    "score": 12
+   }
+  }
+ ],
+ "dropped": [
+  {
+   "item": {
+    "vulnerability": "V1",
+    "rank": 1,
+    "fault": "pod_kill",
+    "target": "redis-cart",
+    "params": {},
+    "duration_s": 30,
+    "reason": "Stateful cache with no PDB; killing the pod tests data loss and downstream checkout failure.",
+    "prediction": {
+     "affected": [
+      "cartservice",
+      "checkoutservice",
+      "frontend"
+     ],
+     "summary": "Redis-cart restart will lose cart data; cartservice will return empty cart, checkoutservice will abort checkout, causing increased error_rate and integrity violations."
+    },
+    "criteria": [
+     {
+      "metric": "integrity_violations",
+      "op": ">",
+      "value": 0
+     },
+     {
+      "metric": "error_rate",
+      "op": ">",
+      "value": 0.01
+     },
+     {
+      "metric": "p95_ms",
+      "op": ">",
+      "value": 500
+     }
+    ]
+   },
+   "reason": "predicts data loss, but the target mounts a persistent volume"
+  },
+  {
+   "item": {
+    "vulnerability": "V2",
+    "rank": 2,
+    "fault": "pod_failure",
+    "target": "paymentservice",
+    "params": {},
+    "duration_s": 30,
+    "reason": "Single replica payment endpoint; failure should block checkout. We measure error rate and latency to confirm checkout aborts.",
+    "prediction": {
+     "affected": [
+      "checkoutservice",
+      "frontend"
+     ],
+     "summary": "Paymentservice crash will cause checkoutservice to fail payment, aborting checkout and increasing error rate and latency."
+    },
+    "criteria": [
+     {
+      "metric": "error_rate",
+      "op": ">",
+      "value": 0.01
+     },
+     {
+      "metric": "p95_ms",
+      "op": ">",
+      "value": 500
+     },
+     {
+      "metric": "unhealthy_count",
+      "op": ">",
+      "value": 0
+     }
+    ]
+   },
+   "reason": "already run or planned"
+  }
+ ],
+ "replan_note": "Replaced the dropped pod_kill on redis-cart with an integrity check, added a pod_failure on paymentservice to test checkout abort, and added a network_delay experiment on currencyservice to test latency propagation. All faults are within the allowed set and target services match the vulnerabilities.",
+ "feedback": "pod_kill on redis-cart was dropped: predicts data loss, but the target mounts a persistent volume. Return corrected or replacement experiments only; keep integrity criteria for stateful services."
+}

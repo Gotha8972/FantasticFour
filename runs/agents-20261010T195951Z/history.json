@@ -1,0 +1,133 @@
+[
+ {
+  "vulnerability": "V1",
+  "experiment": {
+   "id": "v1-pod-kill-redis-cart",
+   "fault": "pod_kill",
+   "target": "redis-cart",
+   "params": {},
+   "duration_s": 30
+  },
+  "criteria": [
+   {
+    "metric": "integrity_violations",
+    "op": ">",
+    "value": 0
+   },
+   {
+    "metric": "error_rate",
+    "op": ">",
+    "value": 0.01
+   },
+   {
+    "metric": "p95_ms",
+    "op": ">",
+    "value": 500
+   }
+  ],
+  "prediction": {
+   "affected": [
+    "cartservice",
+    "checkoutservice",
+    "frontend"
+   ],
+   "summary": "Redis-cart pod restart will cause cartservice to lose in\u2011memory cart data, leading to checkout failures and integrity violations."
+  },
+  "safety": {
+   "decision": "approve",
+   "reason": "Current health snapshot is healthy with no unhealthy services and the experiment targets a single service (redis-cart) with a pod_kill fault. The duration of 30 seconds is within acceptable limits and does not exceed the hard bound of 60 seconds. No intensity parameters are specified, so no ramp is needed.",
+   "experiment": {
+    "id": "v1-pod-kill-redis-cart",
+    "fault": "pod_kill",
+    "target": "redis-cart",
+    "params": {},
+    "duration_s": 30
+   },
+   "ramp": [
+    null
+   ],
+   "steps": [],
+   "health_at_review": {
+    "ts": 1791662412.9366307,
+    "error_rate": 0.0,
+    "p50_ms": 18.0,
+    "p95_ms": 31.0,
+    "users": 20,
+    "rps": 4.1,
+    "requests": 27466,
+    "failures": 405,
+    "checkout_success": 0.9926047658175843,
+    "checkout_requests": 1217,
+    "checkout_failures": 9,
+    "locust_history_ts": 1791662410.0,
+    "loadgenerator_pod_uids": [
+     "62ff364f-2626-44ab-8521-9241489ef8ba"
+    ],
+    "pod_uids": {
+     "adservice": [
+      "b3e738a7-840a-4c10-bcad-6c355a45c756"
+     ],
+     "cartservice": [
+      "81d939fa-806f-4da1-9eda-eb350ea735a3",
+      "a6c77726-10e7-48d2-a133-8d58dd39bdc7"
+     ],
+     "checkoutservice": [
+      "8a695f4e-2dbf-41e9-a39d-435e50caa0be"
+     ],
+     "currencyservice": [
+      "6077ac6e-adc5-4d55-95e5-39456cac60b5"
+     ],
+     "emailservice": [
+      "793a3c99-875f-4729-91b8-6f65e55c36ea"
+     ],
+     "frontend": [
+      "429dbf5e-aacf-4bf9-9acc-fe94035ba76a",
+      "c7e4e5cb-aefc-4459-96c5-f7ee6d883dc7"
+     ],
+     "loadgenerator": [
+      "62ff364f-2626-44ab-8521-9241489ef8ba"
+     ],
+     "paymentservice": [
+      "b6f94341-e91f-402a-87b4-156f41a75e24"
+     ],
+     "productcatalogservice": [
+      "57ed6738-1439-475f-bab9-d2a2d4804506",
+      "605cd7e0-1e2e-4f9b-b0ce-42fd6fb2440a"
+     ],
+     "recommendationservice": [
+      "28a150eb-7b88-4b04-ad7f-111f3ba0124a"
+     ],
+     "redis-cart": [
+      "b81980f4-dfbc-4d7e-8632-32328439051a"
+     ],
+     "shippingservice": [
+      "d2d6b37f-db07-4932-9991-30773150aa1c"
+     ]
+    },
+    "unhealthy_services": [],
+    "restarts": {
+     "adservice": 7,
+     "cartservice": 0,
+     "checkoutservice": 0,
+     "currencyservice": 2,
+     "emailservice": 0,
+     "frontend": 6,
+     "loadgenerator": 1,
+     "paymentservice": 2,
+     "productcatalogservice": 0,
+     "recommendationservice": 1,
+     "redis-cart": 0,
+     "shippingservice": 0
+    },
+    "metrics_age_s": 2.9366061687469482,
+    "source": "locust_csv_and_kubernetes"
+   }
+  },
+  "observed": null,
+  "integrity": [],
+  "verdict": "inconclusive",
+  "criteria_met": [],
+  "score": null,
+  "blast_share": 0.364
+ }
+]

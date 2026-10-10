@@ -1,0 +1,394 @@
+{
+ "vulnerabilities": [
+  {
+   "id": "V1",
+   "service": "paymentservice",
+   "severity": "critical",
+   "weakness": "Single replica payment processor; pod failure blocks payment and order completion",
+   "status": "confirmed"
+  },
+  {
+   "id": "V2",
+   "service": "currencyservice",
+   "severity": "critical",
+   "weakness": "Single replica currency conversion; pod failure stops price calculation in checkout",
+   "status": "confirmed"
+  },
+  {
+   "id": "V3",
+   "service": "shippingservice",
+   "severity": "critical",
+   "weakness": "Single replica shipping estimator; pod failure blocks shipping cost calculation",
+   "status": "untested"
+  },
+  {
+   "id": "V4",
+   "service": "checkoutservice",
+   "severity": "critical",
+   "weakness": "Single replica checkout orchestrator with no PDB; pod failure stops entire checkout flow",
+   "status": "refuted"
+  },
+  {
+   "id": "V5",
+   "service": "productcatalogservice",
+   "severity": "high",
+   "weakness": "Two replicas but no PDB; pod failure reduces catalog availability during checkout",
+   "status": "untested"
+  },
+  {
+   "id": "V6",
+   "service": "cartservice",
+   "severity": "medium",
+   "weakness": "Two replicas without PDB; pod failure reduces cart service availability but fallback exists",
+   "status": "untested"
+  },
+  {
+   "id": "V7",
+   "service": "adservice",
+   "severity": "low",
+   "weakness": "Optional ad service; failure should not impact checkout or revenue",
+   "status": "untested"
+  }
+ ],
+ "experiments": [
+  {
+   "experiment_id": "v1-pod-kill-paymentservice",
+   "vulnerability": "V1",
+   "fault": "pod_kill",
+   "target": "paymentservice",
+   "params": {},
+   "prediction": {
+    "affected": [
+     "checkoutservice",
+     "frontend",
+     "paymentservice"
+    ],
+    "summary": "Payment step fails \u2192 500 errors on checkout, increased p95 latency due to retries."
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.01
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 445
+    }
+   ],
+   "verdict": "confirmed",
+   "safety_decision": "approve",
+   "ramp": [
+    null
+   ],
+   "tolerated_up_to": null,
+   "limit_crossed_at": null,
+   "phases": {
+    "pre": {
+     "error_rate": 0.0,
+     "p95_ms": 80.0,
+     "unhealthy": []
+    },
+    "during_worst": {
+     "error_rate": 0.045454545454545456,
+     "p95_ms": 80.0,
+     "unhealthy": [
+      "paymentservice"
+     ]
+    },
+    "post": {
+     "error_rate": 0.0,
+     "p95_ms": 75.0,
+     "unhealthy": []
+    }
+   },
+   "observed": {
+    "error_rate": 0.045454545454545456,
+    "p95_ms": 80.0,
+    "unhealthy_count": 1,
+    "breach": null,
+    "recovery_s": 1.304,
+    "service_ready_s": 15.5,
+    "customer_recovered_s": 0.0,
+    "users": 20,
+    "integrity_violations": 0
+   },
+   "criteria_met": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.01
+    }
+   ],
+   "recovery_s": 1.304,
+   "integrity_violations": [],
+   "score": {
+    "score": 87,
+    "breakdown": {
+     "E": 12.1,
+     "L": 0.9,
+     "R": 0.3,
+     "B": 0.0,
+     "I": 0.0
+    }
+   },
+   "remediation": {
+    "verdict": "no_fix",
+    "choice": {
+     "fix_id": "none",
+     "reason": "no reviewed fix for paymentservice"
+    }
+   },
+   "run_dir": "runs/v1-pod-kill-paymentservice-s1-20261010T200113.169609Z",
+   "log_errors": [
+    "frontend: {\"error\":\"failed to complete the order: rpc error: code = Internal desc = failed to charge card: could not charge the card: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.220.189:50051: connect: connection refused\\\"\",\"http.req.id\":\"cdfe",
+    "frontend: {\"http.req.id\":\"cdfef0af-114c-4340-ae0c-c7f779430b8e\",\"http.req.method\":\"POST\",\"http.req.path\":\"/cart/checkout\",\"http.resp.bytes\":5192,\"http.resp.status\":500,\"http.resp.took_ms\":10,\"message\":\"request complete\",\"session\":\"2601a197-d59d-48fa-8416-391908379bb4\",\"severity\":\"debug\",\"timestamp\":\"2026-10-1",
+    "frontend: {\"error\":\"failed to complete the order: rpc error: code = Internal desc = failed to charge card: could not charge the card: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.220.189:50051: connect: connection refused\\\"\",\"http.req.id\":\"c30e",
+    "frontend: {\"http.req.id\":\"c30ec59d-ad57-487f-b80b-707903019a81\",\"http.req.method\":\"POST\",\"http.req.path\":\"/cart/checkout\",\"http.resp.bytes\":5192,\"http.resp.status\":500,\"http.resp.took_ms\":70,\"message\":\"request complete\",\"session\":\"14f459d6-2c08-42cb-ab18-9defaa968486\",\"severity\":\"debug\",\"timestamp\":\"2026-10-1"
+   ]
+  },
+  {
+   "experiment_id": "v2-pod-failure-currencyservice",
+   "vulnerability": "V2",
+   "fault": "pod_failure",
+   "target": "currencyservice",
+   "params": {},
+   "prediction": {
+    "affected": [
+     "checkoutservice",
+     "frontend",
+     "currencyservice"
+    ],
+    "summary": "Currency conversion stops, checkout returns 500, p95 latency rises due to retries."
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.01
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 400
+    }
+   ],
+   "verdict": "confirmed",
+   "safety_decision": "approve",
+   "ramp": [
+    null
+   ],
+   "tolerated_up_to": null,
+   "limit_crossed_at": null,
+   "phases": {
+    "pre": {
+     "error_rate": 0.0,
+     "p95_ms": 92.0,
+     "unhealthy": []
+    },
+    "during_worst": {
+     "error_rate": 0.3846153846153846,
+     "p95_ms": 56.0,
+     "unhealthy": [
+      "currencyservice"
+     ]
+    },
+    "post": {
+     "error_rate": 0.02173913043478261,
+     "p95_ms": 140.0,
+     "unhealthy": []
+    }
+   },
+   "observed": {
+    "error_rate": 1.0,
+    "p95_ms": 140.0,
+    "unhealthy_count": 1,
+    "breach": {
+     "metric": "error_rate",
+     "value": 0.3846153846153846,
+     "limit": 0.05
+    },
+    "recovery_s": 30.503,
+    "service_ready_s": 28.6,
+    "customer_recovered_s": 43.2,
+    "users": 20,
+    "integrity_violations": 0
+   },
+   "criteria_met": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.01
+    }
+   ],
+   "recovery_s": 30.503,
+   "integrity_violations": [],
+   "score": {
+    "score": 47,
+    "breakdown": {
+     "E": 40.0,
+     "L": 2.1,
+     "R": 7.6,
+     "B": 2.7,
+     "I": 0.0
+    }
+   },
+   "remediation": {
+    "verdict": "no_fix",
+    "choice": {
+     "fix_id": "none",
+     "reason": "no reviewed fix for currencyservice"
+    }
+   },
+   "run_dir": "runs/v2-pod-failure-currencyservice-s1-20261010T200203.014787Z",
+   "log_errors": [
+    "frontend: {\"error\":\"could not retrieve currencies: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.54.127:7000: connect: connection refused\\\"\",\"http.req.id\":\"c8a2af49-dcc0-4d87-b072-7c052755a18a\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/2",
+    "frontend: {\"http.req.id\":\"c8a2af49-dcc0-4d87-b072-7c052755a18a\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/2ZYFJ3GM2N\",\"http.resp.bytes\":5104,\"http.resp.status\":500,\"http.resp.took_ms\":5,\"message\":\"request complete\",\"session\":\"8150c9af-4078-40f6-ae4c-d8b6f978e8f0\",\"severity\":\"debug\",\"timestamp\":\"2026-1",
+    "frontend: {\"error\":\"could not retrieve currencies: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.54.127:7000: connect: connection refused\\\"\",\"http.req.id\":\"402f199f-e708-4087-b77f-86f831edefc6\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/1",
+    "frontend: {\"http.req.id\":\"402f199f-e708-4087-b77f-86f831edefc6\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/1YMWWN1N4O\",\"http.resp.bytes\":5104,\"http.resp.status\":500,\"http.resp.took_ms\":1,\"message\":\"request complete\",\"session\":\"fb80670c-0880-4c9a-a73f-da7027502aee\",\"severity\":\"debug\",\"timestamp\":\"2026-1",
+    "frontend: {\"error\":\"could not retrieve currencies: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.54.127:7000: connect: connection refused\\\"\",\"http.req.id\":\"17b0a75b-d397-4df6-959b-de0458e7298d\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/L",
+    "frontend: {\"http.req.id\":\"17b0a75b-d397-4df6-959b-de0458e7298d\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/LS4PSXUNUM\",\"http.resp.bytes\":5104,\"http.resp.status\":500,\"http.resp.took_ms\":1,\"message\":\"request complete\",\"session\":\"e21846fc-854a-4c9e-831f-6e7757307153\",\"severity\":\"debug\",\"timestamp\":\"2026-1",
+    "frontend: {\"error\":\"could not retrieve currencies: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.54.127:7000: connect: connection refused\\\"\",\"http.req.id\":\"f594aa87-a9d6-4480-a50c-2674413463f7\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/9",
+    "frontend: {\"http.req.id\":\"f594aa87-a9d6-4480-a50c-2674413463f7\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/9SIQT8TOJO\",\"http.resp.bytes\":5104,\"http.resp.status\":500,\"http.resp.took_ms\":1,\"message\":\"request complete\",\"session\":\"61849fd3-2ea5-4799-afe0-e2eb7c60c865\",\"severity\":\"debug\",\"timestamp\":\"2026-1",
+    "frontend: {\"error\":\"could not retrieve currencies: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.54.127:7000: connect: connection refused\\\"\",\"http.req.id\":\"c5012df4-fdbd-47cd-8c4c-9b450d5c7bd2\",\"http.req.method\":\"GET\",\"http.req.path\":\"/cart\",\"me",
+    "frontend: {\"http.req.id\":\"c5012df4-fdbd-47cd-8c4c-9b450d5c7bd2\",\"http.req.method\":\"GET\",\"http.req.path\":\"/cart\",\"http.resp.bytes\":5105,\"http.resp.status\":500,\"http.resp.took_ms\":0,\"message\":\"request complete\",\"session\":\"61849fd3-2ea5-4799-afe0-e2eb7c60c865\",\"severity\":\"debug\",\"timestamp\":\"2026-10-10T20:02:10.",
+    "frontend: {\"error\":\"failed to complete the order: rpc error: code = Internal desc = failed to prepare order: failed to convert price of \\\"9SIQT8TOJO\\\" to JPY\",\"http.req.id\":\"7eb481a3-5a47-422b-b44a-a4c320fdc867\",\"http.req.method\":\"POST\",\"http.req.path\":\"/cart/checkout\",\"message\":\"request error\",\"session\":\"618",
+    "frontend: {\"http.req.id\":\"7eb481a3-5a47-422b-b44a-a4c320fdc867\",\"http.req.method\":\"POST\",\"http.req.path\":\"/cart/checkout\",\"http.resp.bytes\":5060,\"http.resp.status\":500,\"http.resp.took_ms\":5,\"message\":\"request complete\",\"session\":\"61849fd3-2ea5-4799-afe0-e2eb7c60c865\",\"severity\":\"debug\",\"timestamp\":\"2026-10-10",
+    "frontend: {\"error\":\"could not retrieve currencies: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.54.127:7000: connect: connection refused\\\"\",\"http.req.id\":\"f41efb4e-8a2d-4ada-beb3-f4bf02c3b44b\",\"http.req.method\":\"GET\",\"http.req.path\":\"/cart\",\"me",
+    "frontend: {\"http.req.id\":\"f41efb4e-8a2d-4ada-beb3-f4bf02c3b44b\",\"http.req.method\":\"GET\",\"http.req.path\":\"/cart\",\"http.resp.bytes\":5105,\"http.resp.status\":500,\"http.resp.took_ms\":1,\"message\":\"request complete\",\"session\":\"eb07c136-b6b2-488f-bce0-adc11643fc8a\",\"severity\":\"debug\",\"timestamp\":\"2026-10-10T20:02:11.",
+    "frontend: {\"error\":\"could not retrieve currencies: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.54.127:7000: connect: connection refused\\\"\",\"http.req.id\":\"b48e7a05-7ed9-46a3-a078-3f59bec6960b\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/6",
+    "frontend: {\"http.req.id\":\"b48e7a05-7ed9-46a3-a078-3f59bec6960b\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/66VCHSJNUP\",\"http.resp.bytes\":5104,\"http.resp.status\":500,\"http.resp.took_ms\":1,\"message\":\"request complete\",\"session\":\"60b4d36d-b84a-4077-89d7-91004b7c8bd8\",\"severity\":\"debug\",\"timestamp\":\"2026-1",
+    "frontend: {\"error\":\"could not retrieve currencies: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.54.127:7000: connect: connection refused\\\"\",\"http.req.id\":\"06b75ef6-4572-4c29-b702-887e373089a2\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/6",
+    "frontend: {\"http.req.id\":\"06b75ef6-4572-4c29-b702-887e373089a2\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/6E92ZMYYFZ\",\"http.resp.bytes\":5104,\"http.resp.status\":500,\"http.resp.took_ms\":1,\"message\":\"request complete\",\"session\":\"9f95c15e-3b86-46b5-a73e-c26524a459a3\",\"severity\":\"debug\",\"timestamp\":\"2026-1",
+    "frontend: {\"error\":\"could not retrieve currencies: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.54.127:7000: connect: connection refused\\\"\",\"http.req.id\":\"c9514672-c577-4425-b1c1-06225fa97124\",\"http.req.method\":\"GET\",\"http.req.path\":\"/cart\",\"me",
+    "frontend: {\"http.req.id\":\"c9514672-c577-4425-b1c1-06225fa97124\",\"http.req.method\":\"GET\",\"http.req.path\":\"/cart\",\"http.resp.bytes\":5105,\"http.resp.status\":500,\"http.resp.took_ms\":0,\"message\":\"request complete\",\"session\":\"9f95c15e-3b86-46b5-a73e-c26524a459a3\",\"severity\":\"debug\",\"timestamp\":\"2026-10-10T20:02:11.",
+    "frontend: {\"error\":\"could not retrieve currencies: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.54.127:7000: connect: connection refused\\\"\",\"http.req.id\":\"74f758b8-fcc2-4340-9fbd-85265135c3db\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/L",
+    "frontend: {\"http.req.id\":\"74f758b8-fcc2-4340-9fbd-85265135c3db\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/L9ECAV7KIM\",\"http.resp.bytes\":5104,\"http.resp.status\":500,\"http.resp.took_ms\":1,\"message\":\"request complete\",\"session\":\"7e313a25-e930-4404-b02b-b2d35acee6e8\",\"severity\":\"debug\",\"timestamp\":\"2026-1",
+    "frontend: {\"error\":\"could not retrieve currencies: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.54.127:7000: connect: connection refused\\\"\",\"http.req.id\":\"237efd8b-a069-4ce6-983d-9324cfb1aaf9\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/2",
+    "frontend: {\"http.req.id\":\"237efd8b-a069-4ce6-983d-9324cfb1aaf9\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/2ZYFJ3GM2N\",\"http.resp.bytes\":5104,\"http.resp.status\":500,\"http.resp.took_ms\":1,\"message\":\"request complete\",\"session\":\"84be83cb-ee42-4b3d-aa37-cb43bfce5e73\",\"severity\":\"debug\",\"timestamp\":\"2026-1",
+    "frontend: {\"error\":\"could not retrieve currencies: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.54.127:7000: connect: connection refused\\\"\",\"http.req.id\":\"96ed025a-2a4d-49ed-ad38-0f54c7ce25a2\",\"http.req.method\":\"GET\",\"http.req.path\":\"/cart\",\"me",
+    "frontend: {\"http.req.id\":\"96ed025a-2a4d-49ed-ad38-0f54c7ce25a2\",\"http.req.method\":\"GET\",\"http.req.path\":\"/cart\",\"http.resp.bytes\":5105,\"http.resp.status\":500,\"http.resp.took_ms\":0,\"message\":\"request complete\",\"session\":\"84be83cb-ee42-4b3d-aa37-cb43bfce5e73\",\"severity\":\"debug\",\"timestamp\":\"2026-10-10T20:02:11.",
+    "frontend: {\"error\":\"could not retrieve currencies: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.54.127:7000: connect: connection refused\\\"\",\"http.req.id\":\"6d0cd938-318b-45c7-9f3b-eefd92f8f614\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/0",
+    "frontend: {\"http.req.id\":\"6d0cd938-318b-45c7-9f3b-eefd92f8f614\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/0PUK6V6EV0\",\"http.resp.bytes\":5104,\"http.resp.status\":500,\"http.resp.took_ms\":1,\"message\":\"request complete\",\"session\":\"b6487f4e-bb5b-47db-a728-043d71c7293d\",\"severity\":\"debug\",\"timestamp\":\"2026-1",
+    "frontend: {\"error\":\"could not retrieve currencies: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.54.127:7000: connect: connection refused\\\"\",\"http.req.id\":\"c654f27a-b64a-49d8-a1c8-2f8e5f981953\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/0",
+    "frontend: {\"http.req.id\":\"c654f27a-b64a-49d8-a1c8-2f8e5f981953\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/0PUK6V6EV0\",\"http.resp.bytes\":5104,\"http.resp.status\":500,\"http.resp.took_ms\":1,\"message\":\"request complete\",\"session\":\"147a254b-9d1a-4019-bd28-874682d914f2\",\"severity\":\"debug\",\"timestamp\":\"2026-1",
+    "frontend: {\"error\":\"could not retrieve currencies: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.54.127:7000: connect: connection refused\\\"\",\"http.req.id\":\"2af84e0a-be1c-45ce-8f1e-83b825234b96\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/9",
+    "frontend: {\"http.req.id\":\"2af84e0a-be1c-45ce-8f1e-83b825234b96\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/9SIQT8TOJO\",\"http.resp.bytes\":5104,\"http.resp.status\":500,\"http.resp.took_ms\":1,\"message\":\"request complete\",\"session\":\"e21846fc-854a-4c9e-831f-6e7757307153\",\"severity\":\"debug\",\"timestamp\":\"2026-1",
+    "frontend: {\"error\":\"could not retrieve currencies: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.54.127:7000: connect: connection refused\\\"\",\"http.req.id\":\"eb6bda3a-5b12-445a-a694-b0dc96a9e6b6\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/1",
+    "frontend: {\"http.req.id\":\"eb6bda3a-5b12-445a-a694-b0dc96a9e6b6\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/1YMWWN1N4O\",\"http.resp.bytes\":5104,\"http.resp.status\":500,\"http.resp.took_ms\":1,\"message\":\"request complete\",\"session\":\"47c6e88e-86a1-40e7-994f-6f8c2dddd9af\",\"severity\":\"debug\",\"timestamp\":\"2026-1",
+    "frontend: {\"error\":\"could not retrieve currencies: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.54.127:7000: connect: connection refused\\\"\",\"http.req.id\":\"aec3a5e5-fa09-41ab-b90e-a9f864ab9ca4\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/9",
+    "frontend: {\"http.req.id\":\"aec3a5e5-fa09-41ab-b90e-a9f864ab9ca4\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/9SIQT8TOJO\",\"http.resp.bytes\":5104,\"http.resp.status\":500,\"http.resp.took_ms\":2,\"message\":\"request complete\",\"session\":\"7cc586e3-215a-40d9-87f6-f65f92eae92c\",\"severity\":\"debug\",\"timestamp\":\"2026-1",
+    "frontend: {\"error\":\"could not retrieve currencies: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.54.127:7000: connect: connection refused\\\"\",\"http.req.id\":\"2e1fa616-830e-4748-8eea-5ec5f4e2c876\",\"http.req.method\":\"GET\",\"http.req.path\":\"/cart\",\"me",
+    "frontend: {\"http.req.id\":\"2e1fa616-830e-4748-8eea-5ec5f4e2c876\",\"http.req.method\":\"GET\",\"http.req.path\":\"/cart\",\"http.resp.bytes\":5105,\"http.resp.status\":500,\"http.resp.took_ms\":1,\"message\":\"request complete\",\"session\":\"61978733-baf1-4d20-b3a8-434e37286d64\",\"severity\":\"debug\",\"timestamp\":\"2026-10-10T20:02:12.",
+    "frontend: {\"error\":\"could not retrieve currencies: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.54.127:7000: connect: connection refused\\\"\",\"http.req.id\":\"10f3500d-89af-42c2-b822-152226cf21a2\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/6",
+    "frontend: {\"http.req.id\":\"10f3500d-89af-42c2-b822-152226cf21a2\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/6E92ZMYYFZ\",\"http.resp.bytes\":5104,\"http.resp.status\":500,\"http.resp.took_ms\":2,\"message\":\"request complete\",\"session\":\"d2f596b8-692f-42b8-acc1-f77bae6c3db9\",\"severity\":\"debug\",\"timestamp\":\"2026-1",
+    "frontend: {\"error\":\"could not retrieve currencies: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.54.127:7000: connect: connection refused\\\"\",\"http.req.id\":\"a0a860b3-dbc8-4224-baeb-4a2031d95c10\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/6",
+    "frontend: {\"http.req.id\":\"a0a860b3-dbc8-4224-baeb-4a2031d95c10\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/66VCHSJNUP\",\"http.resp.bytes\":5104,\"http.resp.status\":500,\"http.resp.took_ms\":1,\"message\":\"request complete\",\"session\":\"eb07c136-b6b2-488f-bce0-adc11643fc8a\",\"severity\":\"debug\",\"timestamp\":\"2026-1",
+    "frontend: {\"error\":\"could not retrieve currencies: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.54.127:7000: connect: connection refused\\\"\",\"http.req.id\":\"ae64096c-5160-4363-8283-3e44810c1289\",\"http.req.method\":\"GET\",\"http.req.path\":\"/cart\",\"me",
+    "frontend: {\"http.req.id\":\"ae64096c-5160-4363-8283-3e44810c1289\",\"http.req.method\":\"GET\",\"http.req.path\":\"/cart\",\"http.resp.bytes\":5105,\"http.resp.status\":500,\"http.resp.took_ms\":0,\"message\":\"request complete\",\"session\":\"eb07c136-b6b2-488f-bce0-adc11643fc8a\",\"severity\":\"debug\",\"timestamp\":\"2026-10-10T20:02:13.",
+    "frontend: {\"error\":\"could not retrieve currencies: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.54.127:7000: connect: connection refused\\\"\",\"http.req.id\":\"5b92da10-d16c-4a42-b908-0a3d32823c3f\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/2",
+    "frontend: {\"http.req.id\":\"5b92da10-d16c-4a42-b908-0a3d32823c3f\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/2ZYFJ3GM2N\",\"http.resp.bytes\":5104,\"http.resp.status\":500,\"http.resp.took_ms\":1,\"message\":\"request complete\",\"session\":\"61978733-baf1-4d20-b3a8-434e37286d64\",\"severity\":\"debug\",\"timestamp\":\"2026-1",
+    "frontend: {\"error\":\"could not retrieve currencies: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.54.127:7000: connect: connection refused\\\"\",\"http.req.id\":\"2a760813-d4b8-4fa7-ad93-2c4c4b250d71\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/L",
+    "frontend: {\"http.req.id\":\"2a760813-d4b8-4fa7-ad93-2c4c4b250d71\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/LS4PSXUNUM\",\"http.resp.bytes\":5104,\"http.resp.status\":500,\"http.resp.took_ms\":2,\"message\":\"request complete\",\"session\":\"7cc586e3-215a-40d9-87f6-f65f92eae92c\",\"severity\":\"debug\",\"timestamp\":\"2026-1",
+    "frontend: {\"error\":\"could not retrieve currencies: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.54.127:7000: connect: connection refused\\\"\",\"http.req.id\":\"4b78b090-1a1d-4e69-8a8b-deaaf074eed8\",\"http.req.method\":\"GET\",\"http.req.path\":\"/cart\",\"me",
+    "frontend: {\"http.req.id\":\"4b78b090-1a1d-4e69-8a8b-deaaf074eed8\",\"http.req.method\":\"GET\",\"http.req.path\":\"/cart\",\"http.resp.bytes\":5105,\"http.resp.status\":500,\"http.resp.took_ms\":0,\"message\":\"request complete\",\"session\":\"7cc586e3-215a-40d9-87f6-f65f92eae92c\",\"severity\":\"debug\",\"timestamp\":\"2026-10-10T20:02:14.",
+    "frontend: {\"error\":\"could not retrieve currencies: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.54.127:7000: connect: connection refused\\\"\",\"http.req.id\":\"cd1e07fa-d7ca-4ea5-962f-0f0f638de04d\",\"http.req.method\":\"GET\",\"http.req.path\":\"/cart\",\"me",
+    "frontend: {\"http.req.id\":\"cd1e07fa-d7ca-4ea5-962f-0f0f638de04d\",\"http.req.method\":\"GET\",\"http.req.path\":\"/cart\",\"http.resp.bytes\":5105,\"http.resp.status\":500,\"http.resp.took_ms\":0,\"message\":\"request complete\",\"session\":\"d8f0f392-5e1b-45a8-b5d1-7325ea9c4cca\",\"severity\":\"debug\",\"timestamp\":\"2026-10-10T20:02:14.",
+    "frontend: {\"error\":\"could not retrieve currencies: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.54.127:7000: connect: connection refused\\\"\",\"http.req.id\":\"3b695864-cd7b-47c9-82f8-7a5197a5aa25\",\"http.req.method\":\"GET\",\"http.req.path\":\"/\",\"messag",
+    "frontend: {\"http.req.id\":\"3b695864-cd7b-47c9-82f8-7a5197a5aa25\",\"http.req.method\":\"GET\",\"http.req.path\":\"/\",\"http.resp.bytes\":5100,\"http.resp.status\":500,\"http.resp.took_ms\":0,\"message\":\"request complete\",\"session\":\"14f459d6-2c08-42cb-ab18-9defaa968486\",\"severity\":\"debug\",\"timestamp\":\"2026-10-10T20:02:14.8473",
+    "frontend: {\"error\":\"could not retrieve currencies: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.54.127:7000: connect: connection refused\\\"\",\"http.req.id\":\"165d7882-cf82-4e75-ba1c-baa072225008\",\"http.req.method\":\"GET\",\"http.req.path\":\"/cart\",\"me",
+    "frontend: {\"http.req.id\":\"165d7882-cf82-4e75-ba1c-baa072225008\",\"http.req.method\":\"GET\",\"http.req.path\":\"/cart\",\"http.resp.bytes\":5105,\"http.resp.status\":500,\"http.resp.took_ms\":2,\"message\":\"request complete\",\"session\":\"e4166fc2-6b19-49a4-8241-6f16ec15dbbd\",\"severity\":\"debug\",\"timestamp\":\"2026-10-10T20:02:15.",
+    "frontend: {\"error\":\"could not retrieve currencies: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.54.127:7000: connect: connection refused\\\"\",\"http.req.id\":\"f7017c50-c8f5-4b0a-b547-3c720ea60df9\",\"http.req.method\":\"GET\",\"http.req.path\":\"/cart\",\"me",
+    "frontend: {\"http.req.id\":\"f7017c50-c8f5-4b0a-b547-3c720ea60df9\",\"http.req.method\":\"GET\",\"http.req.path\":\"/cart\",\"http.resp.bytes\":5105,\"http.resp.status\":500,\"http.resp.took_ms\":0,\"message\":\"request complete\",\"session\":\"8150c9af-4078-40f6-ae4c-d8b6f978e8f0\",\"severity\":\"debug\",\"timestamp\":\"2026-10-10T20:02:15.",
+    "frontend: {\"error\":\"could not retrieve currencies: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.54.127:7000: connect: connection refused\\\"\",\"http.req.id\":\"7e6d685a-5dc3-45ca-9701-742d62de61d6\",\"http.req.method\":\"GET\",\"http.req.path\":\"/\",\"messag",
+    "frontend: {\"http.req.id\":\"7e6d685a-5dc3-45ca-9701-742d62de61d6\",\"http.req.method\":\"GET\",\"http.req.path\":\"/\",\"http.resp.bytes\":5100,\"http.resp.status\":500,\"http.resp.took_ms\":0,\"message\":\"request complete\",\"session\":\"b6487f4e-bb5b-47db-a728-043d71c7293d\",\"severity\":\"debug\",\"timestamp\":\"2026-10-10T20:02:15.8268"
+   ]
+  },
+  {
+   "experiment_id": "v4-pod-kill-checkoutservice",
+   "vulnerability": "V4",
+   "fault": "pod_kill",
+   "target": "checkoutservice",
+   "params": {},
+   "prediction": {
+    "affected": [
+     "checkoutservice",
+     "frontend"
+    ],
+    "summary": "Checkout API returns 500, frontend shows error, p95 latency rises due to retries."
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.01
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 400
+    }
+   ],
+   "verdict": "refuted",
+   "safety_decision": "approve",
+   "ramp": [
+    null
+   ],
+   "tolerated_up_to": null,
+   "limit_crossed_at": null,
+   "phases": {
+    "pre": {
+     "error_rate": 0.0,
+     "p95_ms": 82.0,
+     "unhealthy": []
+    },
+    "during_worst": {
+     "error_rate": 0.0,
+     "p95_ms": 150.0,
+     "unhealthy": [
+      "checkoutservice"
+     ]
+    },
+    "post": {
+     "error_rate": 0.0,
+     "p95_ms": 71.0,
+     "unhealthy": []
+    }
+   },
+   "observed": {
+    "error_rate": 0.0,
+    "p95_ms": 150.0,
+    "unhealthy_count": 1,
+    "breach": null,
+    "recovery_s": 1.323,
+    "service_ready_s": 3.8,
+    "customer_recovered_s": 0.0,
+    "users": 20,
+    "integrity_violations": 0
+   },
+   "criteria_met": [],
+   "recovery_s": 1.323,
+   "integrity_violations": [],
+   "score": {
+    "score": 97,
+    "breakdown": {
+     "E": 0.0,
+     "L": 2.3,
+     "R": 0.3,
+     "B": 0.0,
+     "I": 0.0
+    }
+   },
+   "remediation": null,
+   "run_dir": "runs/v4-pod-kill-checkoutservice-s1-20261010T200257.671634Z",
+   "log_errors": []
+  }
+ ],
+ "scorecard": {
+  "hypotheses": 3,
+  "confirmed": 2,
+  "refuted": 1,
+  "refuted_after_fix": 0
+ }
+}

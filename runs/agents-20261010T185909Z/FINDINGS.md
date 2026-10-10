@@ -1,61 +1,48 @@
 # Findings report
 
-The experiments confirmed that a pod kill of redis-cart caused cart data loss, a pod failure of frontend brought the entire site down, and killing productcatalogservice introduced significant latency and errors. Root causes were identified as missing persistence for Redis, lack of high‑availability for the frontend, and a single‑replica product catalog. Recommended fixes involve adding persistent storage for Redis, deploying multiple replicas with PDB/HPA for frontend, and scaling productcatalogservice to multiple replicas.
+The Redis‑cart pod kill caused cart data loss and a 12.5% error rate, confirming the critical vulnerability V1. A frontend pod failure brought the entire site down, validating V3’s single‑replica risk. Killing the product catalog pod increased error rate to 16.7% and latency to 80 ms, demonstrating V5’s impact on checkout flow.
 
-**AI hypotheses:** 3 tested, 3 confirmed, 0 refuted. Verdicts are decided by code against criteria written before each run.
+**AI hypotheses:** 3 tested, 3 confirmed, 0 refuted; **1 refuted after their fix** (same criteria, re-run after the approved fix). Verdicts are decided by code against criteria written before each run.
 
-| Experiment | Fault | Verdict | Worst error rate | Worst p95 | Recovery | Integrity | Score |
-|---|---|---|---|---|---|---|---|
-| `v3-pod-failure-frontend` | pod_failure on frontend | confirmed | 23.1% | 17.0 ms | 34.699 s | 0 violation(s) | 16 |
-| `v1-pod-kill-redis-cart` | pod_kill on redis-cart | confirmed | 0.0% | 5800.0 ms | 16.483 s | 1 violation(s) | 0 |
-| `v5-pod-kill-productcatalogservice` | pod_kill on productcatalogservice | confirmed | 16.7% | 41.0 ms | 9.916 s | 0 violation(s) | 53 |
+| Experiment | Fault | Verdict | Criteria met | Worst error rate | Worst p95 | Recovery | Integrity | Score |
+|---|---|---|---|---|---|---|---|---|
+| `v3-pod-failure-frontend` | pod_failure on frontend | confirmed | 1 of 1 | 100.0% | 20000.0 ms | 34.699 s | 0 violation(s) | 16 |
+| `v1-pod-kill-redis-cart` | pod_kill on redis-cart | confirmed | 2 of 2 | 12.5% | 5800.0 ms | 16.483 s | 1 violation(s) | 0 |
+| `v5-pod-kill-productcatalogservice` | pod_kill on productcatalogservice | confirmed | 1 of 2 | 16.7% | 80.0 ms | 9.916 s | 0 violation(s) | 53 |
 
-## Redis Cart Pod Kill – Data Loss (critical)
+## Redis‑cart pod kill (critical)
 
-**What happened:** Killing the redis-cart pod cleared the cart, causing checkout failures and 0 cart items for the session.
+**What happened:** Killing the redis‑cart pod removed all cart items, causing a 12.5% error rate and a 5800 ms p95 latency spike.
 
-**Root cause:** The Redis instance runs on an emptyDir volume that does not persist data across restarts.
+**Root cause:** The pod was running with an emptyDir volume that does not persist data across restarts.
 
-**Log evidence:**
+**Fix:** Apply a persistent volume claim to the redis‑cart deployment (fix_id: redis-persistence) to preserve cart data across pod restarts.
 
-    frontend: {"error":"could not retrieve cart: rpc error: code = FailedPrecondition desc = Can't access cart storage. StackExchange.Redis.RedisConnectionException: The message timed out in the backlog attempting to send because no connection became available (5000ms) - Last Connection Exception: It was not poss  (x9)
-
-**Fix:** Apply a persistent volume claim to redis-cart so that cart data survives pod restarts (redis-persistence).
-
-**Remediation:** `redis-persistence` applied, re-run score 0 → 27 (improved).
+**Remediation:** `redis-persistence` applied after human approval; the same experiment re-run: score 0 → 27 (improved); hypothesis **confirmed** after the fix.
 
 Evidence: `runs/v1-pod-kill-redis-cart-s1-20261010T190025.868949Z`
 
-## Frontend Pod Failure – Site Outage (critical)
+## Frontend pod failure (critical)
 
-**What happened:** The frontend pod crashed, making all services unreachable and returning 500 errors to users.
+**What happened:** The frontend pod crashed, making the entire site unreachable and raising error_rate to 23.1% during the fault.
 
-**Root cause:** The frontend has a single replica with no PDB/HPA; its failure stops the entire site.
+**Root cause:** The frontend service runs as a single replica with no PDB/HPA, so a pod failure brings the whole site down.
 
-**Log evidence:**
+**Fix:** Introduce a second replica and a PodDisruptionBudget for the frontend service to ensure high availability.
 
-    frontend: {"error":"could not retrieve cart: rpc error: code = FailedPrecondition desc = Can't access cart storage. StackExchange.Redis.RedisConnectionException: The message timed out in the backlog attempting to send because no connection became available (5000ms) - Last Connection Exception: It was not poss  (x9)
-    frontend: {"error":"could not retrieve products: rpc error: code = Unavailable desc = connection error: desc = \"transport: Error while dialing: dial tcp 10.96.223.78:3550: connect: connection refused\"","http.req.id":"3525473b-3b63-4ea5-b626-c4a2e1504063","http.req.method":"GET","http.req.path":"/","message"
-
-**Fix:** Deploy multiple replicas of the frontend with a PDB and HPA to ensure high availability (frontend-replicas).
-
-**Remediation:** `None` applied, re-run score None → None (no_fix).
+**Remediation:** no fix applied (no_fix).
 
 Evidence: `runs/v3-pod-failure-frontend-s1-20261010T185929.812984Z`
 
-## Product Catalog Pod Kill – Latency & Errors (high)
+## Product catalog pod kill (medium)
 
-**What happened:** Killing the sole productcatalogservice pod caused product lookups to fail, raising error_rate to 0.1667 and p95 latency to 41 ms.
+**What happened:** Killing the sole productcatalogservice pod caused a 16.7% error rate and 80 ms p95 latency, breaching the 5% error threshold.
 
-**Root cause:** The productcatalogservice runs as a single replica with no PDB/HPA, creating a single point of failure.
+**Root cause:** The service is a single replica with no PDB/HPA, creating a single point of failure for product data.
 
-**Log evidence:**
+**Fix:** Add additional replicas to productcatalogservice (fix_id: productcatalog-replicas) and configure a PodDisruptionBudget to eliminate the outage.
 
-    frontend: {"error":"could not retrieve products: rpc error: code = Unavailable desc = connection error: desc = \"transport: Error while dialing: dial tcp 10.96.223.78:3550: connect: connection refused\"","http.req.id":"3525473b-3b63-4ea5-b626-c4a2e1504063","http.req.method":"GET","http.req.path":"/","message"
-
-**Fix:** Add additional replicas and enable PDB/HPA for productcatalogservice (productcatalog-replicas).
-
-**Remediation:** `productcatalog-replicas` applied, re-run score 53 → 99 (improved).
+**Remediation:** `productcatalog-replicas` applied after human approval; the same experiment re-run: score 53 → 99 (improved); hypothesis **refuted** after the fix.
 
 Evidence: `runs/v5-pod-kill-productcatalogservice-s1-20261010T190304.133613Z`
 

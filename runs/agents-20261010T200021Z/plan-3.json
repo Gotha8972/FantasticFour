@@ -1,0 +1,47 @@
+{
+ "plan": [
+  {
+   "vulnerability": "V4",
+   "rank": 1,
+   "fault": "pod_kill",
+   "target": "checkoutservice",
+   "params": {},
+   "duration_s": 30,
+   "reason": "checkoutservice is single\u2011replica with no PDB; killing it should cause 500 errors and latency spikes in the checkout flow, directly impacting customers.",
+   "prediction": {
+    "affected": [
+     "checkoutservice",
+     "frontend"
+    ],
+    "summary": "Checkout API returns 500, frontend shows error, p95 latency rises due to retries."
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.01
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 400
+    }
+   ],
+   "experiment": {
+    "id": "v4-pod-kill-checkoutservice",
+    "fault": "pod_kill",
+    "target": "checkoutservice",
+    "params": {},
+    "duration_s": 30
+   },
+   "priority": {
+    "blast_radius": 2,
+    "criticality": "critical",
+    "score": 8
+   }
+  }
+ ],
+ "dropped": [],
+ "replan_note": "No changes needed; this experiment tests the unverified hypothesis for V4 and uses a fault type not yet exercised.",
+ "feedback": null
+}

@@ -1,0 +1,227 @@
+{
+ "plan": [
+  {
+   "vulnerability": "V1",
+   "rank": 1,
+   "fault": "pod_kill",
+   "target": "paymentservice",
+   "params": {},
+   "duration_s": 30,
+   "reason": "Single\u2011replica payment processor; killing the pod should cause payment failures and abort checkout, measurable via error_rate and latency spikes.",
+   "prediction": {
+    "affected": [
+     "checkoutservice",
+     "frontend",
+     "paymentservice"
+    ],
+    "summary": "Payment step fails \u2192 500 errors on checkout, increased p95 latency due to retries."
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.01
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 445
+    }
+   ],
+   "experiment": {
+    "id": "v1-pod-kill-paymentservice",
+    "fault": "pod_kill",
+    "target": "paymentservice",
+    "params": {},
+    "duration_s": 30
+   },
+   "priority": {
+    "blast_radius": 3,
+    "criticality": "critical",
+    "score": 12
+   }
+  },
+  {
+   "vulnerability": "V2",
+   "rank": 2,
+   "fault": "pod_failure",
+   "target": "currencyservice",
+   "params": {},
+   "duration_s": 30,
+   "reason": "Currency service is single\u2011replica; a pod failure should cause checkout to return 500 and block order creation. We observe error_rate and latency impact.",
+   "prediction": {
+    "affected": [
+     "checkoutservice",
+     "frontend"
+    ],
+    "summary": "Checkout should fail with 500, raising error_rate >1% and p95 latency >445\u202fms."
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.01
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 445
+    }
+   ],
+   "experiment": {
+    "id": "v2-pod-failure-currencyservice",
+    "fault": "pod_failure",
+    "target": "currencyservice",
+    "params": {},
+    "duration_s": 30
+   },
+   "priority": {
+    "blast_radius": 3,
+    "criticality": "critical",
+    "score": 12
+   }
+  },
+  {
+   "vulnerability": "V4",
+   "rank": 3,
+   "fault": "pod_failure",
+   "target": "checkoutservice",
+   "params": {},
+   "duration_s": 30,
+   "reason": "Checkout orchestrator is single\u2011replica; a pod failure should block the entire checkout flow, producing 500 errors and high latency.",
+   "prediction": {
+    "affected": [
+     "checkoutservice",
+     "frontend"
+    ],
+    "summary": "Checkout API returns 500, order cannot be placed, p95 latency spikes."
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.01
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 445
+    }
+   ],
+   "experiment": {
+    "id": "v4-pod-failure-checkoutservice",
+    "fault": "pod_failure",
+    "target": "checkoutservice",
+    "params": {},
+    "duration_s": 30
+   },
+   "priority": {
+    "blast_radius": 2,
+    "criticality": "critical",
+    "score": 8
+   }
+  }
+ ],
+ "dropped": [
+  {
+   "item": {
+    "vulnerability": "V5",
+    "rank": 3,
+    "fault": "network_delay",
+    "target": "productcatalogservice",
+    "params": {
+     "latency": "500"
+    },
+    "duration_s": 30,
+    "reason": "Two replicas but no PDB; adding 500\u202fms latency should overload the remaining pod, causing slow responses and higher error_rate.",
+    "prediction": {
+     "affected": [
+      "productcatalogservice",
+      "checkoutservice",
+      "frontend"
+     ],
+     "summary": "Catalog responses slow \u2192 checkout retries, increased p95 latency and error_rate."
+    },
+    "criteria": [
+     {
+      "metric": "error_rate",
+      "op": ">",
+      "value": 0.01
+     },
+     {
+      "metric": "p95_ms",
+      "op": ">",
+      "value": 445
+     }
+    ]
+   },
+   "reason": "latency must be a nonnegative duration in ms"
+  },
+  {
+   "item": {
+    "vulnerability": "V1",
+    "rank": 1,
+    "fault": "pod_kill",
+    "target": "paymentservice",
+    "params": {},
+    "duration_s": 30,
+    "reason": "Single\u2011replica payment processor; killing the pod should immediately stop payments and abort checkout. We measure customer impact via error_rate and p95_ms, not pod status.",
+    "prediction": {
+     "affected": [
+      "checkoutservice",
+      "frontend"
+     ],
+     "summary": "Payment failures should raise error_rate above 1% and p95 latency above 5\u00d7 baseline (~445\u202fms)."
+    },
+    "criteria": [
+     {
+      "metric": "error_rate",
+      "op": ">",
+      "value": 0.01
+     },
+     {
+      "metric": "p95_ms",
+      "op": ">",
+      "value": 445
+     }
+    ]
+   },
+   "reason": "already run or planned"
+  },
+  {
+   "item": {
+    "vulnerability": "V4",
+    "rank": 3,
+    "fault": "network_delay",
+    "target": "checkoutservice",
+    "params": {
+     "latency": "1000"
+    },
+    "duration_s": 30,
+    "reason": "Checkout orchestrator is single\u2011replica; adding 1\u202fs latency tests latency propagation to frontend and payment. We measure p95_ms and error_rate.",
+    "prediction": {
+     "affected": [
+      "frontend",
+      "paymentservice"
+     ],
+     "summary": "Latency should push p95 above 5\u00d7 baseline (~445\u202fms) and may increase error_rate >1% if timeouts occur."
+    },
+    "criteria": [
+     {
+      "metric": "p95_ms",
+      "op": ">",
+      "value": 445
+     },
+     {
+      "metric": "error_rate",
+      "op": ">",
+      "value": 0.01
+     }
+    ]
+   },
+   "reason": "latency must be a nonnegative duration in ms"
+  }
+ ],
+ "replan_note": "All three experiments use distinct fault types and target services, covering the critical single\u2011replica weaknesses. No previous faults on these targets have been run, and the criteria are set above baseline to capture real customer impact.",
+ "feedback": "network_delay on productcatalogservice was dropped: latency must be a nonnegative duration in ms. Return corrected or replacement experiments only; keep integrity criteria for stateful services."
+}

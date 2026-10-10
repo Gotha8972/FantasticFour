@@ -1,0 +1,88 @@
+{
+ "plan": [
+  {
+   "vulnerability": "V2",
+   "rank": 1,
+   "fault": "pod_failure",
+   "target": "currencyservice",
+   "params": {},
+   "duration_s": 30,
+   "reason": "Currencyservice is a single\u2011replica critical dependency; a pod failure should cause 500 errors on checkout and a noticeable latency spike. Using pod_failure tests the availability impact without state loss.",
+   "prediction": {
+    "affected": [
+     "checkoutservice",
+     "frontend",
+     "currencyservice"
+    ],
+    "summary": "Currency conversion stops, checkout returns 500, p95 latency rises due to retries."
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.01
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 400
+    }
+   ],
+   "experiment": {
+    "id": "v2-pod-failure-currencyservice",
+    "fault": "pod_failure",
+    "target": "currencyservice",
+    "params": {},
+    "duration_s": 30
+   },
+   "priority": {
+    "blast_radius": 3,
+    "criticality": "critical",
+    "score": 12
+   }
+  },
+  {
+   "vulnerability": "V3",
+   "rank": 2,
+   "fault": "network_delay",
+   "target": "shippingservice",
+   "params": {
+    "latency": "500ms"
+   },
+   "duration_s": 30,
+   "reason": "Shippingservice is single\u2011replica; adding 500\u202fms latency should propagate to checkout, increasing overall response time. Network_delay distinguishes latency propagation from outright failure.",
+   "prediction": {
+    "affected": [
+     "checkoutservice",
+     "frontend",
+     "shippingservice"
+    ],
+    "summary": "Shipping cost calculation delayed, checkout latency increases, but service remains available."
+   },
+   "criteria": [
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 500
+    }
+   ],
+   "experiment": {
+    "id": "v3-network-delay-shippingservice",
+    "fault": "network_delay",
+    "target": "shippingservice",
+    "params": {
+     "latency": "500ms"
+    },
+    "duration_s": 30
+   },
+   "priority": {
+    "blast_radius": 3,
+    "criticality": "critical",
+    "score": 12
+   }
+  }
+ ],
+ "dropped": [],
+ "replan_note": "Previous experiment V1 used pod_kill on paymentservice; to avoid repetition we now test pod_failure on currencyservice and network_delay on shippingservice, covering two distinct fault types and measuring customer impact via error_rate and latency. The plan respects the remaining fault budget and focuses on unverified critical vulnerabilities.",
+ "feedback": null
+}
