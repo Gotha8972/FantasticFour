@@ -4,6 +4,7 @@ python -m chaosmind.guard exp.json ['{"max_unhealthy": 0}']   # optional limit o
 """
 import json
 import pathlib
+import signal
 import sys
 import time
 
@@ -82,4 +83,5 @@ def run(exp, limits=None):
 
 
 if __name__ == "__main__":
+    signal.signal(signal.SIGTERM, lambda *_: sys.exit(143))  # `kill` → SystemExit → finally reverts
     run(json.load(open(sys.argv[1])), json.loads(sys.argv[2]) if len(sys.argv) > 2 else None)
