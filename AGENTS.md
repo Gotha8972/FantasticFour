@@ -3,6 +3,14 @@
 **Demo story these 6 agents produce together:**
 > The AI **predicted** the impact → the **Safety Officer** shrank a risky plan → we broke it safely → the **Integrity Oracle** caught a silent failure that monitoring missed → the **Log Detective** explained the root cause → the **Remediation Engineer** fixed it and **proved** the fix with a re-run → the **Critic** fact-checked the final report against the evidence.
 
+## Who actually injects the failure?
+**No LLM does, by design.** The AI **decides** and our code **executes**:
+```
+① Strategist (AI) proposes → ② Safety Officer (AI) approves/shrinks → Operator inject.py (code) creates the
+Chaos Mesh fault → Chaos Mesh breaks the pod/network → guard.py (code) watches and auto-reverts
+```
+The **Operator** (`inject.py` + `guard.py`, already built and tested live) is a deterministic agent with no LLM. It validates every experiment (allowed fault, real target, our namespace only, duration ≤ 120 s) before creating anything. That way a hallucinated or prompt-injected AI output can never reach the cluster unchecked.
+
 ## Ground rules (everyone)
 1. **Agents only return JSON.** They never run `kubectl` or touch the cluster. Our deterministic code validates the JSON and then acts. The guard stays plain code; no agent can loosen it.
 2. **One shared client:** `chaosmind/agents/llm.py` → `ask(system, user, schema_hint, model="large") -> dict` (Mistral, JSON mode, 1 retry on invalid JSON). D builds it first; everyone imports it.
