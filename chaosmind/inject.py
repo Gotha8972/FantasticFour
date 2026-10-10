@@ -9,7 +9,10 @@ ROOT = Path(__file__).resolve().parents[1]
 NS = 'online-boutique'
 CONTEXT = 'kind-online-boutique'
 MAX_DURATION_S = 120
-KINDS = {'pod_failure': 'PodChaos', 'network_delay': 'NetworkChaos'}
+KINDS = {'pod_failure': 'PodChaos', 'network_delay': 'NetworkChaos', 'network_loss': 'NetworkChaos',
+         'cpu_stress': 'StressChaos', 'pod_kill': 'PodChaos'}
+# Fault -> (param, default) that the Safety Checker ramps. pod_failure/pod_kill have no intensity.
+INTENSITY = {'network_delay': ('latency', '500ms'), 'network_loss': ('loss', 10), 'cpu_stress': ('load', 50)}
 OWNER = 'chaosmind'
 
 
@@ -43,16 +46,32 @@ def validate(exp):
                 raise ValueError(f'{key} must be a nonnegative duration in ms')
             if float(value[:-2]) > 2000:
                 raise ValueError(f'{key} must be <= 2000ms')
+    if exp['fault'] == 'network_loss':
+        loss = params.get('loss', 10)
+        if type(loss) not in (int, float) or not 0 < loss <= 50:
+            raise ValueError('loss must be a percentage in (0, 50]')
+    if exp['fault'] == 'cpu_stress':
+        load, workers = params.get('load', 50), params.get('workers', 1)
+        if type(load) is not int or not 0 < load <= 100:
+            raise ValueError('load must be an integer in 1..100')
+        if type(workers) is not int or not 1 <= workers <= 2:
+            raise ValueError('workers must be 1 or 2')
 
 
 def manifest(exp):
     validate(exp)
     spec = {'mode': 'one', 'duration': f"{exp['duration_s']}s",
             'selector': {'namespaces': [NS], 'labelSelectors': {'app': exp['target']}}}
+    params = exp.get('params', {})
     if exp['fault'] == 'network_delay':
-        params = exp.get('params', {})
         spec.update(action='delay', delay={'latency': params.get('latency', '500ms'),
                                           'jitter': params.get('jitter', '50ms'), 'correlation': '50'})
+    elif exp['fault'] == 'network_loss':
+        spec.update(action='loss', loss={'loss': str(params.get('loss', 10)), 'correlation': '25'})
+    elif exp['fault'] == 'cpu_stress':
+        spec['stressors'] = {'cpu': {'workers': params.get('workers', 1), 'load': params.get('load', 50)}}
+    elif exp['fault'] == 'pod_kill':
+        spec['action'] = 'pod-kill'  # ponytail: not yet verified live; one-shot kill, guard still watches recovery
     else:
         spec['action'] = 'pod-failure'
     metadata = {'name': exp['id'], 'namespace': NS,
