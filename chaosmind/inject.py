@@ -10,9 +10,12 @@ NS = 'online-boutique'
 CONTEXT = 'kind-online-boutique'
 MAX_DURATION_S = 120
 KINDS = {'pod_failure': 'PodChaos', 'network_delay': 'NetworkChaos', 'network_loss': 'NetworkChaos',
-         'cpu_stress': 'StressChaos', 'pod_kill': 'PodChaos'}
-# Fault -> (param, default) that the Safety Checker ramps. pod_failure/pod_kill have no intensity.
-INTENSITY = {'network_delay': ('latency', '500ms'), 'network_loss': ('loss', 10), 'cpu_stress': ('load', 50)}
+         'cpu_stress': 'StressChaos', 'pod_kill': 'PodChaos',
+         'network_partition': 'NetworkChaos', 'disk_full': 'IOChaos'}
+# Fault -> (param, default) that the Safety Checker ramps. pod_failure/pod_kill/network_partition have none.
+INTENSITY = {'network_delay': ('latency', '500ms'), 'network_loss': ('loss', 10), 'cpu_stress': ('load', 50),
+             'disk_full': ('percent', 100)}
+DNS = r'[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?'
 OWNER = 'chaosmind'
 
 
@@ -56,6 +59,16 @@ def validate(exp):
             raise ValueError('load must be an integer in 1..100')
         if type(workers) is not int or not 1 <= workers <= 2:
             raise ValueError('workers must be 1 or 2')
+    if exp['fault'] == 'network_partition':
+        to = params.get('to')
+        if not isinstance(to, str) or not re.fullmatch(DNS, to) or to == exp['target']:
+            raise ValueError('network_partition needs params.to: another service to cut the target off from')
+    if exp['fault'] == 'disk_full':
+        path, percent = params.get('path', '/data'), params.get('percent', 100)
+        if not isinstance(path, str) or not re.fullmatch(r'(/[A-Za-z0-9._-]+)+', path) or '..' in path:
+            raise ValueError('disk_full path must be an absolute mount path like /data')
+        if type(percent) is not int or not 0 < percent <= 100:
+            raise ValueError('percent must be an integer in 1..100')
 
 
 def manifest(exp):
@@ -70,6 +83,14 @@ def manifest(exp):
         spec.update(action='loss', loss={'loss': str(params.get('loss', 10)), 'correlation': '25'})
     elif exp['fault'] == 'cpu_stress':
         spec['stressors'] = {'cpu': {'workers': params.get('workers', 1), 'load': params.get('load', 50)}}
+    elif exp['fault'] == 'network_partition':
+        # Failed dependency: target can no longer reach params.to
+        spec.update(action='partition', direction='to',
+                    target={'mode': 'all', 'selector': {'namespaces': [NS], 'labelSelectors': {'app': params['to']}}})
+    elif exp['fault'] == 'disk_full':
+        # Full disk: writes under the mount fail with ENOSPC (errno 28, "No space left on device")
+        path = params.get('path', '/data')
+        spec.update(action='fault', errno=28, percent=params.get('percent', 100), volumePath=path, path=f'{path}/**')
     elif exp['fault'] == 'pod_kill':
         spec['action'] = 'pod-kill'  # ponytail: not yet verified live; one-shot kill, guard still watches recovery
     else:
@@ -89,6 +110,14 @@ def apply(exp, dry_run=False):
         raise ValueError("target deployment's app label does not match the selector")
     if deployment['spec'].get('replicas', 1) < 1:
         raise ValueError('target has no running replicas')
+    params = exp.get('params', {})
+    if exp['fault'] == 'network_partition':
+        kubectl('get', 'deployment', params['to'], '-n', NS)  # raises if the dependency doesn't exist
+    if exp['fault'] == 'disk_full':
+        mounts = {m['mountPath'] for c in deployment['spec']['template']['spec']['containers']
+                  for m in c.get('volumeMounts', [])}
+        if params.get('path', '/data') not in mounts:
+            raise ValueError(f"target has no volume mounted at {params.get('path', '/data')}")
     args = ['create', '-f', '-']
     if dry_run:
         args.append('--dry-run=server')

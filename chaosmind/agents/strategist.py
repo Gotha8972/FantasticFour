@@ -19,10 +19,14 @@ Faults you may use (exact names and limits):
 - network_delay: params {{"latency": "<n>ms"}} (max 2000ms)
 - network_loss: params {{"loss": <percent>}} (max 50)
 - cpu_stress: params {{"load": <1-100>, "workers": 1}}
+- network_partition: target can't reach params.to at all (failed dependency). params {{"to": "<service>"}}
+- disk_full: writes fail with "no space left" on a mounted volume (only services with volumes, e.g. redis-cart). params {{"path": "/data", "percent": <1-100>}}
+Traffic spikes are run separately (scripts/grafana-stress.sh), not as a fault here.
 duration_s: 20-60. Pick a moderate intensity; the Safety Checker ramps it up gradually.
 
 Match the fault to the weakness: stateful/no persistence -> pod_kill; high fan-in or latency propagation -> network_delay;
-flaky dependency -> network_loss; resource pressure -> cpu_stress; plain availability -> pod_failure.
+flaky dependency -> network_loss; dependency down -> network_partition; overloaded database -> cpu_stress on redis-cart;
+storage/full disk -> disk_full; plain availability -> pod_failure.
 
 For each experiment write pass/fail "criteria" BEFORE it runs. The hypothesis is CONFIRMED if ANY criterion is met
 during the fault. Allowed metrics: {', '.join(METRICS)} ("unhealthy_count" = number of unavailable services).

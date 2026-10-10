@@ -1,0 +1,6 @@
+[
+  {"op": "replace", "path": "/spec/template/spec/volumes/0",
+   "value": {"name": "redis-data", "persistentVolumeClaim": {"claimName": "redis-cart-data"}}},
+  {"op": "add", "path": "/spec/template/spec/containers/0/args", "value": ["--appendonly", "yes"]},
+  {"op": "replace", "path": "/spec/strategy", "value": {"type": "Recreate"}}
+]

@@ -178,10 +178,23 @@ bash scripts/grafana-stress.sh
 ```
 | Field | Allowed |
 |---|---|
-| `fault` | `pod_failure` (service unavailable), `pod_kill` (pod killed once and recreated), `network_delay` (added latency + jitter), `network_loss` (packet loss %), `cpu_stress` (CPU load) |
+| `fault` | `pod_failure`, `pod_kill`, `network_delay`, `network_loss`, `network_partition`, `cpu_stress`, `disk_full` (see coverage table below) |
 | `target` | Any deployment name, e.g. `cartservice`, `productcatalogservice` |
 | `duration_s` | 1–120 |
-| `params` | `network_delay`: `latency`, `jitter` (ms, ≤ 2000) · `network_loss`: `loss` (≤ 50%) · `cpu_stress`: `load` (1–100), `workers` (1–2) |
+| `params` | `network_delay`: `latency`, `jitter` (ms, ≤ 2000) · `network_loss`: `loss` (≤ 50%) · `network_partition`: `to` (the dependency to cut off) · `cpu_stress`: `load` (1–100), `workers` (1–2) · `disk_full`: `path` (a mounted volume, e.g. `/data`), `percent` (1–100) |
+
+**Coverage of the failure types listed in the brief**
+
+| Brief's example | How we inject it | Live status |
+|---|---|---|
+| Service or container crash | `pod_failure` (down for N s), `pod_kill` (instant kill + recreate) | ✅ pod_failure via guard; pod_kill via the Grafana demo script |
+| Slow or lossy network | `network_delay`, `network_loss` | ✅ delay; loss defined, not yet run |
+| Full disk | `disk_full`: Chaos Mesh IOChaos returns `ENOSPC` ("no space left on device") on the volume | Defined, not yet run |
+| Overloaded database | `cpu_stress` on `redis-cart` | Defined, not yet run |
+| Failed dependency | `network_partition`: e.g. `cartservice` can no longer reach `redis-cart` | Defined, not yet run |
+| Sudden traffic spike | 20 → 100 shoppers (`scripts/grafana-stress.sh`) | ✅ run twice |
+
+Ready-made experiments for each are in [`experiments/`](experiments/).
 
 Samples are in [`experiments/`](experiments).
 
@@ -288,7 +301,7 @@ Each experiment is compared with the baseline taken under the same conditions, n
 
 **Findings so far** (most severe first)
 
-1. 🔴 **Silent cart data loss.** `redis-cart` runs as 1 replica on an `emptyDir` volume, so any restart wipes every cart while the site reports success. *Fix:* a PersistentVolumeClaim with Redis persistence (AOF), or replicated Redis.
+1. 🔴 **Silent cart data loss.** `redis-cart` runs as 1 replica on an `emptyDir` volume, so any restart wipes every cart while the site reports success. Redis does save on shutdown, but into a folder that's deleted with the pod. *Fix (ready, before/after run pending):* `bash scripts/redis-fix.sh apply` moves `/data` to a PersistentVolumeClaim, turns on the append-only log (covers instant kills, not just clean shutdowns) and uses the `Recreate` strategy so two Redis pods never share the disk. `revert` restores the original for a live before/after demo. Trade-off: still 1 replica, so the cart is briefly unavailable during a restart, but no longer lost. Files: [`remediation/`](remediation/).
 2. 🟠 **Cart outage takes the shop down hard.** Losing `cartservice` drives error rate to 35–100% and takes ~55 s to recover. *Fix:* more replicas plus a PodDisruptionBudget; degrade the cart page instead of failing.
 3. 🟠 **"Healthy" ≠ recovered.** After a catalog pod kill, Kubernetes reported the service available in ~3 s, but customers kept getting errors and 10 s responses for ~30 s more. Health checks alone would have hidden it. *Fix:* more than 1 replica so a single kill isn't an outage; readiness that reflects real serving capacity; client retries with backoff in the frontend.
 4. 🟡 **Catalog latency spreads everywhere.** 500 ms on one service pushes site-wide p95 to 3.5 s at 20 shoppers and 4.4 s at 100, reproducibly, consistent with it having the most callers. *Fix:* client-side timeouts and caching of catalog reads in the frontend.
@@ -316,7 +329,8 @@ chaosmind/
   podkill_demo.py, checkout_investigation.py   Pod-kill demo and checkout-failure log search
   test_guard.py      Offline behaviour tests (no cluster needed)
   agents/            Cartographer, Strategist, Safety Checker (+ facts.py, llm.py, loop in __main__.py)
-experiments/         Experiment definitions (JSON)
+experiments/         Experiment definitions (JSON), one per brief failure type
+remediation/         Fixes for findings (Redis persistence patch + PVC)
 chaos/               Chaos Mesh install values and standalone YAML experiments
 deploy/              kind cluster and Online Boutique overlay
 scripts/             Cluster, Chaos Mesh and load setup

@@ -1,0 +1,10 @@
+# Fix for finding #1 (silent cart loss): give redis-cart a disk that outlives the pod.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-cart-data
+  namespace: online-boutique
+  labels: {app.kubernetes.io/part-of: chaosmind-remediation}
+spec:
+  accessModes: [ReadWriteOnce]
+  resources: {requests: {storage: 1Gi}}

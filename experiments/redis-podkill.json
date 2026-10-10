@@ -1,0 +1,2 @@
+{"id": "redis-podkill", "fault": "pod_kill", "target": "redis-cart", "duration_s": 30,
+ "hypothesis": "Before the fix: an instant kill wipes carts. After the fix (PVC + append-only log): carts survive"}

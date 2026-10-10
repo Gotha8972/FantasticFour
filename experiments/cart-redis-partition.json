@@ -1,0 +1,2 @@
+{"id": "cart-redis-partition", "fault": "network_partition", "target": "cartservice", "params": {"to": "redis-cart"},
+ "duration_s": 30, "hypothesis": "Failed dependency: cartservice can't reach Redis, so cart and checkout fail while browsing keeps working"}

@@ -1,0 +1,2 @@
+{"id": "catalog-loss", "fault": "network_loss", "target": "productcatalogservice", "params": {"loss": 20},
+ "duration_s": 30, "hypothesis": "Lossy network: retries/timeouts raise p95 and some product pages fail"}

@@ -111,6 +111,17 @@ class GuardTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 inject.validate(EXP | bad)
 
+    def test_slide_fault_types_render_with_limits(self):
+        cut = inject.manifest(EXP | {'fault': 'network_partition', 'target': 'cartservice', 'params': {'to': 'redis-cart'}})
+        self.assertEqual((cut['kind'], cut['spec']['action'], cut['spec']['direction']), ('NetworkChaos', 'partition', 'to'))
+        disk = inject.manifest(EXP | {'fault': 'disk_full', 'target': 'redis-cart', 'params': {}})
+        self.assertEqual((disk['kind'], disk['spec']['errno'], disk['spec']['volumePath']), ('IOChaos', 28, '/data'))
+        for bad in ({'fault': 'network_partition', 'params': {}}, {'fault': 'network_partition', 'params': {'to': EXP['target']}},
+                    {'fault': 'disk_full', 'params': {'path': '/../etc'}}, {'fault': 'network_loss', 'params': {'loss': 90}},
+                    {'fault': 'cpu_stress', 'params': {'load': 500}}):
+            with self.assertRaises(ValueError):
+                inject.validate(EXP | bad)
+
     def test_foreign_resource_cannot_be_deleted(self):
         with patch.object(inject, 'kubectl', return_value=json.dumps({'metadata': {'labels': {}}})) as kube:
             with self.assertRaises(ValueError):

@@ -1,0 +1,6 @@
+[
+  {"op": "replace", "path": "/spec/template/spec/volumes/0", "value": {"name": "redis-data", "emptyDir": {}}},
+  {"op": "remove", "path": "/spec/template/spec/containers/0/args"},
+  {"op": "replace", "path": "/spec/strategy",
+   "value": {"type": "RollingUpdate", "rollingUpdate": {"maxSurge": "25%", "maxUnavailable": "25%"}}}
+]

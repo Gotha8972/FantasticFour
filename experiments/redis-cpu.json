@@ -1,0 +1,2 @@
+{"id": "redis-cpu", "fault": "cpu_stress", "target": "redis-cart", "params": {"load": 80, "workers": 1},
+ "duration_s": 30, "hypothesis": "Overloaded database: cart latency rises but requests still succeed"}

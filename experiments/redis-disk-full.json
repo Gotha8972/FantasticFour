@@ -1,0 +1,2 @@
+{"id": "redis-disk-full", "fault": "disk_full", "target": "redis-cart", "params": {"path": "/data", "percent": 100},
+ "duration_s": 30, "hypothesis": "Redis can't write its data: with the fix (append-only log on) cart writes start failing; shows whether the shop surfaces the error"}
