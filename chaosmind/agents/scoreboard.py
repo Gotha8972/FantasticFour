@@ -12,19 +12,24 @@ from statistics import median
 from chaosmind.agents import facts as facts_mod, safety, score, steps, trials
 
 # (finding in FINDINGS.md, experiment, condition, evidence kind, run[#target]). Same experiment twice = before/after.
-AI_RUN = 'runs/agents-20261010T185909Z'
+AI_RUN = 'runs/agents-20261010T185909Z'    # first full live AI loop (Redis and catalog fixes approved)
+AI_RUN2 = 'runs/agents-20261010T192511Z'   # fresh live AI loop, Redis fix already in place (frontend and cart fixes)
+FIXED = 'after the fix, approved by a human'
 EVIDENCE = [
     (1, 'Redis restarted (cart test)', 'before fix', 'redis', 'runs/c-redis-20261010T070925.577773Z'),
     (1, 'Redis restarted (cart test)', 'after fix: PVC + append-only log', 'redis', 'runs/c-redis-20261010T102251.009037Z'),
     (1, 'Redis pod kill, chosen and run by the AI', 'before fix', 'agent', f'{AI_RUN}#redis-cart'),
-    (1, 'Redis pod kill, chosen and run by the AI', 'after the fix, approved by a human', 'agent-after', f'{AI_RUN}#redis-cart'),
-    (2, 'frontend unavailable, chosen and run by the AI', '1 replica', 'agent', f'{AI_RUN}#frontend'),
+    (1, 'Redis pod kill, chosen and run by the AI', FIXED, 'agent-after', f'{AI_RUN}#redis-cart'),
+    (1, 'Redis pod kill, fresh AI run', 'fix already in place', 'agent', f'{AI_RUN2}#redis-cart'),
+    (2, 'frontend unavailable, chosen and run by the AI', '1 replica', 'agent', f'{AI_RUN2}#frontend'),
+    (2, 'frontend unavailable, chosen and run by the AI', FIXED, 'agent-after', f'{AI_RUN2}#frontend'),
     (3, 'cartservice unavailable', '1 replica', 'guard', 'runs/test-down-20261010T062320.861245Z'),
+    (3, 'cartservice pod kill, chosen and run by the AI', '1 replica', 'agent', f'{AI_RUN2}#cartservice'),
+    (3, 'cartservice pod kill, chosen and run by the AI', FIXED, 'agent-after', f'{AI_RUN2}#cartservice'),
     (4, 'catalog pod kill, 5 trials', '1 replica', 'trials', 'runs/trials-catalog-podkill-20261010T182606Z'),
     (4, 'catalog pod kill, 5 trials', '2 replicas', 'trials', 'runs/trials-catalog-podkill-20261010T183121Z'),
     (4, 'catalog pod kill, chosen and run by the AI', '1 replica', 'agent', f'{AI_RUN}#productcatalogservice'),
-    (4, 'catalog pod kill, chosen and run by the AI', 'after the fix, approved by a human', 'agent-after',
-     f'{AI_RUN}#productcatalogservice'),
+    (4, 'catalog pod kill, chosen and run by the AI', FIXED, 'agent-after', f'{AI_RUN}#productcatalogservice'),
     (5, '+500 ms delay on productcatalogservice', 'no fix', 'guard', 'runs/test-delay-20261010T062255.501508Z'),
     (7, 'adservice unavailable', 'no fix needed', 'guard', 'runs/c-ad-health-13973e53bd-20261010T070523.440196Z'),
 ]

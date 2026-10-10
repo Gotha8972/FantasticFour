@@ -26,9 +26,9 @@ Aashrith is building his own LangGraph/LangChain agents. Both get dry-run 3× an
 | Milestone | Status | Remaining action |
 |---|---|---|
 | AI experiment planner | ✅ Built, dry-run twice live | — |
-| ≥ 3 failure types run, errors/slowdowns/recovery recorded | ✅ Delay, pod failure, pod kill run live | **AI-driven live run** (below) so the AI itself runs ≥ 3 types |
-| Analysis and scoring | ✅ Analyst, score, [FINDINGS.md](../../FINDINGS.md) | Regenerate after the live run |
-| Feature freeze + clean run | — | H5 |
+| ≥ 3 failure types run, errors/slowdowns/recovery recorded | ✅ Delay, pod failure, pod kill run live; the AI's two live runs used pod failure and pod kill | — |
+| Analysis and scoring | ✅ AI reports for both live runs, [scoreboard](../evidence/SCOREBOARD.md) regenerated from raw evidence, consolidated [FINDINGS.md](../../FINDINGS.md) | Regenerate the two AI reports with the improved Analyst (see [RERUN_020B817.md](RERUN_020B817.md)) |
+| Feature freeze + clean run | ✅ **Frozen** (one entry point: `chaosmind.graph`) | Clean install from scratch on a second laptop, recorded (Smrithi) |
 | Demo video + docs | Plan ready ([PRESENTATION_PLAN.md](PRESENTATION_PLAN.md)); [architecture](../ARCHITECTURE.md) ✅ | Record + edit |
 | Submission | [Team form](../TEAM_FORM.md) ✅ | Submit 30 min early |
 

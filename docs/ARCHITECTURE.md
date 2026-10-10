@@ -33,7 +33,7 @@ flowchart LR
 5. **Measure likelihood.** `trials.py` repeats an experiment under identical conditions (fault, load, replicas) and reports how often customer thresholds were breached, with a 95% Wilson interval. Failed injections or missing telemetry are kept as *invalid*, never counted as passes. Recovery is timed twice: when capacity is back (service ready) and when customers are back (metrics normal).
 6. **Learn and re-plan.** Results go back to the Strategist, which re-ranks the remaining vulnerabilities.
 7. **Fix and prove.** For confirmed weaknesses, **Remediation** chooses a fix from a reviewed catalog (it can't write arbitrary patches), applies it after a server-side dry run, **re-runs the identical experiment**, and keeps the fix only if the score improves.
-8. **Report.** The **Analyst** explains root causes from error logs captured during each fault (quotes are verified to be real log lines) and writes `FINDINGS.md`, with every number fact-checked against the measured data.
+8. **Report.** The **Analyst** explains root causes from error logs captured during each fault (quotes are verified to be real log lines) and writes `FINDINGS.md`, with every number fact-checked against the measured data and any data-loss claim that the integrity checks contradict flagged. If the model fails, the measured part is still written.
 
 ## Safety controls
 | Layer | Guarantee |

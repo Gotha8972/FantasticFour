@@ -14,7 +14,8 @@ import subprocess
 import sys
 
 from chaosmind import inject
-from chaosmind.agents import llm
+from chaosmind.agents import llm, strategist
+from chaosmind.agents.cartographer import claims_data_loss
 
 ERROR_LINE = re.compile(r'error|fail|unavailable|timeout|refused|panic|exception|deadline|\b5\d\d\b', re.I)
 
@@ -25,6 +26,8 @@ Rules:
 - Do NOT invent numbers. Mention a number only if it appears in the fact sheet.
 - "evidence" must be log lines copied EXACTLY from the input. If logs don't explain it, say so in "root_cause".
 - Order findings by severity: data loss first, then checkout/site outage, then slowdowns, then graceful cases.
+- Claim data loss ONLY for an experiment whose integrity_violations list is non-empty; otherwise data was kept.
+- Use "observed" for an experiment's worst numbers: it covers the fault and the recovery after it.
 Return JSON: {"summary": "3 sentences for a judge", "findings": [{"experiment_id": "...", "title": "...",
  "severity": "critical|high|medium|low", "what_happened": "...", "root_cause": "...", "evidence": ["exact line"],
  "fix": "..."}]}"""
@@ -48,20 +51,41 @@ def phases(events):
 
 
 def error_lines(events, target, limit=60):
-    """Error-like log lines from the frontend and the target during the fault (live cluster only)."""
+    """Error-like log lines from the frontend and the target during THIS experiment only (live cluster only).
+    Bounded at both ends: without an end, an experiment would collect errors caused by the ones after it."""
     start = next((e['timestamp_utc'] for e in events if e['event'] == 'INJECTED'), None)
     if not start:
         return []
     since = (datetime.fromisoformat(start) - timedelta(seconds=10)).strftime('%Y-%m-%dT%H:%M:%SZ')
+    end = next((e['timestamp_utc'] for e in reversed(events) if e.get('timestamp_utc')), start)
+    until = datetime.fromisoformat(end) + timedelta(seconds=5)
     lines = []
     for app in sorted({'frontend', target}):
         try:
-            out = inject.kubectl('logs', f'deployment/{app}', '-n', inject.NS, f'--since-time={since}', '--all-containers')
+            out = inject.kubectl('logs', f'deployment/{app}', '-n', inject.NS, f'--since-time={since}',
+                                 '--all-containers', '--timestamps')
         except (subprocess.SubprocessError, OSError):
             continue
-        lines += [f'{app}: {l.strip()[:300]}' for l in out.splitlines() if ERROR_LINE.search(l)]
+        for line in out.splitlines():
+            stamp, _, text = line.partition(' ')
+            try:
+                if datetime.fromisoformat(stamp.replace('Z', '+00:00')) > until:
+                    continue
+            except ValueError:
+                pass
+            if ERROR_LINE.search(text):
+                lines.append(f'{app}: {text.strip()[:300]}')
     counts = Counter(lines)
     return [l if n == 1 else f'{l}  (x{n})' for l, n in counts.most_common(limit)]
+
+
+def after_verdict(h):
+    """The same pre-registered criteria applied to the after-fix re-run: a fix that works refutes the hypothesis."""
+    r = h.get('remediation')
+    if not r or not r.get('after_observed') or 'after_verdict' in r:
+        return r
+    observed = {**r['after_observed'], 'integrity_violations': len(r.get('after_integrity', []))}
+    return {**r, 'after_verdict': strategist.evaluate(h.get('criteria', []), observed)[0]}
 
 
 def fact_sheet(run_dir):
@@ -81,16 +105,19 @@ def fact_sheet(run_dir):
             'ramp': [s.get('intensity') for s in steps],
             'tolerated_up_to': h.get('safety', {}).get('tolerated_up_to'),
             'limit_crossed_at': h.get('safety', {}).get('limit_crossed_at'),
-            'phases': phases(events), 'recovery_s': (h.get('observed') or {}).get('recovery_s'),
+            'phases': phases(events), 'observed': h.get('observed'), 'criteria_met': h.get('criteria_met', []),
+            'recovery_s': (h.get('observed') or {}).get('recovery_s'),
             'integrity_violations': h.get('integrity', []), 'score': h.get('score'),
-            'remediation': h.get('remediation'), 'run_dir': steps[-1]['run_dir'] if steps else None,
+            'remediation': after_verdict(h), 'run_dir': steps[-1]['run_dir'] if steps else None,
             'log_errors': error_lines(events, h['experiment']['target']) if events else []})
     return {'vulnerabilities': [{k: v.get(k) for k in ('id', 'service', 'severity', 'weakness', 'status')}
                                 for v in vulns['vulnerabilities']],
             'experiments': experiments,
             'scorecard': {'hypotheses': len(history),
                           'confirmed': sum(h.get('verdict') == 'confirmed' for h in history),
-                          'refuted': sum(h.get('verdict') == 'refuted' for h in history)}}
+                          'refuted': sum(h.get('verdict') == 'refuted' for h in history),
+                          'refuted_after_fix': sum((after_verdict(h) or {}).get('after_verdict') == 'refuted'
+                                                   for h in history)}}
 
 
 def numbers(text):
@@ -107,12 +134,15 @@ def fact_check(prose, facts):
 def render(facts, reply):
     lines = ['# Findings report', '', reply.get('summary', ''), '',
              f"**AI hypotheses:** {facts['scorecard']['hypotheses']} tested, {facts['scorecard']['confirmed']} confirmed, "
-             f"{facts['scorecard']['refuted']} refuted. Verdicts are decided by code against criteria written before each run.", '',
-             '| Experiment | Fault | Verdict | Worst error rate | Worst p95 | Recovery | Integrity | Score |',
-             '|---|---|---|---|---|---|---|---|']
+             f"{facts['scorecard']['refuted']} refuted; **{facts['scorecard']['refuted_after_fix']} refuted after their fix** "
+             "(same criteria, re-run after the approved fix). Verdicts are decided by code against criteria written before "
+             "each run.", '',
+             '| Experiment | Fault | Verdict | Criteria met | Worst error rate | Worst p95 | Recovery | Integrity | Score |',
+             '|---|---|---|---|---|---|---|---|---|']
     for e in facts['experiments']:
-        w = e['phases']['during_worst'] or {}
+        w = e.get('observed') or e['phases']['during_worst'] or {}  # fault + recovery: the numbers the verdict used
         lines.append(f"| `{e['experiment_id']}` | {e['fault']} on {e['target']} | {e['verdict']} | "
+                     f"{len(e.get('criteria_met') or [])} of {len(e.get('criteria') or [])} | "
                      f"{w.get('error_rate', 0):.1%} | {w.get('p95_ms', '–')} ms | {e['recovery_s'] or '–'} s | "
                      f"{len(e['integrity_violations'])} violation(s) | {(e['score'] or {}).get('score', '–')} |")
     lines.append('')
@@ -125,11 +155,18 @@ def render(facts, reply):
                   f"**What happened:** {f.get('what_happened', '')}", '',
                   f"**Root cause:** {f.get('root_cause', '')}", '']
         lines += ['**Log evidence:**', ''] + [f'    {x}' for x in evidence] + [''] if evidence else []
+        if claims_data_loss(f"{f.get('title', '')} {f.get('what_happened', '')} {f.get('root_cause', '')}") \
+                and e and not e.get('integrity_violations'):
+            lines += ['> ⚠ **Contradicted by the measurements:** this claims data loss, but the integrity checks passed '
+                      '(the cart was kept).', '']
         lines += [f"**Fix:** {f.get('fix', '')}", '']
-        if e.get('remediation'):
-            r = e['remediation']
-            lines += [f"**Remediation:** `{r.get('fix')}` applied, re-run score {r.get('before')} → {r.get('after')} "
-                      f"({r.get('verdict')}).", '']
+        r = e.get('remediation')
+        if r and r.get('fix') and r.get('after') is not None:
+            lines += [f"**Remediation:** `{r['fix']}` applied after human approval; the same experiment re-run: score "
+                      f"{r.get('before')} → {r['after']} ({r.get('verdict')}); hypothesis **{r.get('after_verdict', '?')}** "
+                      "after the fix.", '']
+        elif r:
+            lines += [f"**Remediation:** no fix applied ({r.get('verdict')}).", '']
         lines += [f"Evidence: `{e.get('run_dir')}`", '']
     return '\n'.join(lines)
 
@@ -137,11 +174,18 @@ def render(facts, reply):
 def write(run_dir, out=None):
     facts = fact_sheet(run_dir)
     (Path(run_dir) / 'facts_for_report.json').write_text(json.dumps(facts, indent=1))
-    reply = llm.ask(SYSTEM, facts)
+    try:
+        reply = llm.ask(SYSTEM, facts)
+    except RuntimeError as error:  # the measured results don't depend on the AI: always write the report
+        reply = {'summary': f'AI narrative unavailable ({error}). Every measured result below is complete.', 'findings': []}
+    (Path(run_dir) / 'analyst_reply.json').write_text(json.dumps(reply, indent=1))  # re-render without the API
     report = render(facts, reply)
     unmatched = fact_check(report, facts)
+    contradicted = report.count('Contradicted by the measurements')
     report += '\n## Fact-check\n\n' + ('Every number above appears in the measured data.' if not unmatched else
               'Numbers not found in the measured data (treat with caution): ' + ', '.join(f'{n:g}' for n in unmatched))
+    if contradicted:
+        report += f'\n\n{contradicted} claim(s) contradicted by the integrity checks are marked above.'
     path = Path(out or Path(run_dir) / 'FINDINGS.md')
     path.write_text(report + '\n')
     return path

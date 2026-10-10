@@ -7,26 +7,26 @@
 ---
 
 ## 1. Demo video (deliverable #2, ≤ 3:00)
-**Rule:** never run live while recording. Cut from screen recordings made beforehand.
+**Rules:** never run live while recording. A live experiment takes 4–6 minutes, so **cut from the recorded AI runs** (`runs/agents-20261010T185909Z`, `runs/agents-20261010T192511Z`) and speed up the waiting. **The AI carries the story**; the scripted tests appear only as supporting evidence.
 
 | Time | Shot (screen) | Voice-over | Speaker |
 |---|---|---|---|
-| 0:00–0:15 | Shop running + Grafana steady | "11 microservices, 20 shoppers. When one service fails, what else breaks? Nobody knows until it happens." | Srinavith |
-| 0:15–0:40 | Terminal: Cartographer output (8 ranked vulnerabilities) | "Our AI audits the live architecture first. Every fact it cites is checked against the real config; across our runs it made **zero** unverifiable claims." | Smrithi |
-| 0:40–1:05 | Strategist plan + Safety Checker decision | "It writes a hypothesis and pass/fail criteria *before* breaking anything. A Safety Checker can only make experiments smaller, never bigger." | Smrithi |
-| 1:05–1:40 | Grafana: p95 spikes → guard log `BREACH` → `REVERTED` → recovery (from `grafana-stress.sh`) | "Here we slow the product catalog. Latency spikes to 4.3 s; within seconds the kill switch trips, and the fault is gone 0.3 s later. We ran it twice: same numbers." | Aashrith |
-| 1:40–2:15 | Redis test: cart 1 → 0, error panel flat at 0% | "Now the scary one: restart Redis, and every cart is wiped. Zero errors, so monitoring sees nothing. Our integrity check caught it." | Harshil |
-| 2:15–2:40 | `redis-fix.sh apply` → same test → cart 1 → 1 | "The fix: persistent storage plus Redis append-only logging. Same experiment, cart survives. Fix proven, not just recommended." | Srinavith |
-| 2:40–3:00 | ARCHITECTURE.md diagram + safety table | "AI decides, code verifies, the kill switch always wins. FantasticFour." | Srinavith |
+| 0:00–0:15 | Shop + Grafana steady | "11 microservices, 20 shoppers. When one fails, what else breaks? Nobody knows until it happens." | Srinavith |
+| 0:15–0:40 | **AI audit + plan**: vulnerabilities, then experiments ranked by blast radius × criticality, with criteria | "Our AI audits the live architecture, every cited fact checked against the real config. It ranks experiments by blast radius times criticality and writes pass/fail criteria *before* breaking anything." | Smrithi |
+| 0:40–0:55 | **Safety Checker** shrinking the risky checkout test to 500 ms / 30 s | "A Safety Checker can only make experiments smaller, and code enforces hard limits whatever the model says." | Smrithi |
+| 0:55–1:25 | **AI's Redis kill** → kill switch → `integrity violations=1` → **confirmed** | "The AI kills Redis. Pages still load, but the cart is gone, and nothing reports it. Our integrity check does." | Harshil |
+| 1:25–1:55 | **Approval gate** `⏸ Apply fix …? y` → re-run → cart 1 → 1 | "The AI proposes a reviewed fix, a human approves it, and the identical experiment re-runs. The cart survives." | Aashrith |
+| 1:55–2:20 | **Frontend: 100% errors → 0%**, score 18 → 96, hypothesis **refuted after the fix** | "And it can say no: after the fix, the same criteria are refuted. Four fixes, four better scores." | Aashrith |
+| 2:20–2:40 | Scoreboard + trials table (5/5 vs 0/5) | "Measured, not guessed: one replica hurt customers 5 times in 5, two replicas never." | Srinavith |
+| 2:40–3:00 | Architecture diagram | "Honest limit: the Redis fix stops data loss, but a restart is still slow with one replica. AI proposes, code verifies, the kill switch always wins." | Srinavith |
 
-### Shot list: record these first (owner: Aashrith, with Harshil editing)
-1. `bash scripts/grafana-stress.sh` with Grafana and the terminal side by side.
-2. `.venv/bin/python -m chaosmind.graph --dry-run` (or the live `--budget 2` run if time allows). Terminal only, readable font size.
-3. Redis before: `bash scripts/redis-fix.sh revert` → `./tests/redis_finding.sh` (cart 1 → 0), with Grafana's error panel visible.
-4. Redis after: `bash scripts/redis-fix.sh apply` → `./tests/redis_finding.sh` (cart 1 → 1).
-5. A slow scroll of the README highlights and the architecture diagram.
+### Shot list (owner: Aashrith, editing: Harshil)
+1. The terminal recordings of both live AI runs. If they weren't screen-recorded, re-run `.venv/bin/python -m chaosmind.graph --budget 2 --remediate` once with the recorder on, and cut the waiting.
+2. The risky safety test: `python3 -m chaosmind.agents.safety experiments/risky-checkout.json --review-only`.
+3. Grafana during one AI experiment (error panel + p95).
+4. `docs/evidence/SCOREBOARD.md` and the trials table in the README, scrolled slowly.
 
-Use real numbers from the recordings. If a number differs from this script, **say the recorded one**.
+Use the recorded numbers. If one differs from this script, **say the recorded one**.
 
 ---
 
@@ -38,8 +38,8 @@ Use real numbers from the recordings. If a number differs from this script, **sa
 | 3 | How our AI thinks | 6-step loop (audit → hypothesise → inject → judge → fix → report) | Hypotheses and criteria are written *before* each run; code decides the verdict |
 | 4 | Breaking things safely | Guard timeline: breach detected at 9.6 s → fault removed 0.3 s later → healthy at 14 s | 9 safety layers; fail-safe even if our own guard crashes; AI can't loosen limits |
 | 5 | What we found | Findings 1–5 with icons | Silent data loss; frontend single point of failure (found by the AI); cart outage; "healthy ≠ recovered" (3 s vs 34 s); latency spreads everywhere |
-| 6 | Fix → proof | Before/after table: cart 1 → 0 vs 1 → 1; Redis score **30 → 67** (data loss gone; one replica still slows restarts); catalog **29 → 99** with 2 replicas | Fixes come from a reviewed catalog; re-run the identical experiment; keep only if the score improves |
-| 7 | Why trust it | "AI proposes → code verifies → guard wins" | 0 unverifiable claims; tests for every safety rule; every number in reports fact-checked |
+| 6 | Fix → proof | 4 AI-loop fixes, each approved and re-run: frontend **18 → 96**, cart **31 → 78**, catalog **70 → 99**, Redis **13 → 50**; trials 29 → 100 | Fixes come from a reviewed catalog; re-run the identical experiment; keep only if the score improves |
+| 7 | Why trust it | "AI proposes → code verifies → guard wins" | Cited facts checked against the live config; noise can't confirm a criterion; 2 hypotheses refuted after fixes; report claims the measurements contradict are flagged |
 | 8 | Measured, not guessed | "Customers hurt in **5/5** kills with 1 replica vs **0/5** with 2" + 95% intervals (57–100% vs 0–43%, no overlap) | Repeated trials → failure frequency with uncertainty; invalid runs never count as passes |
 | 9 | Impact + next | The LangGraph diagram (generated from the code) + resilience scores | Human approval gate before any fix; resumable runs; runs on any Kubernetes app; next: more fixes in the catalog, CI integration |
 
@@ -54,6 +54,8 @@ Speaking order: Srinavith (1–3) → Aashrith (4) → Harshil (5) → Srinavith
 | *How do you know the AI isn't hallucinating?* | Every fact the Cartographer cites is compared with the live config; mismatches are dropped (0 across our runs). Verdicts are computed by code against criteria written before the run. The Analyst can only quote real log lines, and every number in the report is fact-checked. |
 | *Why not let the AI write fixes?* | Arbitrary patches to a cluster are risky. It chooses from a reviewed fix catalog, the change is dry-run on the API server first, and we keep it only if the re-run scores better; otherwise it's rolled back. |
 | *How fast does the kill switch react?* | It polls every 2 s. A breach is detected ~8–10 s after injection, because it reads the load generator's rolling ~10 s window, and the fault is removed ~0.3 s later. Polling Prometheus directly would cut detection to a few seconds; that's our next step. |
+| *Did the Redis fix actually help customers?* | It stopped the data loss, the critical part. It did **not** make a restart less disruptive: with one Redis replica, carts still error and slow down for seconds. That's the next fix (cartservice retries or a replicated Redis). |
+| *Can your system ever refute a hypothesis?* | Yes. Criteria thresholds are raised above baseline noise in code, and after the frontend and catalog fixes the same pre-registered criteria were **refuted**. In the Redis kill with the fix in place, the data-loss criterion failed: the cart was kept. |
 | *Is the resilience score meaningful?* | It's plain, documented code: error, latency, recovery, blast-radius and integrity penalties relative to the baseline, exactly the factors in the brief. A silent data-loss case can never score well. Every score is regenerated from the raw evidence by one command, so nobody typed a number in. |
 | *How are experiments ranked?* | By code, as the brief asks: blast radius (services that break with the target, from the generated dependency map) × criticality (severity). The AI writes the reason for each. |
 | *Why Online Boutique? Everyone used it.* | Because it's realistic: 11 services, 5 languages, gRPC, a stateful store. What's different is what we found in it: silent data loss, and "healthy ≠ recovered". |

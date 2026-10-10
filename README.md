@@ -4,15 +4,21 @@
 
 **Findings report:** [FINDINGS.md](FINDINGS.md) · **Architecture (1 page):** [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · **Run it:** [docs/RUNNING.md](docs/RUNNING.md) · **Agents:** [docs/AGENTS.md](docs/AGENTS.md) · **Team form:** [docs/TEAM_FORM.md](docs/TEAM_FORM.md)
 
-## Project status: complete
-All components are built and tested (**76 automated tests**): the AI agents, LangGraph workflow with a human approval gate and resume, kill switch, integrity checks, resilience score, repeated-trial statistics, Remediation and the Analyst report. The kill switch and the Redis fix are **proven on the live cluster**, and the **full AI loop has run live end to end**: it chose 3 experiments, confirmed all 3 weaknesses (including the Redis cart loss), proposed the Redis fix, a human approved it on screen, and the re-run proved the data loss gone. The agents run on an **open-weight model**, `gpt-oss-20b`, hosted by NVIDIA. A full agent dry run (audit + plan + safety review) takes **about 45 seconds**. See [FINDINGS.md](FINDINGS.md) for results.
+## Project status
+**Feature-complete and frozen.** One entry point: `.venv/bin/python -m chaosmind.graph` ([quick start](#quick-start)). 79 automated tests, no cluster or API key needed.
+
+- **Proven live:** the kill switch (all three triggers, crash fail-safe, manual abort), and **two full AI runs end to end** ([run 1](runs/agents-20261010T185909Z), [run 2](runs/agents-20261010T192511Z)). The AI chose 6 experiments, ranked by blast radius × criticality, and code confirmed all 6 against criteria written before each run. The verdicts still hold when every threshold is raised above baseline noise. In the Redis kill with the fix already in place, only the latency criterion held; the data-loss criterion failed, meaning the fix worked. The AI proposed **4 fixes; a human approved each on screen; each was applied and the same experiment re-run. All 4 scored higher, and 2 hypotheses were refuted after their fix.** The Analyst wrote a report for each run.
+- **Fault types proven live:** pod failure, pod kill, network delay. **Defined and validated, not yet run live:** packet loss, network partition, CPU stress, full disk.
+- **Model:** open-weight `gpt-oss-20b`, hosted by NVIDIA. A dry run (audit + plan + safety review) takes 25–45 s; a live experiment takes 4–6 minutes.
+- **Not done yet:** the clean install from scratch on a second laptop.
 
 ## Highlights
 | | |
 |---|---|
-| 🔍 **Found a silent data-loss bug, then fixed it** | Restarting Redis emptied shoppers' carts, and **nothing reported it**: pages kept answering HTTP 200 with the cart empty (the cart test saw zero failed requests). Error-rate monitoring alone would never notice. Our integrity checks caught it, and our fix made the cart survive the same experiment (**1 → 0 before, 1 → 1 after**; resilience score **30 → 67**). The AI loop later found, confirmed and fixed it on its own, with human approval. |
+| 🔍 **Found a silent data-loss bug, then fixed it** | Restarting Redis emptied shoppers' carts, and **nothing reported it**: pages kept answering HTTP 200 with the cart empty (the cart test saw zero failed requests). Error-rate monitoring alone would never notice. Our integrity checks caught it, and our fix made the cart survive the same experiment (**1 → 0 before, 1 → 1 after**; resilience score **40 → 81**). The AI loop later found, confirmed and fixed it on its own, with human approval. The fix stops the data loss; with one Redis replica, carts are still slow during a restart. |
 | 🛑 **Kill switch: detects in ~8–10 s, reverts in ~0.3 s** | Every experiment runs under a guard that polls every 2 s and reverts automatically on error rate, latency or service-health breaches. Proven live on all three triggers, plus a crash fail-safe (`kill -9` on the guard) and manual abort. |
-| 🧠 **AI that can't hallucinate its way into the cluster** | Agents only return JSON. Code verifies every cited fact (**0 unverifiable claims** across live AI runs), the verdict is computed by code against criteria written *before* each run, and no agent can enlarge an experiment or loosen a safety limit. |
+| 🧠 **AI that can't talk its way into the cluster** | Agents only return JSON. Every configuration fact the AI cites is checked against the live config, and mismatches are dropped; its interpretations stay hypotheses until an experiment tests them. Code computes every verdict against criteria written *before* each run, and raises any threshold that normal noise could meet. Code also flags report claims the measurements contradict. No agent can enlarge an experiment or loosen a safety limit. |
+| 🤖 **The AI fixes what it finds, with a human in the loop** | 4 fixes proposed by the AI, approved on screen, applied, and proven by re-running the identical experiment: **frontend 18 → 96**, **cart service 31 → 78**, **catalog 70 → 99**, **Redis 13 → 50**. Fixes it can't prove are rolled back, and fixes already in place are never offered again. |
 | 📈 **Measured, not guessed** | Catalog pod kill, 5 trials each: **1 replica → customers hurt 5 of 5 times** (errors for 32–38 s although the pod was back in ~3 s); **2 replicas → 0 of 5** (never hurt). The 95% intervals (57–100% vs 0–43%) don't overlap. |
 | 🔁 **Reproducible results** | A catalog-latency experiment repeated twice: guard tripped at **9.6 s** both times, recovery **14.1 s / 14.0 s**. |
 | 📊 **Live dashboard** | Grafana shows shoppers, throughput, errors, p95, confirmed faults, pod health, CPU and memory while experiments run. |
@@ -41,14 +47,14 @@ graph TD;
 4. **Judge:** integrity checks verify the cart survived and orders really complete; code decides **confirmed / refuted**, computes a **0–100 resilience score** (errors, latency, recovery, blast radius, integrity), and times capacity recovery and customer recovery separately.
 5. **Measure likelihood:** repeated trials of the same experiment give a **failure frequency with a 95% confidence interval** ("customers hurt in X of N pod kills"), not a single anecdote.
 6. **Fix and prove:** **Remediation** applies a reviewed fix and re-runs the identical experiment, keeping the fix only if the score improves.
-7. **Report:** the **Analyst** explains root causes from the logs captured during each fault and writes a fact-checked findings report.
+7. **Report:** the **Analyst** explains each result from the error logs captured during that experiment and writes `FINDINGS.md`. Code fact-checks every number and flags any data-loss claim the integrity checks contradict.
 
 | Component | Status |
 |---|---|
 | Cartographer · Strategist · Safety Checker | ✅ Validated in 14 dry runs, then a **live run** on NVIDIA-hosted `openai/gpt-oss-20b`: Redis kill planned, approved by the Safety Checker, cart loss confirmed by code |
 | Integrity checks · resilience score · Remediation · Analyst | ✅ Built and tested; every published score is regenerated from raw evidence ([scoreboard](docs/evidence/SCOREBOARD.md)) |
 | Orchestration: LangGraph state machine with a **human approval gate** before any fix and **checkpoint/resume** for long runs | ✅ Built and tested (incl. resume in a fresh process) |
-| **Chosen by measurement:** two independent agent implementations, 12 real dry runs on frozen identical inputs, scored by one script | ✅ This one won ([bake-off](docs/team/BAKEOFF_RESULT.md)): 0 hallucinated facts, 100% valid experiments, 3 fault types per plan, integrity checks on every Redis test |
+| **Chosen by measurement:** two independent agent implementations, 12 real dry runs on frozen identical inputs, scored by one script | ✅ This one won ([bake-off](docs/team/BAKEOFF_RESULT.md)): 0 hallucinated facts, 100% valid experiments, 3 fault types per plan, integrity checks on every Redis test. *The bake-off chose the design and ran on `gpt-5.6-luna`, before the switch to `gpt-oss-20b`; the shipped model was validated separately in the two live runs.* |
 | Injector + kill switch (`inject.py`, `guard.py`) | ✅ Proven live |
 | Grafana dashboard | ✅ Running |
 | Fault types: **proven live** | Pod failure · pod kill · network delay |
@@ -127,14 +133,14 @@ The lower p95 in the second 20-shopper study follows the monitoring install, whi
 | 1 | **5 of 5** | 57–100% | ~3 s | after **32–38 s** (errors up to 96%, p95 up to 20 s) |
 | 2 | **0 of 5** | 0–43% | ~3 s | **never hurt** (errors ≤ 2.4%) |
 
-**Resilience scores, ranked:** the [scoreboard](docs/evidence/SCOREBOARD.md) recomputes every score from the raw evidence and ranks the experiments worst first. Fixes proven by re-running the same experiment: **catalog pod kill 29 → 99** (2 replicas), **Redis restart 30 → 67** (cart test) and **0 → 27** (the AI's own loop). Redis can't reach 99 with one replica: the data loss is gone, but cart requests still take seconds during a restart.
+**Resilience scores, ranked:** the [scoreboard](docs/evidence/SCOREBOARD.md) recomputes every score from the raw evidence and ranks the experiments worst first. Six fixes proven by re-running the identical experiment, four of them inside the live AI loop: **frontend 18 → 96**, **cart service 31 → 78**, **catalog 70 → 99** (AI loop) and **29 → 100** (5 trials each), **Redis 40 → 81** (cart test) and **13 → 50** (AI loop). Redis stays lowest: the fix stopped the data loss, but customer disruption during a restart didn't improve (one replica).
 
 Raw guard events per trial: [1 replica](runs/trials-catalog-podkill-20261010T182606Z/trials.json), [2 replicas](runs/trials-catalog-podkill-20261010T183121Z/trials.json); `python3 -m chaosmind.agents.trials summary` recomputes this table from them. In two of the 1-replica trials traffic stalled completely, so the kill switch reverted early; those count as breaches because the errors that followed were measured.
 
 ### Findings (most severe first)
-1. 🔴 **Silent cart data loss: fixed and verified ✅.** Redis kept every cart on a temporary `emptyDir` volume that's deleted with the pod, so a restart wiped all carts while the site kept answering HTTP 200. **Fix** (`bash scripts/redis-fix.sh apply`): a PersistentVolumeClaim for `/data`, Redis append-only logging, and the `Recreate` rollout strategy. **Re-test:** the cart survives the same experiment ([before/after](docs/evidence/REDIS_FIX_RESULTS.md)), and the AI loop reproduced the whole cycle live: found → confirmed → fix approved by a human → cart kept. Remaining: with one Redis replica, cart requests still take 2–6 s during a restart.
-2. 🔴 **The frontend is a single point of failure (found by the AI).** The AI ranked it first (blast radius: every service) and confirmed it: frontend down → 100% errors; customers back after 40.5 s. *Fix:* 2 replicas, now in the [fix catalog](remediation/catalog.json).
-3. 🟠 **A cart outage takes the shop down.** Losing `cartservice` drives errors to 35% and takes ~55 s to recover. *Fix:* 2+ replicas with a PodDisruptionBudget (in our [fix catalog](remediation/catalog.json)).
+1. 🔴 **Silent cart data loss: fixed and verified ✅.** Redis kept every cart on a temporary `emptyDir` volume that's deleted with the pod, so a restart wiped all carts while the site kept answering HTTP 200. **Fix** (`bash scripts/redis-fix.sh apply`): a PersistentVolumeClaim for `/data`, Redis append-only logging, and the `Recreate` rollout strategy. **Re-test:** the cart survives the same experiment ([before/after](docs/evidence/REDIS_FIX_RESULTS.md)), and the AI loop reproduced the whole cycle live: found → confirmed → fix approved by a human → cart kept. **What the fix doesn't change:** with one Redis replica, a restart still causes errors and 2–6 s cart requests.
+2. 🔴 **The frontend is a single point of failure (found by the AI).** The AI ranked it first (blast radius: every service) and confirmed it: frontend down → 100% errors. *Fix, applied by the AI loop after approval:* 2 replicas → **0% errors on the same experiment; score 18 → 96; hypothesis refuted after the fix**.
+3. 🟠 **A cart outage takes the shop down.** Losing `cartservice` drives errors to 35–100% and takes ~55 s to recover. *Fix, applied by the AI loop after approval:* 2 replicas → errors 100% → 0%, score 31 → 78. p95 still reached 2.7 s, so the latency part of the hypothesis stays confirmed.
 4. 🟠 **"Healthy" ≠ recovered.** After a catalog pod kill, Kubernetes reported the service healthy in ~3 s, yet customers saw errors and 10–20 s responses for ~30 s more, in **5 of 5** repeated trials. Health checks alone would have hidden it. *Fix, measured:* **2 replicas → customers hurt in 0 of 5** trials; frontend retries with backoff would help further.
 5. 🟡 **Catalog latency spreads everywhere.** 500 ms on one service pushes the whole site's p95 to 3.5–4.4 s, as the map predicted for the service with the most callers. *Fix:* client-side timeouts and caching of catalog reads.
 6. 🟡 **Checkout fails ~1.3% of the time with nothing broken (likely cause found).** 3 HTTP 500s in 237 checkouts across both baselines, always on `POST /cart/checkout`. We've ruled out the load generator's card data (expiry and card numbers are always valid). **Lead:** in a baseline taken under host memory pressure, `paymentservice` failed its liveness probe and restarted while **4 of 56** checkouts failed; the final baseline, with memory headroom, had **0 of 55**. Resource pressure on payment is the likely cause, not application logic.
@@ -173,6 +179,11 @@ python3 -m chaosmind.test_guard && python3 -m unittest chaosmind.agents.test_age
 ```
 
 ## Repository layout
+**The product is `chaosmind.graph`.** Everything else is labelled:
+- `python3 -m chaosmind.agents`: a dependency-free fallback that runs the *same* steps without LangGraph (no approval gate UI, no resume). The tests use it.
+- `chaosmind/portable/`, `profiles/`, `deploy/portable/`: a prototype of the workflow for other apps behind an HTTP API. **Not used for any result here.**
+- `docs/adk/`: a design we evaluated and didn't build. `docs/team/AGENT_BAKEOFF.md`: how this implementation was chosen (history).
+
 ```
 chaosmind/            graph.py (LangGraph workflow) · inject.py · guard.py (kill switch) · monitor.py · baseline.py
 chaosmind/agents/     cartographer · strategist · safety · remediation · analyst · integrity · score · scoreboard · trials · steps (shared by graph + fallback loop)

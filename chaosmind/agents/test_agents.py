@@ -102,6 +102,15 @@ class AgentTests(unittest.TestCase):
         self.assertEqual([(i['target'], i['rank'], i['priority']['score']) for i in out['plan']],
                          [('redis-cart', 1, 16), ('adservice', 2, 2)])  # 4 services x critical(4) vs 2 x low(1)
 
+    def test_criteria_baseline_noise_could_meet_are_raised(self):
+        # Real gpt-oss criterion: "error_rate > 0" is confirmed by one failed request, so it could never refute.
+        base = {'metrics': {'error_rate': {'mean': 0.0006}, 'p95_ms': {'mean': 68, 'max': 110}}}
+        crit = strategist.valid_criteria([{'metric': 'error_rate', 'op': '>', 'value': 0},
+                                          {'metric': 'p95_ms', 'op': '>', 'value': 255},
+                                          {'metric': 'p95_ms', 'op': '>', 'value': 1000}], 'pod_kill', base)
+        self.assertEqual([(c['value'], c.get('raised_from')) for c in crit], [(0.01, 0), (340, 255), (1000, None)])
+        self.assertEqual(strategist.evaluate(crit, {'error_rate': 0.004, 'p95_ms': 120})[0], 'refuted')  # noise
+
     def test_trivial_pod_criteria_dropped(self):
         crit = [{'metric': 'unhealthy_count', 'op': '>', 'value': 0}, {'metric': 'error_rate', 'op': '>', 'value': 0.05}]
         self.assertEqual([c['metric'] for c in strategist.valid_criteria(crit, 'pod_kill')], ['error_rate'])

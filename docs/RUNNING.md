@@ -166,7 +166,7 @@ Offline tests (no cluster, no API key):
 ```bash
 python3 -m unittest chaosmind.agents.test_agents chaosmind.agents.test_day2
 ```
-Everything is saved to `runs/agents-<time>/`: facts, vulnerabilities, every plan, the full history with verdicts and scores, and `FINDINGS.md`.
+Everything is saved to `runs/agents-<time>/`: facts, vulnerabilities, every plan, the full history with verdicts and scores, and `FINDINGS.md` (written even if the model fails, then without the AI narrative). To regenerate the report for a run: `python3 -m chaosmind.agents.analyst runs/agents-<time>`.
 
 ### Manual incident menu (one scenario per failure type in the brief)
 ```bash

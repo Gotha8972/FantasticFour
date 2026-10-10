@@ -3,10 +3,11 @@ the identical experiment. The AI never writes patches; it can only choose a vett
 """
 import json
 from pathlib import Path
+import subprocess
 import time
 
 from chaosmind import guard, inject
-from chaosmind.agents import integrity, llm, safety, score
+from chaosmind.agents import integrity, llm, safety, score, strategist
 
 ROOT = Path(__file__).resolve().parents[2]
 CATALOG = json.loads((ROOT / 'remediation/catalog.json').read_text())
@@ -18,11 +19,27 @@ Only choose a fix whose "target" equals the experiment's target.
 Return JSON: {"fix_id": "<catalog id or none>", "reason": "...", "expected_effect": "what should improve on re-run"}"""
 
 
+def applied(fix):
+    """True if the live deployment already has this fix: a server-side dry run of its patch changes nothing.
+    (The model once proposed the Redis fix again, claiming emptyDir while the PVC was live.)"""
+    try:
+        live = json.loads(inject.kubectl('get', 'deployment', fix['target'], '-n', inject.NS, '-o', 'json'))['spec']
+        patched = json.loads(inject.kubectl('patch', 'deployment', fix['target'], '-n', inject.NS, '--type=json',
+                                            '-p', (ROOT / fix['patch']).read_text(), '--dry-run=server', '-o', 'json'))['spec']
+    except (subprocess.SubprocessError, OSError, ValueError):
+        return False  # can't tell (e.g. offline): the human approval gate still decides
+    return live == patched
+
+
 def choose(item):
     exp = item['experiment']
     candidates = [f for f in CATALOG if f['target'] == exp['target']]
     if not candidates:
         return {'fix_id': 'none', 'reason': f"no reviewed fix for {exp['target']}"}
+    in_place = [f['id'] for f in candidates if applied(f)]
+    candidates = [f for f in candidates if f['id'] not in in_place]
+    if not candidates:
+        return {'fix_id': 'none', 'reason': f"every reviewed fix for {exp['target']} is already applied: {in_place}"}
     reply = llm.ask(SYSTEM, {'weakness': {k: item.get(k) for k in ('vulnerability', 'experiment', 'observed',
                                                                     'integrity', 'verdict', 'score')},
                              'catalog': candidates})
@@ -107,10 +124,12 @@ def execute(item, choice, baseline, guard_run=guard.run):
                'no_change' if before is not None and after['score'] == before else 'worse')
     if verdict == 'worse':
         revert(fix)
+    # Same pre-registered criteria on the re-run: a fix that works turns "confirmed" into "refuted".
+    after_verdict, _ = strategist.evaluate(item.get('criteria', []), {**observed, 'integrity_violations': len(violations)})
     return {'choice': choice, 'fix': fix['id'], 'before': before, 'after': after['score'],
             'after_breakdown': after['breakdown'], 'after_observed': observed, 'after_integrity': violations,
             'after_run_dir': next((e.get('artifact_dir') for e in events), None), 'verdict': verdict,
-            'kept': verdict != 'worse'}
+            'kept': verdict != 'worse', 'after_verdict': after_verdict}
 
 
 def remediate(item, baseline, guard_run=guard.run):

@@ -39,7 +39,8 @@ For each experiment write pass/fail "criteria" BEFORE it runs. The hypothesis is
 during the fault. Allowed metrics: {', '.join(METRICS)} ("unhealthy_count" = number of unavailable services;
 "integrity_violations" = number of business checks that failed after the fault: cart lost its items, checkout did
 not produce an order. Use {{"metric": "integrity_violations", "op": ">", "value": 0}} for silent data-loss hypotheses).
-Use the baseline to set values well above normal (e.g. p95 at least 5x baseline).
+Use the baseline to set values well above normal: error_rate at least 0.01 and p95 at least 5x baseline. Code raises
+any threshold that normal noise could reach, so "error_rate > 0" is never a valid criterion.
 If a hypothesis can't be measured with these metrics, set "criteria": [] and say so in "reason".
 
 Given "history": never repeat a fault+target already run; use confirmed/refuted results to re-rank what's left
@@ -65,15 +66,32 @@ def experiment_id(item):
     return re.sub(r'[^a-z0-9-]', '', raw)[:55].strip('-')
 
 
-def valid_criteria(criteria, fault=None):
+def noise_floor(metric, baseline):
+    """The smallest threshold baseline noise can't reach: 5x normal, and at least 1% errors / 2x the worst normal p95.
+    Without it "error_rate > 0" is confirmed by a single failed request, so a hypothesis could never be refuted."""
+    m = ((baseline or {}).get('metrics') or {}).get(metric) or {}
+    if metric == 'error_rate':
+        return max(5 * (m.get('mean') or 0), 0.01)
+    if metric == 'p95_ms':
+        return max(5 * (m.get('mean') or 0), 2 * (m.get('max') or m.get('p95') or 0))
+    return 0
+
+
+def valid_criteria(criteria, fault=None, baseline=None):
     ok = [c for c in criteria if isinstance(c, dict) and c.get('metric') in METRICS
           and c.get('op') in ('>', '<') and type(c.get('value')) in (int, float)]
     if fault in ('pod_kill', 'pod_failure'):  # the target is unhealthy by definition; that proves nothing
         ok = [c for c in ok if c['metric'] != 'unhealthy_count']
-    return ok
+    out = []
+    for c in ok:
+        floor = noise_floor(c['metric'], baseline)
+        if c['op'] == '>' and c['value'] < floor:  # raised, and recorded, so noise alone can't confirm it
+            c = {**c, 'value': round(floor, 4), 'raised_from': c['value']}
+        out.append(c)
+    return out
 
 
-def check(reply, by_id, done, allowed, persistent):
+def check(reply, by_id, done, allowed, persistent, baseline=None):
     """Code validation of one strategist reply: what is kept, what is dropped and why."""
     items, dropped, done = [], [], set(done)
     for item in reply.get('plan', []):
@@ -93,7 +111,7 @@ def check(reply, by_id, done, allowed, persistent):
         if (exp['fault'], exp['target']) in done:
             dropped.append({'item': item, 'reason': 'already run or planned'})
             continue
-        criteria = valid_criteria(item.get('criteria', []), exp['fault'])
+        criteria = valid_criteria(item.get('criteria', []), exp['fault'], baseline)
         if exp['target'] == 'redis-cart' and not any(c['metric'] == 'integrity_violations' for c in criteria):
             dropped.append({'item': item, 'reason': 'Stateful target requires an integrity criterion'})
             continue
@@ -134,12 +152,12 @@ def plan(vulnerabilities, baseline, history=(), budget=5, allowed_faults=None, p
                'max_experiments': budget, 'faults_you_may_use_now': sorted(allowed),
                'services_with_persistent_volume': sorted(persistent)}
     reply = llm.ask(SYSTEM, request)
-    items, dropped = check(reply, by_id, done, allowed, persistent)
+    items, dropped = check(reply, by_id, done, allowed, persistent, baseline)
     note = feedback(items, dropped, history, allowed)
     if note:
         planned = done | {(i['experiment']['fault'], i['experiment']['target']) for i in items}
         retry = llm.ask(SYSTEM, {**request, 'feedback': note})
-        more, rejected = check(retry, by_id, planned, allowed, persistent)
+        more, rejected = check(retry, by_id, planned, allowed, persistent, baseline)
         items, dropped = items + more, dropped + rejected
         reply = {**reply, 'replan_note': retry.get('replan_note') or reply.get('replan_note', '')}
     items = [{**i, 'priority': priority(i, by_id)} for i in items]

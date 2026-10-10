@@ -40,8 +40,16 @@ class Day2Tests(unittest.TestCase):
             violations = integrity.verify({'cart_before': 0})
         self.assertEqual([v['check'] for v in violations], ['checkout_completes'])
 
+    def test_remediation_never_offers_a_fix_that_is_already_live(self):
+        item = {'experiment': {'id': 'redis-podkill', 'fault': 'pod_kill', 'target': 'redis-cart', 'duration_s': 30}}
+        with patch.object(remediation, 'applied', return_value=True), \
+             patch.object(llm, 'ask', side_effect=AssertionError('model must not be asked')):
+            self.assertIn('already applied', remediation.choose(item)['reason'])
+
     def test_remediation_only_picks_reviewed_fixes(self):
         item = {'experiment': {'id': 'redis-podkill', 'fault': 'pod_kill', 'target': 'redis-cart', 'duration_s': 30}}
+        self.addCleanup(patch.stopall)
+        patch.object(remediation, 'applied', return_value=False).start()
         with patch.object(llm, 'ask', return_value={'fix_id': 'rm -rf /'}):
             self.assertEqual(remediation.choose(item)['fix_id'], 'none')
         with patch.object(llm, 'ask', return_value={'fix_id': 'cartservice-replicas'}):  # wrong target
@@ -96,6 +104,21 @@ class Day2Tests(unittest.TestCase):
         self.assertNotIn('invented line', text)
         self.assertIn('999', text.split('## Fact-check')[1])
 
+    def test_analyst_flags_data_loss_claims_the_integrity_check_contradicts(self):
+        # Real gpt-oss report: "the redis-cart pod kill caused loss of cart state", while the cart was kept.
+        facts = {'scorecard': {'hypotheses': 1, 'confirmed': 1, 'refuted': 0, 'refuted_after_fix': 0},
+                 'experiments': [{'experiment_id': 'v2-redis', 'fault': 'pod_kill', 'target': 'redis-cart',
+                                  'verdict': 'confirmed', 'criteria': [{}, {}, {}], 'criteria_met': [{}],
+                                  'observed': {'error_rate': 0.0, 'p95_ms': 3200}, 'phases': {'during_worst': None},
+                                  'recovery_s': 10, 'integrity_violations': [], 'score': {'score': 80},
+                                  'remediation': {'verdict': 'not_approved'}, 'run_dir': 'runs/x', 'log_errors': []}]}
+        reply = {'summary': 's', 'findings': [{'experiment_id': 'v2-redis', 'title': 'Redis kill causes state loss',
+                                               'what_happened': 'cart data was lost', 'root_cause': 'emptyDir'}]}
+        text = analyst.render(facts, reply)
+        self.assertIn('Contradicted by the measurements', text)
+        self.assertIn('| 1 of 3 | 0.0% | 3200 ms |', text)  # same numbers as the verdict, and how many criteria held
+        self.assertIn('no fix applied (not_approved)', text)
+
     def test_recovery_timings_from_real_cart_down_run(self):
         events = [json.loads(l) for l in Path(CART_DOWN_RUN, 'events.jsonl').read_text().splitlines()]
         obs = loop.safety.observed(events)
@@ -124,7 +147,9 @@ class Day2Tests(unittest.TestCase):
         self.assertLess(by[(ai, 'before fix')], by[(ai, 'after the fix, approved by a human')])  # live AI loop
         self.assertLess(by[('catalog pod kill, 5 trials', '1 replica')], by[('catalog pod kill, 5 trials', '2 replicas')])
         self.assertLess(by[('cartservice unavailable', '1 replica')], by[('adservice unavailable', 'no fix needed')])
-        self.assertIn('| catalog pod kill, 5 trials | 29 (1 replica) | 99 (2 replicas) | **+70** |', scoreboard.render(table))
+        pairs = [l for l in scoreboard.render(table).split('## Fixes proven')[1].splitlines() if l.startswith('| ') and '**' in l]
+        self.assertGreaterEqual(len(pairs), 6)  # 2 manual/trial pairs + 4 fixes approved inside the live AI loop
+        self.assertTrue(all('**+' in l for l in pairs))  # every fix scored higher on the identical re-run
 
     def test_trials_wilson_and_invalid_runs(self):
         from chaosmind.agents import trials

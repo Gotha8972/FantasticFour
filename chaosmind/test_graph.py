@@ -40,6 +40,7 @@ class GraphTests(unittest.TestCase):
                   patch('chaosmind.monitor.snapshot', return_value={'users': 20}),
                   patch.object(safety, 'run', return_value={'decision': 'approve', 'reason': '', 'ramp': [None], 'steps': [STEP]}),
                   patch.object(integrity, 'prepare', return_value={}),
+                  patch.object(remediation, 'applied', return_value=False),
                   patch.object(integrity, 'verify', return_value=[{'check': 'cart_persistence'}])):
             p.start()
             self.addCleanup(p.stop)
