@@ -8,7 +8,7 @@
   ],
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "editable": true,
   "refresh": "5s",
   "time": {
@@ -380,13 +380,136 @@
       }
     },
     {
+      "id": 20,
+      "title": "Confirmed network delay",
+      "description": "Largest configured delay among experiments Chaos Mesh reports as injected. Zero means no confirmed delay while telemetry is available. This is not measured network RTT or request latency.",
+      "type": "stat",
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 6,
+        "h": 6
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max(boutique_chaos_network_delay_max_ms) and on() (max(boutique_chaos_stats_available) == 1)",
+          "legendFormat": "Confirmed delay",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "noValue": "No data",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 21,
+      "title": "Network delay by experiment",
+      "description": "Configured delay and configured delay gated by confirmed injection, per experiment. Compare these with request p95 to see customer impact. The values come from Chaos Mesh settings, not packet timing measurements.",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 6,
+        "y": 8,
+        "w": 18,
+        "h": 6
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "boutique_chaos_network_delay_configured_ms and on() (max(boutique_chaos_stats_available) == 1)",
+          "legendFormat": "{{experiment}} / {{target}} configured",
+          "range": true,
+          "instant": false
+        },
+        {
+          "refId": "B",
+          "expr": "boutique_chaos_network_delay_injected_ms and on() (max(boutique_chaos_stats_available) == 1)",
+          "legendFormat": "{{experiment}} / {{target}} confirmed",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "noValue": "No data",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "custom": {
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
       "id": 8,
       "title": "Telemetry availability: 1 = fresh, 0 = unavailable",
       "description": "Always check this before interpreting other panels. Missing targets and stale data must not be treated as a healthy zero.",
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 8,
+        "y": 14,
         "w": 12,
         "h": 5
       },
@@ -455,7 +578,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 8,
+        "y": 14,
         "w": 12,
         "h": 5
       },
@@ -515,7 +638,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 13,
+        "y": 19,
         "w": 12,
         "h": 7
       },
@@ -575,7 +698,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 13,
+        "y": 19,
         "w": 12,
         "h": 7
       },
@@ -653,7 +776,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 20,
+        "y": 26,
         "w": 12,
         "h": 7
       },
@@ -722,7 +845,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 20,
+        "y": 26,
         "w": 12,
         "h": 7
       },
@@ -789,7 +912,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 27,
+        "y": 33,
         "w": 12,
         "h": 7
       },
@@ -842,7 +965,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 27,
+        "y": 33,
         "w": 12,
         "h": 7
       },
@@ -895,7 +1018,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 34,
+        "y": 40,
         "w": 12,
         "h": 7
       },
@@ -948,7 +1071,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 34,
+        "y": 40,
         "w": 12,
         "h": 7
       },
@@ -1001,7 +1124,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 0,
-        "y": 41,
+        "y": 47,
         "w": 12,
         "h": 7
       },
@@ -1054,7 +1177,7 @@
       "type": "timeseries",
       "gridPos": {
         "x": 12,
-        "y": 41,
+        "y": 47,
         "w": 12,
         "h": 7
       },

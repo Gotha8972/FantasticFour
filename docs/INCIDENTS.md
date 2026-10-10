@@ -92,6 +92,10 @@ Choices 2–6 print an artifact directory under `runs/incident-*` with:
   a `GUARD_FINISHED` event in the incident log.
 
 Choice 1 writes its existing `runs/grafana-pod-kill-*` evidence.
+It supports one or more ready catalog replicas and kills one specific pod.
+Recovery requires a new pod UID and healthy service metrics; a surviving
+replica alone does not count as a replacement. The result records the initial
+number of ready replicas.
 
 Watch availability and errors for crashes/dependencies, p95 and throughput for
 network faults, Redis CPU for database pressure, and shopper count/CPU/RPS for
@@ -107,3 +111,13 @@ tests were added or run for this task. Disk injection and the new database/spike
 scenarios still need live validation on the host; the assistant shell cannot
 access this kind cluster. Existing catalog pod kill evidence is documented in
 `monitoring/README.md`.
+
+## Packet loss at 100 shoppers
+
+After the previous experiment has recovered, run:
+
+```bash
+python3 scripts/incidents/menu.py --choice 2 --network-mode loss --users 100 --rate 10
+```
+
+This establishes a baseline at 100 shoppers, then requests 10% catalog packet loss for up to 60 seconds through the guard. Baseline health must pass first; overload at 100 shoppers prevents injection. The guard retains its approved limits and restores the previous load settings afterward. Compare against the 100-shopper baseline to distinguish load effects from loss effects. Shopper count can be 1–200 and spawn rate 1–100/second. Starting new load settings rolls Locust and resets its live CSV counters. No higher-load result is claimed until run evidence is captured.

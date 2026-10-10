@@ -4,6 +4,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import math
 import os
+import re
 from pathlib import Path
 import ssl
 import time
@@ -28,18 +29,45 @@ def family(name, kind, help_text, value):
     return f'# HELP {name} {help_text}\n# TYPE {name} {kind}\n' + metric(name, value)
 
 
+def duration_ms(value):
+    """Convert a nonnegative Kubernetes/Go duration to milliseconds."""
+    units = {'h': 3600000, 'm': 60000, 's': 1000, 'ms': 1,
+             'us': .001, 'µs': .001, 'μs': .001, 'ns': .000001}
+    value = str(value)
+    parts = re.findall(r'(\d+(?:\.\d+)?)(ms|us|µs|μs|ns|h|m|s)', value)
+    if not parts or ''.join(n + u for n, u in parts) != value:
+        raise ValueError(f'Invalid network delay duration: {value}')
+    return sum(number(n) * units[u] for n, u in parts)
+
+
+def latest_aggregate(path):
+    """Read recent complete CSV rows without rescanning hours of history."""
+    with path.open('rb') as handle:
+        header = next(csv.reader([handle.readline().decode()]))
+        header_end = handle.tell()
+        handle.seek(0, 2)
+        start = max(header_end, handle.tell() - 1024 * 1024)
+        handle.seek(start)
+        if start > header_end:
+            handle.readline()  # Discard the row cut by the tail boundary.
+        lines = handle.read().splitlines(keepends=True)
+    for line in reversed(lines):
+        if not line.endswith(b'\n'):
+            continue  # Locust may still be writing this row.
+        values = next(csv.reader([line.decode()]))
+        if len(values) == len(header):
+            row = dict(zip(header, values))
+            if row.get('Name') == 'Aggregated':
+                return row
+    raise ValueError('No complete aggregate Locust history in recent CSV tail')
+
+
 def locust_metrics():
     directory = Path(os.environ.get('LOCUST_STATS_DIR', '/stats'))
     with (directory / 'load_stats.csv').open(newline='') as handle:
         rows = list(csv.DictReader(handle))
     aggregate = next(r for r in rows if r.get('Name') == 'Aggregated')
-    recent = None
-    with (directory / 'load_stats_history.csv').open(newline='') as handle:
-        for row in csv.DictReader(handle):
-            if row.get('Name') == 'Aggregated':
-                recent = row
-    if recent is None:
-        raise ValueError('No aggregate Locust history yet')
+    recent = latest_aggregate(directory / 'load_stats_history.csv')
     age = time.time() - number(recent['Timestamp'])
     if not -5 <= age <= 15:
         raise ValueError(f'Locust statistics are stale (age={age:.1f}s)')
@@ -84,7 +112,12 @@ def chaos_metrics():
     output += family('boutique_chaos_resource_count', 'gauge', 'Observed experiment resource count including recovered objects.', len(resources))
     for name in ('boutique_chaos_selected', 'boutique_chaos_injected', 'boutique_chaos_recovered'):
         output += f'# HELP {name} Experiment status: 1 means true, 0 means false.\n# TYPE {name} gauge\n'
+    for name, help_text in (
+        ('boutique_chaos_network_delay_configured_ms', 'Configured network delay per experiment; not measured request latency.'),
+        ('boutique_chaos_network_delay_injected_ms', 'Configured delay when injection is confirmed, otherwise zero.')):
+        output += f'# HELP {name} {help_text}\n# TYPE {name} gauge\n'
     injected_count = 0
+    max_delay = 0
     for resource in resources:
         state = resource.get('status', {})
         conditions = {c['type']: c['status'] == 'True' for c in state.get('conditions', [])}
@@ -97,8 +130,17 @@ def chaos_metrics():
         output += metric('boutique_chaos_selected', int(conditions.get('Selected', False)), labels)
         output += metric('boutique_chaos_injected', int(injected), labels)
         output += metric('boutique_chaos_recovered', int(recovered), labels)
+        delay = resource.get('spec', {}).get('delay', {})
+        if resource.get('kind') == 'NetworkChaos' and 'latency' in delay:
+            latency = duration_ms(delay['latency'])
+            active_latency = latency if injected else 0
+            output += metric('boutique_chaos_network_delay_configured_ms', latency, labels)
+            output += metric('boutique_chaos_network_delay_injected_ms', active_latency, labels)
+            max_delay = max(max_delay, active_latency)
         injected_count += int(injected)
     output += family('boutique_chaos_injected_count', 'gauge', 'Currently confirmed injected experiments.', injected_count)
+    output += family('boutique_chaos_network_delay_max_ms', 'gauge',
+                     'Largest configured delay among confirmed injected experiments; zero if none.', max_delay)
     return output
 
 
@@ -120,11 +162,14 @@ class Handler(BaseHTTPRequestHandler):
 
     def reply(self, code, body):
         content = body.encode()
-        self.send_response(code)
-        self.send_header('Content-Type', 'text/plain; version=0.0.4; charset=utf-8')
-        self.send_header('Content-Length', str(len(content)))
-        self.end_headers()
-        self.wfile.write(content)
+        try:
+            self.send_response(code)
+            self.send_header('Content-Type', 'text/plain; version=0.0.4; charset=utf-8')
+            self.send_header('Content-Length', str(len(content)))
+            self.end_headers()
+            self.wfile.write(content)
+        except (BrokenPipeError, ConnectionResetError):
+            print(json.dumps({'client_disconnected': True, 'path': self.path}), flush=True)
 
     def log_message(self, *args):
         pass

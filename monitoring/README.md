@@ -439,3 +439,15 @@ The configuration, exporters, dashboard, and installation/access scripts are
 in this checkout. Live installation from this assistant session is blocked by
 local Kubernetes socket restrictions. Run the installer in your host terminal
 to deploy them. No new implementation tests were added or executed.
+
+## Network delay panels
+
+**Confirmed network delay** shows the largest configured delay (milliseconds) among experiments that Chaos Mesh reports as injected. It shows 0 ms when no delay is confirmed and the Chaos API is available; missing telemetry stays No data. **Network delay by experiment** compares configured delay with delay gated by confirmed injection. These values are fault settings, not measured packet RTT or frontend response time; use request p95 to assess customer impact. Jitter is not included. A short fault can fall between the observer's 10-second scrapes.
+
+Apply the exporter and dashboard update:
+
+```bash
+bash scripts/monitoring.sh update-dashboard
+```
+
+This restarts the Chaos observer and provisions the dashboard. Select Last 5 minutes and refresh after the next scrape. Existing Locust counters are preserved.

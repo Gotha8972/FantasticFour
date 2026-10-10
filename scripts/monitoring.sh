@@ -51,5 +51,37 @@ case "${1:-status}" in
     k -n online-boutique logs deployment/loadgenerator -c metrics-exporter --tail=60
     k -n monitoring logs deployment/boutique-chaos-observer --tail=60
     ;;
-  *) echo 'Usage: bash scripts/monitoring.sh {grafana|grafana-diagnostics|repair-grafana|prometheus|password|status|exporter-logs}' >&2; exit 1 ;;
+  scrape-status)
+    k get --raw '/api/v1/namespaces/monitoring/services/http:boutique-monitoring-prometheus:9090/proxy/api/v1/targets' | python3 -c '
+import json,sys
+data=json.load(sys.stdin)
+for t in data.get("data", {}).get("activeTargets", []):
+    print(t.get("health"), t.get("labels", {}).get("job"), t.get("scrapeUrl"),
+          "duration:", t.get("lastScrapeDuration"), "error:", t.get("lastError", ""))
+'
+    ;;
+  update-dashboard)
+    k -n monitoring create configmap boutique-metrics-exporter --from-file=exporter.py="$PROJECT_DIR/monitoring/exporter.py" --dry-run=client -o yaml | k apply -f -
+    k -n monitoring create configmap boutique-chaos-dashboard --from-file=boutique-chaos.json="$PROJECT_DIR/monitoring/dashboards/boutique-chaos.json" --dry-run=client -o yaml | k apply -f -
+    k -n monitoring label configmap boutique-chaos-dashboard grafana_dashboard=1 --overwrite
+    k -n monitoring rollout restart deployment/boutique-chaos-observer
+    k -n monitoring rollout status deployment/boutique-chaos-observer --timeout=3m
+    echo 'Dashboard updated. Wait for the next scrape, then refresh Grafana.'
+    ;;
+  repair-exporter)
+    cd "$PROJECT_DIR"
+    python3 - <<'PY'
+from chaosmind import inject
+if inject.running():
+    raise SystemExit('Stop unrecovered experiments before restarting telemetry.')
+PY
+    echo 'Updating exporter; restarting Locust resets its live CSV counters.'
+    k -n monitoring create configmap boutique-metrics-exporter --from-file=exporter.py=monitoring/exporter.py --dry-run=client -o yaml | k apply -f -
+    k -n online-boutique create configmap boutique-metrics-exporter --from-file=exporter.py=monitoring/exporter.py --dry-run=client -o yaml | k apply -f -
+    k -n online-boutique rollout restart deployment/loadgenerator
+    k -n monitoring rollout restart deployment/boutique-chaos-observer
+    k -n online-boutique rollout status deployment/loadgenerator --timeout=3m
+    k -n monitoring rollout status deployment/boutique-chaos-observer --timeout=3m
+    ;;
+  *) echo 'Usage: bash scripts/monitoring.sh {grafana|grafana-diagnostics|repair-grafana|repair-exporter|update-dashboard|scrape-status|prometheus|password|status|exporter-logs}' >&2; exit 1 ;;
 esac

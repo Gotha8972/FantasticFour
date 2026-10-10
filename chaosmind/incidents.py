@@ -21,7 +21,9 @@ def read(resource, name):
     return json.loads(inject.kubectl('get', resource, name, '-n', inject.NS, '-o', 'json'))
 
 
-def run(scenario):
+def run(scenario, users=20, rate=2):
+    if not 1 <= users <= 200 or not 1 <= rate <= 100:
+        raise ValueError('Users must be 1–200 and spawn rate must be 1–100')
     active = inject.running()
     jobs = json.loads(inject.kubectl('get', 'jobs', '-n', inject.NS,
                                    '-l', 'boutique.local/incident=database-overload', '-o', 'json'))['items']
@@ -74,7 +76,8 @@ def run(scenario):
 
     try:
         changed_load = True
-        load(20, 2)
+        log('BASELINE_LOAD_REQUESTED', users=users, spawn_rate=rate)
+        load(users, rate)
         # Allow Locust's recent window to populate after its rollout.
         time.sleep(15)
         snap = sample('preflight')
@@ -238,8 +241,12 @@ def run(scenario):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('scenario', choices=SCENARIOS)
+    parser.add_argument('--users', type=int, default=20)
+    parser.add_argument('--rate', type=int, default=2)
     args = parser.parse_args()
-    return run(args.scenario)
+    if not 1 <= args.users <= 200 or not 1 <= args.rate <= 100:
+        parser.error('--users must be 1–200 and --rate must be 1–100')
+    return run(args.scenario, args.users, args.rate)
 
 
 if __name__ == '__main__':

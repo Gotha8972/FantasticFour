@@ -23,9 +23,11 @@ def main():
     ready = [p for p in pods if not p['metadata'].get('deletionTimestamp') and
              any(c['type'] == 'Ready' and c['status'] == 'True'
                  for c in p.get('status', {}).get('conditions', []))]
-    if len(ready) != 1:
-        raise RuntimeError('This demonstration requires exactly one ready catalog pod')
-    victim = ready[0]['metadata']
+    if not ready:
+        raise RuntimeError('This demonstration requires at least one ready catalog pod')
+    initial_uids = {p['metadata']['uid'] for p in pods}
+    victim = sorted(ready, key=lambda p: p['metadata']['name'])[0]['metadata']
+    print(f'Catalog has {len(ready)} ready replicas; selecting one pod: {victim["name"]}', flush=True)
     token = uuid.uuid4().hex[:10]
     name = f'grafana-pod-kill-{token}'
     directory = inject.ROOT / 'runs' / name
@@ -66,7 +68,7 @@ def main():
                         if phase == 'baseline' and (snap['unhealthy_services'] or breach(snap, LIMITS)):
                             raise RuntimeError('Baseline became unhealthy; refusing the kill')
                         if phase == 'after-kill':
-                            replaced = bool(uids) and victim['uid'] not in uids
+                            replaced = victim['uid'] not in uids and bool(set(uids) - initial_uids)
                             healthy = replaced and not snap['unhealthy_services'] and not breach(snap, LIMITS)
                         print(f'{phase}: users={snap["users"]} rps={snap["rps"]} '
                               f'errors={snap["error_rate"]:.1%} p95={snap["p95_ms"]}ms '
@@ -83,7 +85,8 @@ def main():
                     handle.flush()
                     time.sleep(2)
         report = {'replacement_observed': replaced, 'healthy_at_end': healthy,
-                  'original_pod_uid': victim['uid']}
+                  'original_pod_uid': victim['uid'],
+                  'initial_ready_replicas': len(ready)}
         (directory / 'result.json').write_text(json.dumps(report, indent=2))
         if not healthy:
             raise RuntimeError('Replacement and healthy recovery not confirmed within 120 seconds')
