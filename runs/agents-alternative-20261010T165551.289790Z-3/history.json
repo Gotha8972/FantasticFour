@@ -1,0 +1,58 @@
+[
+ {
+  "vulnerability": "V4",
+  "experiment": {
+   "id": "v4-pod-kill-redis-cart",
+   "fault": "pod_kill",
+   "target": "redis-cart",
+   "params": {},
+   "duration_s": 30
+  },
+  "criteria": [
+   {
+    "metric": "error_rate",
+    "op": ">",
+    "value": 0.05
+   },
+   {
+    "metric": "p95_ms",
+    "op": ">",
+    "value": 300
+   },
+   {
+    "metric": "integrity_violations",
+    "op": ">",
+    "value": 0
+   }
+  ],
+  "prediction": {
+   "affected": [
+    "redis-cart",
+    "cartservice",
+    "checkoutservice",
+    "frontend"
+   ],
+   "summary": "Cart operations and checkout may briefly fail during restart; stored cart contents should remain intact after recovery because a persistent volume is configured."
+  },
+  "safety": {
+   "decision": "approve",
+   "reason": "Current health is fresh and shows no unhealthy services, zero reported error rate, and stable latency near baseline. A one-shot pod_kill is confined to redis-cart, with Kubernetes expected to recreate the pod immediately; the 30-second observation window is within bounds. The target may temporarily affect cart-dependent requests, so monitoring checkout failures during the window is necessary, but the experiment does not intentionally impact other services.",
+   "experiment": {
+    "id": "v4-pod-kill-redis-cart",
+    "fault": "pod_kill",
+    "target": "redis-cart",
+    "params": {},
+    "duration_s": 30
+   },
+   "ramp": [
+    null
+   ],
+   "steps": []
+  },
+  "observed": null,
+  "integrity": [],
+  "verdict": "inconclusive",
+  "criteria_met": [],
+  "score": null
+ }
+]

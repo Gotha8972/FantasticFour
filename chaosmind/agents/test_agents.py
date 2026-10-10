@@ -49,7 +49,7 @@ class AgentTests(unittest.TestCase):
             {'vulnerability': 'V1', 'fault': 'pod_kill', 'target': 'redis-cart', 'duration_s': 30, 'criteria': []}]}
         history = [{'experiment': {'fault': 'pod_kill', 'target': 'redis-cart'}}]
         with patch.object(llm, 'ask', return_value=reply):
-            out = strategist.plan([], {}, history, allowed_faults={'network_delay', 'pod_kill'})
+            out = strategist.plan([{'id':'V2','service':'productcatalogservice'}, {'id':'V1','service':'redis-cart'}], {}, history, allowed_faults={'network_delay', 'pod_kill'})
         self.assertEqual([i['experiment']['target'] for i in out['plan']], ['productcatalogservice'])
         self.assertEqual(out['plan'][0]['criteria'], [{'metric': 'p95_ms', 'op': '>', 'value': 500}])
         self.assertEqual(len(out['dropped']), 2)

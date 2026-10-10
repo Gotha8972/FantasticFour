@@ -1,0 +1,159 @@
+{
+ "plan": [
+  {
+   "vulnerability": "V3",
+   "rank": 1,
+   "fault": "pod_kill",
+   "target": "redis-cart",
+   "params": {},
+   "duration_s": 30,
+   "reason": "This directly tests the single stateful datastore failure hypothesis. Persistent storage may preserve data, but the service can still lose availability during restart; integrity must be checked for silent cart loss.",
+   "prediction": {
+    "affected": [
+     "redis-cart",
+     "cartservice",
+     "checkoutservice",
+     "frontend"
+    ],
+    "summary": "Cart operations and checkout requests should show elevated customer-visible failures while redis-cart is being recreated. Persistent storage is expected to limit data loss, so integrity violations should remain zero."
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.05
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 300
+    },
+    {
+     "metric": "integrity_violations",
+     "op": ">",
+     "value": 0
+    }
+   ],
+   "experiment": {
+    "id": "v3-pod-kill-redis-cart",
+    "fault": "pod_kill",
+    "target": "redis-cart",
+    "params": {},
+    "duration_s": 30
+   }
+  },
+  {
+   "vulnerability": "V1",
+   "rank": 2,
+   "fault": "pod_kill",
+   "target": "frontend",
+   "params": {},
+   "duration_s": 30,
+   "reason": "The frontend is the single entrypoint, so a pod kill directly distinguishes an entrypoint availability bottleneck from failures isolated to downstream services. Customer error rate and latency are used instead of target pod health.",
+   "prediction": {
+    "affected": [
+     "frontend",
+     "checkoutservice",
+     "cartservice",
+     "currencyservice",
+     "shippingservice",
+     "adservice",
+     "recommendationservice"
+    ],
+    "summary": "Site requests should fail or become substantially slower until the sole frontend replica is recreated; baseline error rate is approximately 0.07% and baseline p95 latency is approximately 60 ms."
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.05
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 300
+    }
+   ],
+   "experiment": {
+    "id": "v1-pod-kill-frontend",
+    "fault": "pod_kill",
+    "target": "frontend",
+    "params": {},
+    "duration_s": 30
+   }
+  },
+  {
+   "vulnerability": "V4",
+   "rank": 3,
+   "fault": "pod_failure",
+   "target": "cartservice",
+   "params": {},
+   "duration_s": 30,
+   "reason": "A service-level outage tests whether the single cartservice replica is a shared customer-facing bottleneck. This uses a different fault type from the pod-kill experiments and measures impact on cart and checkout traffic rather than target health.",
+   "prediction": {
+    "affected": [
+     "cartservice",
+     "checkoutservice",
+     "frontend"
+    ],
+    "summary": "Cart access and checkout requests requiring cartservice should fail during the outage, increasing customer-visible errors and possibly request latency."
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.05
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 300
+    }
+   ],
+   "experiment": {
+    "id": "v4-pod-failure-cartservice",
+    "fault": "pod_failure",
+    "target": "cartservice",
+    "params": {},
+    "duration_s": 30
+   }
+  },
+  {
+   "vulnerability": "V2",
+   "rank": 4,
+   "fault": "pod_kill",
+   "target": "checkoutservice",
+   "params": {},
+   "duration_s": 30,
+   "reason": "This directly tests the checkoutservice single-replica hypothesis. Customer error rate and latency distinguish a checkout-path outage from a restart that is invisible to users; unhealthy_count is intentionally excluded because the target is expected to be unhealthy during the fault.",
+   "prediction": {
+    "affected": [
+     "checkoutservice",
+     "frontend"
+    ],
+    "summary": "Checkout requests should fail or become substantially slower while the only checkoutservice replica is unavailable; general browsing may continue."
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.05
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 300
+    }
+   ],
+   "experiment": {
+    "id": "v2-pod-kill-checkoutservice",
+    "fault": "pod_kill",
+    "target": "checkoutservice",
+    "params": {},
+    "duration_s": 30
+   }
+  }
+ ],
+ "dropped": [],
+ "replan_note": "No prior experiments exist, so no fault-target combination was excluded and rankings remain driven by risk score, statefulness, and checkout/site blast radius. V3 is prioritized because it can reveal both availability impact and silent data loss. V5 is deferred because only four experiments are allowed; its productcatalogservice outage should be planned next, preferably with pod_failure, unless these results show a broader shared dependency failure that changes prioritization."
+}

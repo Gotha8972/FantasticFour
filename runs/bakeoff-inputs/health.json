@@ -1,0 +1,73 @@
+{
+ "ts": 1791650983.5673254,
+ "error_rate": 0.0,
+ "p50_ms": 11.0,
+ "p95_ms": 64.0,
+ "users": 20,
+ "rps": 4.0,
+ "requests": 43924,
+ "failures": 93,
+ "checkout_success": 0.9889531825355077,
+ "checkout_requests": 1901,
+ "checkout_failures": 21,
+ "locust_history_ts": 1791650982.0,
+ "loadgenerator_pod_uids": [
+  "62ff364f-2626-44ab-8521-9241489ef8ba"
+ ],
+ "pod_uids": {
+  "adservice": [
+   "b3e738a7-840a-4c10-bcad-6c355a45c756"
+  ],
+  "cartservice": [
+   "5c60b13e-8fb6-4602-a747-8272cd4697b7"
+  ],
+  "checkoutservice": [
+   "8a695f4e-2dbf-41e9-a39d-435e50caa0be"
+  ],
+  "currencyservice": [
+   "6077ac6e-adc5-4d55-95e5-39456cac60b5"
+  ],
+  "emailservice": [
+   "793a3c99-875f-4729-91b8-6f65e55c36ea"
+  ],
+  "frontend": [
+   "429dbf5e-aacf-4bf9-9acc-fe94035ba76a"
+  ],
+  "loadgenerator": [
+   "62ff364f-2626-44ab-8521-9241489ef8ba"
+  ],
+  "paymentservice": [
+   "b6f94341-e91f-402a-87b4-156f41a75e24"
+  ],
+  "productcatalogservice": [
+   "339df153-2045-4f24-9fe8-c41cf838dc50",
+   "8c3eca2e-64f7-4867-b6da-d29269c1c713"
+  ],
+  "recommendationservice": [
+   "28a150eb-7b88-4b04-ad7f-111f3ba0124a"
+  ],
+  "redis-cart": [
+   "c0ccab53-25c4-40d9-a336-c1c0ab68f72f"
+  ],
+  "shippingservice": [
+   "d2d6b37f-db07-4932-9991-30773150aa1c"
+  ]
+ },
+ "unhealthy_services": [],
+ "restarts": {
+  "adservice": 7,
+  "cartservice": 2,
+  "checkoutservice": 0,
+  "currencyservice": 2,
+  "emailservice": 0,
+  "frontend": 0,
+  "loadgenerator": 0,
+  "paymentservice": 1,
+  "productcatalogservice": 0,
+  "recommendationservice": 0,
+  "redis-cart": 0,
+  "shippingservice": 0
+ },
+ "metrics_age_s": 1.5673081874847412,
+ "source": "locust_csv_and_kubernetes"
+}

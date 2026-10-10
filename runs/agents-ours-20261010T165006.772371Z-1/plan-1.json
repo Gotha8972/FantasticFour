@@ -1,0 +1,156 @@
+{
+ "plan": [
+  {
+   "vulnerability": "V2",
+   "rank": 1,
+   "fault": "pod_kill",
+   "target": "redis-cart",
+   "params": {},
+   "duration_s": 30,
+   "reason": "This is the highest-risk checkout-path weakness. A pod kill directly tests whether persistent cart state and cart-dependent checkout operations survive a single datastore restart.",
+   "prediction": {
+    "affected": [
+     "redis-cart",
+     "cartservice",
+     "checkoutservice",
+     "frontend"
+    ],
+    "summary": "Cart reads or writes may fail during restart, and checkout may fail or lose previously added items. Persistent storage may preserve state, but the single replica can still create a temporary availability gap."
+   },
+   "criteria": [
+    {
+     "metric": "integrity_violations",
+     "op": ">",
+     "value": 0
+    },
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.05
+    }
+   ],
+   "experiment": {
+    "id": "v2-pod-kill-redis-cart",
+    "fault": "pod_kill",
+    "target": "redis-cart",
+    "params": {},
+    "duration_s": 30
+   }
+  },
+  {
+   "vulnerability": "V1",
+   "rank": 2,
+   "fault": "pod_failure",
+   "target": "frontend",
+   "params": {},
+   "duration_s": 30,
+   "reason": "The frontend is the sole entrypoint and has one replica. A service-level failure directly tests the predicted loss of site access without using unhealthy_count, which would be tautological for the failed target.",
+   "prediction": {
+    "affected": [
+     "frontend",
+     "checkoutservice",
+     "cartservice",
+     "currencyservice",
+     "paymentservice",
+     "shippingservice",
+     "adservice",
+     "recommendationservice",
+     "productcatalogservice"
+    ],
+    "summary": "User-facing requests should fail at a rate far above the 0.07% baseline because all site traffic enters through the unavailable frontend."
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.2
+    }
+   ],
+   "experiment": {
+    "id": "v1-pod-failure-frontend",
+    "fault": "pod_failure",
+    "target": "frontend",
+    "params": {},
+    "duration_s": 30
+   }
+  },
+  {
+   "vulnerability": "V3",
+   "rank": 3,
+   "fault": "pod_failure",
+   "target": "paymentservice",
+   "params": {},
+   "duration_s": 30,
+   "reason": "Paymentservice is a single checkout-path replica and a revenue-critical dependency. A pod failure is the permitted direct availability test for this single point of failure.",
+   "prediction": {
+    "affected": [
+     "paymentservice",
+     "checkoutservice",
+     "frontend"
+    ],
+    "summary": "Browsing may remain available, but checkout attempts requiring payment should fail or produce no completed orders while paymentservice is unavailable."
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.05
+    },
+    {
+     "metric": "integrity_violations",
+     "op": ">",
+     "value": 0
+    }
+   ],
+   "experiment": {
+    "id": "v3-pod-failure-paymentservice",
+    "fault": "pod_failure",
+    "target": "paymentservice",
+    "params": {},
+    "duration_s": 30
+   }
+  },
+  {
+   "vulnerability": "V4",
+   "rank": 4,
+   "fault": "network_delay",
+   "target": "currencyservice",
+   "params": {
+    "latency": "800ms"
+   },
+   "duration_s": 30,
+   "reason": "Currencyservice is a single checkout-path dependency and its hypothesis specifically predicts latency propagation. An 800 ms delay is materially above the approximately 35 ms baseline p95 while remaining within the permitted fault limit.",
+   "prediction": {
+    "affected": [
+     "currencyservice",
+     "checkoutservice",
+     "frontend"
+    ],
+    "summary": "Currency conversion calls should add substantial latency to checkout and may cause timeout-related request failures if checkout has strict dependency timeouts."
+   },
+   "criteria": [
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 300
+    },
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.05
+    }
+   ],
+   "experiment": {
+    "id": "v4-network-delay-currencyservice",
+    "fault": "network_delay",
+    "target": "currencyservice",
+    "params": {
+     "latency": "800ms"
+    },
+    "duration_s": 30
+   }
+  }
+ ],
+ "dropped": [],
+ "replan_note": "No prior experiments have run, so no fault-target combinations are excluded and all vulnerabilities remain unverified. The initial ranking prioritizes checkout-path and site-entrypoint risks, with redis-cart first because it combines the highest risk score with a state-integrity hypothesis. If V2 confirms data loss or checkout impact, prioritize persistence and restart remediation before testing lower-risk optional dependencies. If a hypothesis is refuted, re-rank the remaining untested checkout dependencies and use the available alternative fault type rather than repeating the same fault-target pair."
+}

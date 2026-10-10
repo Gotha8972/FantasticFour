@@ -69,12 +69,16 @@ def plan(vulnerabilities, baseline, history=(), budget=5, allowed_faults=None):
     reply = llm.ask(SYSTEM, {'vulnerabilities': vulnerabilities, 'baseline': baseline,
                              'history': list(history), 'max_experiments': budget,
                              'faults_you_may_use_now': sorted(allowed)})
+    by_id = {v['id']: v for v in vulnerabilities}
     items, dropped = [], []
     for item in reply.get('plan', []):
         try:
             exp = {'id': experiment_id(item), 'fault': item['fault'], 'target': item['target'],
                    'params': item.get('params') or {}, 'duration_s': int(item.get('duration_s', 30))}
             inject.validate(exp)
+            vulnerability = by_id.get(item.get('vulnerability'))
+            if vulnerability is None or vulnerability.get('service') != exp['target']:
+                raise ValueError('Target must match the cited audited vulnerability')
         except (KeyError, TypeError, ValueError) as error:
             dropped.append({'item': item, 'reason': str(error)})
             continue
@@ -84,8 +88,12 @@ def plan(vulnerabilities, baseline, history=(), budget=5, allowed_faults=None):
         if (exp['fault'], exp['target']) in done:
             dropped.append({'item': item, 'reason': 'already run'})
             continue
+        criteria = valid_criteria(item.get('criteria', []), exp['fault'])
+        if exp['target'] == 'redis-cart' and not any(c['metric'] == 'integrity_violations' for c in criteria):
+            dropped.append({'item': item, 'reason': 'Stateful target requires an integrity criterion'})
+            continue
         done.add((exp['fault'], exp['target']))
-        items.append({**item, 'experiment': exp, 'criteria': valid_criteria(item.get('criteria', []), exp['fault'])})
+        items.append({**item, 'experiment': exp, 'criteria': criteria})
     items.sort(key=lambda i: i.get('rank', 99))
     return {'plan': items[:budget], 'dropped': dropped, 'replan_note': reply.get('replan_note', '')}
 

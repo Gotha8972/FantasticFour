@@ -1,0 +1,56 @@
+[
+ {
+  "vulnerability": "V3",
+  "experiment": {
+   "id": "v3-pod-kill-redis-cart",
+   "fault": "pod_kill",
+   "target": "redis-cart",
+   "params": {},
+   "duration_s": 30
+  },
+  "criteria": [
+   {
+    "metric": "error_rate",
+    "op": ">",
+    "value": 0.05
+   },
+   {
+    "metric": "p95_ms",
+    "op": ">",
+    "value": 300
+   },
+   {
+    "metric": "integrity_violations",
+    "op": ">",
+    "value": 0
+   }
+  ],
+  "prediction": {
+   "affected": [
+    "redis-cart",
+    "cartservice",
+    "checkoutservice",
+    "frontend"
+   ],
+   "summary": "Cart and checkout errors should increase during Redis recovery; persistent storage should preserve cart contents, but any integrity violation would confirm data-loss or recovery risk."
+  },
+  "safety": {
+   "decision": "reject",
+   "reason": "Current health is not sufficiently healthy for a pod kill: checkout_success is 0.98895, below the baseline minimum of 0.99761, and checkout failures are already elevated. Introducing a redis-cart disruption could further affect the cart and checkout revenue path, so the experiment should not proceed until health recovers.",
+   "experiment": {
+    "id": "v3-pod-kill-redis-cart",
+    "fault": "pod_kill",
+    "target": "redis-cart",
+    "params": {},
+    "duration_s": 30
+   },
+   "ramp": [],
+   "steps": []
+  },
+  "observed": null,
+  "integrity": [],
+  "verdict": "inconclusive",
+  "criteria_met": [],
+  "score": null
+ }
+]

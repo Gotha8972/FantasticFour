@@ -1,0 +1,58 @@
+[
+ {
+  "vulnerability": "V1",
+  "experiment": {
+   "id": "v1-pod-kill-redis-cart",
+   "fault": "pod_kill",
+   "target": "redis-cart",
+   "params": {},
+   "duration_s": 30
+  },
+  "criteria": [
+   {
+    "metric": "error_rate",
+    "op": ">",
+    "value": 0.05
+   },
+   {
+    "metric": "p95_ms",
+    "op": ">",
+    "value": 300
+   },
+   {
+    "metric": "integrity_violations",
+    "op": ">",
+    "value": 0
+   }
+  ],
+  "prediction": {
+   "affected": [
+    "redis-cart",
+    "cartservice",
+    "checkoutservice",
+    "frontend"
+   ],
+   "summary": "Cart reads or writes and checkout requests may fail or incur elevated latency during Redis recreation. Persistent storage should preserve cart contents after recovery; any lost cart items or failed post-fault business checks would confirm the suspected vulnerability."
+  },
+  "safety": {
+   "decision": "approve",
+   "reason": "Current health is fresh (metrics age 1.6s), has no unhealthy services, and the target has no observed restarts. The pod_kill is a one-shot fault confined to redis-cart, whose pod will be recreated immediately; the 30s duration is only the observation window and is within the safe limit. Existing checkout performance is somewhat below baseline, so monitor it closely, but the snapshot does not indicate an unhealthy system or unacceptable cross-service risk.",
+   "experiment": {
+    "id": "v1-pod-kill-redis-cart",
+    "fault": "pod_kill",
+    "target": "redis-cart",
+    "params": {},
+    "duration_s": 30
+   },
+   "ramp": [
+    null
+   ],
+   "steps": []
+  },
+  "observed": null,
+  "integrity": [],
+  "verdict": "inconclusive",
+  "criteria_met": [],
+  "score": null
+ }
+]

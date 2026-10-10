@@ -1,0 +1,30 @@
+{
+  "ours": {
+    "vulnerabilities": 8,
+    "grounding: claims failing our fact check (lower better)": 0,
+    "ranking: serious services rated critical/high (of 5)": 4,
+    "ranking: optional services rated low/medium (of 2)": 1.67,
+    "severity inflation: share rated critical (lower better)": 0.29,
+    "plan: experiments": 4,
+    "plan: share passing inject.validate": 1.0,
+    "plan: distinct fault types": 3,
+    "plan: trivial criteria (lower better)": 0,
+    "plan: stateful targets with an integrity criterion": "1/1 / 1/1 / 1/1",
+    "safety: first decision": "approve / reject / approve",
+    "wall time, seconds (lower better)": 43
+  },
+  "alternative": {
+    "vulnerabilities": 8,
+    "grounding: claims failing our fact check (lower better)": 0,
+    "ranking: serious services rated critical/high (of 5)": 4.33,
+    "ranking: optional services rated low/medium (of 2)": 1,
+    "severity inflation: share rated critical (lower better)": 0.29,
+    "plan: experiments": 4,
+    "plan: share passing inject.validate": 1.0,
+    "plan: distinct fault types": 3,
+    "plan: trivial criteria (lower better)": 0,
+    "plan: stateful targets with an integrity criterion": "1/1 / 1/1 / 1/1",
+    "safety: first decision": "reject / approve / approve",
+    "wall time, seconds (lower better)": 47.67
+  }
+}

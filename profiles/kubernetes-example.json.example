@@ -1,0 +1,27 @@
+{
+  "id": "my-application",
+  "adapter": "kubernetes",
+  "allowed_targets": [
+    "catalog"
+  ],
+  "allowed_faults": [
+    "pod_kill",
+    "network_delay",
+    "network_loss"
+  ],
+  "customer_journey": "Complete a purchase",
+  "expected_users": 20,
+  "kubernetes": {
+    "namespace": "application",
+    "context": "your-context",
+    "kubeconfig": "/credentials/kubeconfig",
+    "prometheus_url": "http://prometheus:9090",
+    "queries": {
+      "error_rate": "max(application_recent_error_ratio)",
+      "p95_ms": "max(application_recent_p95_ms)",
+      "rps": "max(application_recent_rps)",
+      "users": "max(application_users)",
+      "source_age_s": "max(application_source_age_seconds)"
+    }
+  }
+}

@@ -1,0 +1,164 @@
+{
+ "plan": [
+  {
+   "vulnerability": "V4",
+   "rank": 1,
+   "fault": "pod_kill",
+   "target": "redis-cart",
+   "params": {},
+   "duration_s": 30,
+   "reason": "Redis-cart is stateful and the cart/checkout path depends on its sole replica. A pod kill directly tests availability during restart while also checking whether persistent storage prevents cart-state loss.",
+   "prediction": {
+    "affected": [
+     "redis-cart",
+     "cartservice",
+     "checkoutservice",
+     "frontend"
+    ],
+    "summary": "Cart operations and cart-dependent checkout requests should fail or become slow during Redis restart. Persistent storage may preserve state after recovery, but it will not provide immediate availability."
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.05
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 300
+    },
+    {
+     "metric": "integrity_violations",
+     "op": ">",
+     "value": 0
+    }
+   ],
+   "experiment": {
+    "id": "v4-pod-kill-redis-cart",
+    "fault": "pod_kill",
+    "target": "redis-cart",
+    "params": {},
+    "duration_s": 30
+   }
+  },
+  {
+   "vulnerability": "V1",
+   "rank": 2,
+   "fault": "pod_failure",
+   "target": "paymentservice",
+   "params": {},
+   "duration_s": 30,
+   "reason": "The payment processor has one replica and is a direct checkout dependency. A service outage tests whether checkout fails from payment unavailability rather than from restart-specific state loss.",
+   "prediction": {
+    "affected": [
+     "paymentservice",
+     "checkoutservice",
+     "frontend"
+    ],
+    "summary": "Payment-dependent checkout attempts should fail during the outage, increasing customer-visible error rate while general browsing may remain available."
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.05
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 300
+    }
+   ],
+   "experiment": {
+    "id": "v1-pod-failure-paymentservice",
+    "fault": "pod_failure",
+    "target": "paymentservice",
+    "params": {},
+    "duration_s": 30
+   }
+  },
+  {
+   "vulnerability": "V2",
+   "rank": 3,
+   "fault": "network_delay",
+   "target": "frontend",
+   "params": {
+    "latency": "500ms"
+   },
+   "duration_s": 30,
+   "reason": "The frontend is the sole entrypoint. Injecting moderate network latency tests whether customer access becomes materially degraded even when the frontend process remains available, distinguishing latency impact from complete pod loss.",
+   "prediction": {
+    "affected": [
+     "frontend",
+     "checkoutservice",
+     "cartservice",
+     "productcatalogservice",
+     "currencyservice",
+     "shippingservice",
+     "adservice",
+     "recommendationservice"
+    ],
+    "summary": "Site-wide requests should remain possible but become substantially slower; frontend-mediated checkout and browsing latency should rise above the approximately 60 ms baseline p95."
+   },
+   "criteria": [
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 300
+    },
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.05
+    }
+   ],
+   "experiment": {
+    "id": "v2-network-delay-frontend",
+    "fault": "network_delay",
+    "target": "frontend",
+    "params": {
+     "latency": "500ms"
+    },
+    "duration_s": 30
+   }
+  },
+  {
+   "vulnerability": "V3",
+   "rank": 4,
+   "fault": "pod_kill",
+   "target": "checkoutservice",
+   "params": {},
+   "duration_s": 30,
+   "reason": "The checkout coordinator has one replica and six downstream dependencies. Killing it directly tests whether checkout requests fail during coordinator recreation, independently of any downstream dependency failure.",
+   "prediction": {
+    "affected": [
+     "checkoutservice",
+     "frontend"
+    ],
+    "summary": "Checkout requests should fail or incur substantial latency while the coordinator is being recreated, while non-checkout frontend functionality may remain usable."
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.05
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 300
+    }
+   ],
+   "experiment": {
+    "id": "v3-pod-kill-checkoutservice",
+    "fault": "pod_kill",
+    "target": "checkoutservice",
+    "params": {},
+    "duration_s": 30
+   }
+  }
+ ],
+ "dropped": [],
+ "replan_note": "No prior experiments have run, so rankings use severity, checkout-path exposure, replica count, and statefulness. V4 is prioritized because it combines a stateful single point of failure with possible silent cart-state loss. V1 follows because payment failure directly blocks checkout. V2 uses network delay to distinguish degraded entrypoint performance from complete frontend failure; V3 then tests coordinator restart impact. Results should re-rank the remaining untested vulnerabilities and distinguish dependency-specific failures from entrypoint or coordinator failures."
+}

@@ -1,0 +1,15 @@
+metric                                                     implementation 1    implementation 2
+vulnerabilities                                                           8                   7
+grounding: claims failing our fact check (lower better)                   0                   0
+ranking: serious services rated critical/high (of 5)                   3.67                4.67
+ranking: optional services rated low/medium (of 2)                     1.33                0.67
+severity inflation: share rated critical (lower better)                0.21                0.47
+plan: experiments                                                         4                   4
+plan: share passing inject.validate                                     1.0                 1.0
+plan: distinct fault types                                                3                2.33
+plan: trivial criteria (lower better)                                     0                   0
+plan: stateful targets with an integrity criterion          1/1 / 1/1 / 1/1     1/1 / 1/1 / 1/1
+safety: first decision                                   reject / reject / reject  reject / approve / approve
+wall time, seconds (lower better)                                     39.67                  45
+
+Runs per implementation: 3, 3 (use ≥ 3 each: AI output varies run to run)

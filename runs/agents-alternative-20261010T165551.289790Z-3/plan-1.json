@@ -1,0 +1,157 @@
+{
+ "plan": [
+  {
+   "vulnerability": "V4",
+   "rank": 1,
+   "fault": "pod_kill",
+   "target": "redis-cart",
+   "params": {},
+   "duration_s": 30,
+   "reason": "V4 has the highest risk score and concerns stateful single-pod cart storage. A pod kill directly tests restart behavior and whether persistent storage preserves cart contents. Customer-impact criteria distinguish temporary unavailability from silent data loss.",
+   "prediction": {
+    "affected": [
+     "redis-cart",
+     "cartservice",
+     "checkoutservice",
+     "frontend"
+    ],
+    "summary": "Cart operations and checkout may briefly fail during restart; stored cart contents should remain intact after recovery because a persistent volume is configured."
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.05
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 300
+    },
+    {
+     "metric": "integrity_violations",
+     "op": ">",
+     "value": 0
+    }
+   ],
+   "experiment": {
+    "id": "v4-pod-kill-redis-cart",
+    "fault": "pod_kill",
+    "target": "redis-cart",
+    "params": {},
+    "duration_s": 30
+   }
+  },
+  {
+   "vulnerability": "V1",
+   "rank": 2,
+   "fault": "pod_failure",
+   "target": "paymentservice",
+   "params": {},
+   "duration_s": 30,
+   "reason": "Paymentservice is a single critical checkout dependency. A service outage directly tests whether checkout fails when payment is unavailable, without relying on target pod health as a criterion.",
+   "prediction": {
+    "affected": [
+     "paymentservice",
+     "checkoutservice",
+     "frontend"
+    ],
+    "summary": "Checkout attempts requiring payment should fail during the outage, producing materially elevated customer-visible errors compared with the 0.07% baseline error rate."
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.05
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 300
+    }
+   ],
+   "experiment": {
+    "id": "v1-pod-failure-paymentservice",
+    "fault": "pod_failure",
+    "target": "paymentservice",
+    "params": {},
+    "duration_s": 30
+   }
+  },
+  {
+   "vulnerability": "V3",
+   "rank": 3,
+   "fault": "network_delay",
+   "target": "checkoutservice",
+   "params": {
+    "latency": "500ms"
+   },
+   "duration_s": 30,
+   "reason": "Checkout has high fan-in from six downstream services and is directly on the customer checkout path. Network delay tests latency propagation and distinguishes a latency-sensitive checkout bottleneck from a simple pod-availability failure.",
+   "prediction": {
+    "affected": [
+     "checkoutservice",
+     "frontend"
+    ],
+    "summary": "Checkout latency should increase substantially above the 34.7 ms mean and 59.95 ms baseline p95, with possible timeout-related customer errors even though the checkout pod remains running."
+   },
+   "criteria": [
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 300
+    },
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.05
+    }
+   ],
+   "experiment": {
+    "id": "v3-network-delay-checkoutservice",
+    "fault": "network_delay",
+    "target": "checkoutservice",
+    "params": {
+     "latency": "500ms"
+    },
+    "duration_s": 30
+   }
+  },
+  {
+   "vulnerability": "V2",
+   "rank": 4,
+   "fault": "pod_kill",
+   "target": "frontend",
+   "params": {},
+   "duration_s": 30,
+   "reason": "Frontend is the single site entrypoint. This test measures complete user-facing availability after a restart and complements the dependency outage and checkout latency tests with an entrypoint failure mode.",
+   "prediction": {
+    "affected": [
+     "frontend"
+    ],
+    "summary": "Users should experience site errors or elevated latency while the sole frontend replica is being recreated; downstream services may remain healthy but inaccessible through the entrypoint."
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.05
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 300
+    }
+   ],
+   "experiment": {
+    "id": "v2-pod-kill-frontend",
+    "fault": "pod_kill",
+    "target": "frontend",
+    "params": {},
+    "duration_s": 30
+   }
+  }
+ ],
+ "dropped": [],
+ "replan_note": "No prior experiments have been run, so rankings remain based on risk score, checkout-path criticality, and the ability to measure customer impact. The plan uses both pod_kill and pod_failure, plus network_delay, to distinguish state loss, dependency unavailability, latency propagation, and entrypoint availability. V4 includes the required integrity criterion because Redis cart state must be checked even with persistent storage configured."
+}

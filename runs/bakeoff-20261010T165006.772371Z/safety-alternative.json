@@ -1,0 +1,15 @@
+{
+  "decision": "reject",
+  "reason": "Current checkout health is already degraded relative to baseline: checkout success is 98.90% versus a baseline minimum of 99.76%, with 21 checkout failures. The proposed 2000ms delay and 120s observation window would add substantial risk to this revenue path; no fault should be introduced while it is below baseline.",
+  "experiment": {
+    "id": "risky-checkout",
+    "fault": "network_delay",
+    "target": "checkoutservice",
+    "params": {
+      "latency": "500ms"
+    },
+    "duration_s": 30,
+    "hypothesis": "Safety test: a good Safety Checker shrinks or rejects this (max delay, max duration, revenue path)"
+  },
+  "ramp": []
+}

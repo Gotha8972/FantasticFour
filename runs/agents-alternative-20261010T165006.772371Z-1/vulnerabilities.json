@@ -1,0 +1,202 @@
+{
+ "vulnerabilities": [
+  {
+   "id": "V1",
+   "service": "frontend",
+   "severity": "critical",
+   "weakness": "The single entrypoint replica is a complete site availability bottleneck.",
+   "evidence": {
+    "replicas": 1,
+    "entrypoint": true,
+    "dependents": [],
+    "risk_score": 7
+   },
+   "hypothesis": "If the frontend pod is killed, then the whole site becomes unavailable until Kubernetes replaces it.",
+   "blast_radius": [
+    "frontend",
+    "checkoutservice",
+    "cartservice",
+    "currencyservice",
+    "shippingservice",
+    "adservice",
+    "recommendationservice"
+   ],
+   "unverified_evidence_dropped": {},
+   "risk_score": 7,
+   "status": "untested"
+  },
+  {
+   "id": "V2",
+   "service": "checkoutservice",
+   "severity": "critical",
+   "weakness": "The single checkout-service replica is a direct single point of failure for the checkout path.",
+   "evidence": {
+    "replicas": 1,
+    "calls": [
+     "cartservice",
+     "currencyservice",
+     "emailservice",
+     "paymentservice",
+     "productcatalogservice",
+     "shippingservice"
+    ],
+    "callers": [
+     "frontend"
+    ],
+    "on_checkout_path": true,
+    "risk_score": 7
+   },
+   "hypothesis": "If the checkoutservice pod is killed, then frontend checkout requests fail until the pod is restored.",
+   "blast_radius": [
+    "frontend",
+    "checkoutservice"
+   ],
+   "unverified_evidence_dropped": {},
+   "risk_score": 7,
+   "status": "untested"
+  },
+  {
+   "id": "V3",
+   "service": "redis-cart",
+   "severity": "high",
+   "weakness": "The single cart datastore replica creates a checkout availability bottleneck despite persistent storage.",
+   "evidence": {
+    "replicas": 1,
+    "volumes": [
+     "persistentVolumeClaim"
+    ],
+    "pdb": false,
+    "on_checkout_path": true,
+    "dependents": [
+     "cartservice",
+     "checkoutservice",
+     "frontend"
+    ],
+    "risk_score": 9
+   },
+   "hypothesis": "If the redis-cart pod fails or experiences network loss, then cart operations and checkout requests depending on the cart become unavailable, while the persistent volume limits the stated risk to availability rather than data loss.",
+   "blast_radius": [
+    "redis-cart",
+    "cartservice",
+    "checkoutservice",
+    "frontend"
+   ],
+   "unverified_evidence_dropped": {},
+   "risk_score": 9,
+   "status": "untested"
+  },
+  {
+   "id": "V4",
+   "service": "cartservice",
+   "severity": "high",
+   "weakness": "The single cart-service replica is a shared checkout dependency with no failover replica.",
+   "evidence": {
+    "replicas": 1,
+    "calls": [
+     "redis-cart"
+    ],
+    "callers": [
+     "checkoutservice",
+     "frontend"
+    ],
+    "on_checkout_path": true,
+    "risk_score": 8
+   },
+   "hypothesis": "If the cartservice pod is killed, then cart access and checkout operations requiring cartservice fail until recovery.",
+   "blast_radius": [
+    "cartservice",
+    "checkoutservice",
+    "frontend"
+   ],
+   "unverified_evidence_dropped": {},
+   "risk_score": 8,
+   "status": "untested"
+  },
+  {
+   "id": "V5",
+   "service": "productcatalogservice",
+   "severity": "high",
+   "weakness": "The catalog has only two replicas and is a dependency of both checkout and the entrypoint.",
+   "evidence": {
+    "replicas": 2,
+    "callers": [
+     "checkoutservice",
+     "frontend",
+     "recommendationservice"
+    ],
+    "dependents": [
+     "checkoutservice",
+     "frontend",
+     "recommendationservice"
+    ],
+    "on_checkout_path": true,
+    "risk_score": 7
+   },
+   "hypothesis": "If both productcatalogservice pods are killed or made unreachable, then product browsing and checkout operations requiring catalog data fail.",
+   "blast_radius": [
+    "productcatalogservice",
+    "checkoutservice",
+    "frontend",
+    "recommendationservice"
+   ],
+   "unverified_evidence_dropped": {},
+   "risk_score": 7,
+   "status": "untested"
+  }
+ ],
+ "rejected": [
+  {
+   "id": "V5",
+   "service": "paymentservice, currencyservice, emailservice, shippingservice",
+   "severity": "high",
+   "weakness": "Each single-replica checkout dependency can partially or fully block checkout when unavailable.",
+   "evidence": {
+    "replicas": 1,
+    "on_checkout_path": true,
+    "pdb": false,
+    "hpa": false
+   },
+   "hypothesis": "If one of these service pods is killed, then checkout requests requiring that service fail or become delayed until the pod is restored.",
+   "blast_radius": [
+    "paymentservice",
+    "currencyservice",
+    "emailservice",
+    "shippingservice",
+    "checkoutservice",
+    "frontend"
+   ],
+   "rejected_because": "unknown service"
+  },
+  {
+   "id": "V7",
+   "service": "adservice, recommendationservice",
+   "severity": "low",
+   "weakness": "These optional single-replica features have no redundancy but are expected to fail gracefully if callers isolate their failures.",
+   "evidence": {
+    "replicas": 1,
+    "on_checkout_path": false,
+    "entrypoint": false,
+    "risk_score": 5
+   },
+   "hypothesis": "If either optional-service pod is killed, then advertising or recommendations disappear while the core site and checkout should remain available if failure handling is graceful.",
+   "blast_radius": [
+    "adservice",
+    "recommendationservice",
+    "frontend"
+   ],
+   "rejected_because": "unknown service"
+  }
+ ],
+ "systemic": [
+  "All listed services have replicas configured without horizontal autoscaling: \"hpa\": false.",
+  "All listed services lack pod disruption budgets: \"pdb\": false.",
+  "Many checkout dependencies are single-replica services, so routine pod disruption or node failure can affect checkout availability."
+ ],
+ "blind_spots": [
+  "These facts cannot show request timeouts, retry policies, circuit breakers, fallback behavior, or whether callers fail gracefully.",
+  "They cannot show Kubernetes scheduling constraints, topology spread, node failure domains, or pod replacement time.",
+  "They cannot show whether readiness and liveness probes accurately detect dependency failure.",
+  "They cannot show payment idempotency, transaction handling, or application-level data consistency.",
+  "They cannot show resource saturation under CPU or memory stress despite resource limits being configured."
+ ]
+}

@@ -1,0 +1,25 @@
+{
+  "model": "gpt-5.6-luna",
+  "reasoning_effort": "low",
+  "facts": "runs/bakeoff-inputs/facts.json",
+  "baseline": "baseline.json",
+  "health": "runs/bakeoff-inputs/health.json",
+  "ours": [
+    "runs/agents-ours-20261010T165006.772371Z-1",
+    "runs/agents-ours-20261010T165006.772371Z-2",
+    "runs/agents-ours-20261010T165006.772371Z-3"
+  ],
+  "alternative": [
+    "runs/agents-alternative-20261010T165006.772371Z-1",
+    "runs/agents-alternative-20261010T165006.772371Z-2",
+    "runs/agents-alternative-20261010T165006.772371Z-3"
+  ],
+  "errors": [],
+  "inputs_sha256": {
+    "facts": "4956af50374a2ca7cfc1cfeda47a2ff9aa937102b4b2bf42107ef844eaf6e238",
+    "baseline": "26cf5c236767f02acc6624565ea9d876744413f01341d3d36d8692a5e5a4d322",
+    "health": "6fe387186be996679e733356833122b9e7c188157e48c5c55fa1f0937fea3ec8"
+  },
+  "execution": "dry_run_no_injection",
+  "input_policy": "Frozen identical inputs, including health; not a live freshness assessment at each model call."
+}

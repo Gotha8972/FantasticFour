@@ -1,0 +1,157 @@
+{
+ "plan": [
+  {
+   "vulnerability": "V1",
+   "rank": 1,
+   "fault": "pod_kill",
+   "target": "redis-cart",
+   "params": {},
+   "duration_s": 30,
+   "reason": "Redis-cart is stateful, has a single replica, and lies directly on the cart and checkout paths. A pod kill tests both availability and whether persistent storage preserves cart state after restart.",
+   "prediction": {
+    "affected": [
+     "redis-cart",
+     "cartservice",
+     "checkoutservice",
+     "frontend"
+    ],
+    "summary": "Cart reads or writes and checkout requests requiring cart state are expected to fail or incur elevated latency during restart. Persistent storage should prevent integrity violations after recovery."
+   },
+   "criteria": [
+    {
+     "metric": "integrity_violations",
+     "op": ">",
+     "value": 0
+    },
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.05
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 300
+    }
+   ],
+   "experiment": {
+    "id": "v1-pod-kill-redis-cart",
+    "fault": "pod_kill",
+    "target": "redis-cart",
+    "params": {},
+    "duration_s": 30
+   }
+  },
+  {
+   "vulnerability": "V5",
+   "rank": 2,
+   "fault": "pod_kill",
+   "target": "paymentservice",
+   "params": {},
+   "duration_s": 30,
+   "reason": "Paymentservice is a single checkout-path replica. Killing it directly tests whether checkout has a resilient failure path or whether payment authorization failure prevents purchases.",
+   "prediction": {
+    "affected": [
+     "paymentservice",
+     "checkoutservice",
+     "frontend"
+    ],
+    "summary": "Checkout attempts requiring payment authorization are expected to fail during the restart, producing a customer-visible error-rate increase while browsing remains available."
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.05
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 300
+    }
+   ],
+   "experiment": {
+    "id": "v5-pod-kill-paymentservice",
+    "fault": "pod_kill",
+    "target": "paymentservice",
+    "params": {},
+    "duration_s": 30
+   }
+  },
+  {
+   "vulnerability": "V3",
+   "rank": 3,
+   "fault": "network_delay",
+   "target": "checkoutservice",
+   "params": {
+    "latency": "1500ms"
+   },
+   "duration_s": 30,
+   "reason": "Checkoutservice has high fan-in and is the checkout coordinator. Network delay is appropriate for testing latency propagation across its downstream checkout calls without making the service outright unavailable.",
+   "prediction": {
+    "affected": [
+     "checkoutservice",
+     "frontend"
+    ],
+    "summary": "Checkout requests should experience substantial latency amplification and may time out because the coordinator's downstream calls are delayed. The effect should be customer-visible even if some requests still succeed."
+   },
+   "criteria": [
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 300
+    },
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.05
+    }
+   ],
+   "experiment": {
+    "id": "v3-network-delay-checkoutservice",
+    "fault": "network_delay",
+    "target": "checkoutservice",
+    "params": {
+     "latency": "1500ms"
+    },
+    "duration_s": 30
+   }
+  },
+  {
+   "vulnerability": "V2",
+   "rank": 4,
+   "fault": "pod_failure",
+   "target": "frontend",
+   "params": {},
+   "duration_s": 30,
+   "reason": "Frontend is the sole site entrypoint and has one replica. A service-unavailable fault tests plain customer-facing availability; unhealthy_count is excluded because the target is expected to be unhealthy by design.",
+   "prediction": {
+    "affected": [
+     "frontend"
+    ],
+    "summary": "Users should be unable to reach the site or initiate checkout while the frontend is unavailable, causing a large increase in customer request failures."
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.1
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 300
+    }
+   ],
+   "experiment": {
+    "id": "v2-pod-failure-frontend",
+    "fault": "pod_failure",
+    "target": "frontend",
+    "params": {},
+    "duration_s": 30
+   }
+  }
+ ],
+ "dropped": [],
+ "replan_note": "No prior experiments exist, so no fault-target combinations are excluded and all vulnerabilities remain unverified. The plan prioritizes the critical stateful checkout datastore first, then a critical checkout dependency, followed by latency propagation through the high fan-in checkout coordinator and sole frontend entrypoint. It uses both pod_kill and pod_failure, plus network_delay, to test distinct failure modes rather than repeating pod kills only."
+}

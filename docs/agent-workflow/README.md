@@ -1,5 +1,7 @@
 # Portable resilience agent with LangGraph
 
+**Implementation:** [Portable agent usage and limits](PORTABLE.md).
+
 This document proposes a LangGraph workflow for discovering application architecture, running controlled stress and fault experiments, estimating failure likelihood from evidence, and recommending fixes. **The latest repository already has a LangGraph workflow** in `chaosmind/graph.py`, with SQLite checkpoints and a remediation approval gate; see the [implemented workflow](../WORKFLOW.md). This document designs the remaining application portability, hosted API, connector, and agents.ai integration. Those deployment capabilities remain future work. It supersedes the Google ADK proposal.
 
 Build on the existing [agents](../AGENTS.md), architecture collector, incident runners, and deterministic guard. Prioritize reliable measurements and repeatable experiments before adding more agent roles.

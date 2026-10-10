@@ -1,0 +1,229 @@
+{
+ "vulnerabilities": [
+  {
+   "id": "V1",
+   "service": "redis-cart",
+   "severity": "critical",
+   "weakness": "The single cart datastore replica is a checkout-path availability and cart-state failure point despite having persistent storage.",
+   "evidence": {
+    "replicas": 1,
+    "volumes": [
+     "persistentVolumeClaim"
+    ],
+    "on_checkout_path": true,
+    "dependents": [
+     "cartservice",
+     "checkoutservice",
+     "frontend"
+    ]
+   },
+   "hypothesis": "If the redis-cart pod fails, then cart operations and checkout requests that require cart state fail or become unavailable.",
+   "blast_radius": [
+    "redis-cart",
+    "cartservice",
+    "checkoutservice",
+    "frontend"
+   ],
+   "unverified_evidence_dropped": {},
+   "risk_score": 9,
+   "status": "untested"
+  },
+  {
+   "id": "V2",
+   "service": "frontend",
+   "severity": "critical",
+   "weakness": "The single frontend replica is the site's sole entrypoint, so one pod failure can make the entire site unavailable.",
+   "evidence": {
+    "replicas": 1,
+    "entrypoint": true,
+    "on_checkout_path": false,
+    "dependents": []
+   },
+   "hypothesis": "If the frontend pod is killed, then users cannot reach the site or initiate checkout.",
+   "blast_radius": [
+    "frontend",
+    "checkoutservice",
+    "cartservice",
+    "currencyservice",
+    "shippingservice",
+    "adservice",
+    "recommendationservice",
+    "productcatalogservice"
+   ],
+   "unverified_evidence_dropped": {},
+   "risk_score": 7,
+   "status": "untested"
+  },
+  {
+   "id": "V3",
+   "service": "checkoutservice",
+   "severity": "critical",
+   "weakness": "The single checkout coordinator is a direct checkout-path outage point and fans out to six downstream services.",
+   "evidence": {
+    "replicas": 1,
+    "calls": [
+     "cartservice",
+     "currencyservice",
+     "emailservice",
+     "paymentservice",
+     "productcatalogservice",
+     "shippingservice"
+    ],
+    "callers": [
+     "frontend"
+    ],
+    "on_checkout_path": true
+   },
+   "hypothesis": "If the checkoutservice pod is killed, then users cannot complete checkout even when all downstream services remain healthy.",
+   "blast_radius": [
+    "checkoutservice",
+    "frontend"
+   ],
+   "unverified_evidence_dropped": {},
+   "risk_score": 7,
+   "status": "untested"
+  },
+  {
+   "id": "V4",
+   "service": "cartservice",
+   "severity": "high",
+   "weakness": "The single cart API replica can block cart access and checkout preparation for all users.",
+   "evidence": {
+    "replicas": 1,
+    "calls": [
+     "redis-cart"
+    ],
+    "callers": [
+     "checkoutservice",
+     "frontend"
+    ],
+    "on_checkout_path": true
+   },
+   "hypothesis": "If the cartservice pod is killed, then users cannot view or modify carts and checkout requests depending on it fail.",
+   "blast_radius": [
+    "cartservice",
+    "checkoutservice",
+    "frontend"
+   ],
+   "unverified_evidence_dropped": {},
+   "risk_score": 8,
+   "status": "untested"
+  },
+  {
+   "id": "V5",
+   "service": "paymentservice",
+   "severity": "high",
+   "weakness": "The single payment service replica is a checkout-path point of failure that can prevent successful purchases.",
+   "evidence": {
+    "replicas": 1,
+    "callers": [
+     "checkoutservice"
+    ],
+    "dependents": [
+     "checkoutservice",
+     "frontend"
+    ],
+    "on_checkout_path": true
+   },
+   "hypothesis": "If the paymentservice pod is killed, then checkout attempts that require payment authorization fail or cannot complete.",
+   "blast_radius": [
+    "paymentservice",
+    "checkoutservice",
+    "frontend"
+   ],
+   "unverified_evidence_dropped": {},
+   "risk_score": 8,
+   "status": "untested"
+  },
+  {
+   "id": "V6",
+   "service": "currencyservice",
+   "severity": "high",
+   "weakness": "The single currency service replica can block checkout whenever price conversion is required.",
+   "evidence": {
+    "replicas": 1,
+    "callers": [
+     "checkoutservice",
+     "frontend"
+    ],
+    "dependents": [
+     "checkoutservice",
+     "frontend"
+    ],
+    "on_checkout_path": true
+   },
+   "hypothesis": "If the currencyservice pod is killed, then checkout requests requiring currency conversion fail or become unavailable.",
+   "blast_radius": [
+    "currencyservice",
+    "checkoutservice",
+    "frontend"
+   ],
+   "unverified_evidence_dropped": {},
+   "risk_score": 8,
+   "status": "untested"
+  },
+  {
+   "id": "V7",
+   "service": "shippingservice",
+   "severity": "high",
+   "weakness": "The single shipping service replica can prevent checkout completion when shipping options or rates are needed.",
+   "evidence": {
+    "replicas": 1,
+    "callers": [
+     "checkoutservice",
+     "frontend"
+    ],
+    "dependents": [
+     "checkoutservice",
+     "frontend"
+    ],
+    "on_checkout_path": true
+   },
+   "hypothesis": "If the shippingservice pod is killed, then checkout attempts requiring shipping selection or calculation fail or become unavailable.",
+   "blast_radius": [
+    "shippingservice",
+    "checkoutservice",
+    "frontend"
+   ],
+   "unverified_evidence_dropped": {},
+   "risk_score": 8,
+   "status": "untested"
+  },
+  {
+   "id": "V8",
+   "service": "adservice",
+   "severity": "low",
+   "weakness": "The single ad service replica is an optional-feature failure point that should be isolated from core site and checkout availability.",
+   "evidence": {
+    "replicas": 1,
+    "callers": [
+     "frontend"
+    ],
+    "dependents": [
+     "frontend"
+    ],
+    "on_checkout_path": false
+   },
+   "hypothesis": "If the adservice pod is killed, then advertisements disappear while the site and checkout should continue if the frontend fails this dependency gracefully.",
+   "blast_radius": [
+    "adservice",
+    "frontend"
+   ],
+   "unverified_evidence_dropped": {},
+   "risk_score": 5,
+   "status": "untested"
+  }
+ ],
+ "rejected": [],
+ "systemic": [
+  "Every service has pdb=false, so voluntary disruptions can remove available capacity without disruption protection.",
+  "Every service has hpa=false, so there is no declared automatic horizontal scaling response to CPU or load pressure."
+ ],
+ "blind_spots": [
+  "These facts cannot show request timeouts, retry and circuit-breaker behavior, or whether optional frontend dependencies fail gracefully.",
+  "They cannot show pod scheduling topology, anti-affinity, node or zone concentration, or actual disruption behavior.",
+  "They cannot show persistent-volume failover, backup, restore, or data durability under Redis failure.",
+  "They cannot show resource request values, CPU throttling, memory pressure, or application-level queueing and saturation.",
+  "They cannot show payment idempotency or whether partial checkout failures can create duplicate charges or inconsistent orders."
+ ]
+}

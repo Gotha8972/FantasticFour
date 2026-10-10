@@ -1,0 +1,59 @@
+{
+  "id": "demo-store",
+  "adapter": "offline",
+  "allowed_targets": [
+    "catalog"
+  ],
+  "allowed_faults": [
+    "pod_kill",
+    "network_delay",
+    "network_loss"
+  ],
+  "customer_journey": "Complete a purchase",
+  "expected_users": 100,
+  "fixture": {
+    "services": {
+      "catalog": {
+        "replicas": 1,
+        "readiness_probes": true
+      },
+      "web": {
+        "replicas": 2,
+        "readiness_probes": true
+      }
+    },
+    "dependencies": [
+      {
+        "from": "web",
+        "to": "catalog",
+        "evidence": "fixture"
+      }
+    ],
+    "baseline": {
+      "error_rate": 0,
+      "p95_ms": 50,
+      "users": 100,
+      "rps": 20
+    },
+    "during": [
+      {
+        "error_rate": 0,
+        "p95_ms": 150,
+        "users": 100,
+        "rps": 20
+      },
+      {
+        "error_rate": 0,
+        "p95_ms": 180,
+        "users": 100,
+        "rps": 20
+      },
+      {
+        "error_rate": 0,
+        "p95_ms": 60,
+        "users": 100,
+        "rps": 20
+      }
+    ]
+  }
+}

@@ -1,0 +1,58 @@
+[
+ {
+  "vulnerability": "V4",
+  "experiment": {
+   "id": "v4-pod-kill-redis-cart",
+   "fault": "pod_kill",
+   "target": "redis-cart",
+   "params": {},
+   "duration_s": 30
+  },
+  "criteria": [
+   {
+    "metric": "error_rate",
+    "op": ">",
+    "value": 0.05
+   },
+   {
+    "metric": "p95_ms",
+    "op": ">",
+    "value": 300
+   },
+   {
+    "metric": "integrity_violations",
+    "op": ">",
+    "value": 0
+   }
+  ],
+  "prediction": {
+   "affected": [
+    "redis-cart",
+    "cartservice",
+    "checkoutservice",
+    "frontend"
+   ],
+   "summary": "Cart operations and cart-dependent checkout requests should fail or become slow during Redis restart. Persistent storage may preserve state after recovery, but it will not provide immediate availability."
+  },
+  "safety": {
+   "decision": "approve",
+   "reason": "Current health is fresh (metrics age 1.6s), with no unhealthy services and zero current error rate. The pod_kill is a one-shot action against only redis-cart, and the 30s duration is an observation window rather than downtime; Kubernetes should recreate the pod immediately. Existing checkout variation is within the observed baseline window and does not indicate an active unhealthy system.",
+   "experiment": {
+    "id": "v4-pod-kill-redis-cart",
+    "fault": "pod_kill",
+    "target": "redis-cart",
+    "params": {},
+    "duration_s": 30
+   },
+   "ramp": [
+    null
+   ],
+   "steps": []
+  },
+  "observed": null,
+  "integrity": [],
+  "verdict": "inconclusive",
+  "criteria_met": [],
+  "score": null
+ }
+]

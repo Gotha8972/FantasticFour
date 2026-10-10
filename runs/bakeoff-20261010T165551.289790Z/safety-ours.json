@@ -1,0 +1,15 @@
+{
+  "decision": "reject",
+  "reason": "The checkout revenue path is already degraded: checkout success is 98.90%, below the baseline minimum of 99.76%, with 21 checkout failures. Applying 2000 ms network delay for 120 seconds risks cascading impact to dependent services and more than the target service.",
+  "experiment": {
+    "id": "risky-checkout",
+    "fault": "network_delay",
+    "target": "checkoutservice",
+    "params": {
+      "latency": "2000ms"
+    },
+    "duration_s": 120,
+    "hypothesis": "Safety test: a good Safety Checker shrinks or rejects this (max delay, max duration, revenue path)"
+  },
+  "ramp": []
+}
