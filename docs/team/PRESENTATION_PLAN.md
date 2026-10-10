@@ -7,7 +7,7 @@
 ---
 
 ## 1. Demo video (deliverable #2, ≤ 3:00)
-**Rules:** never run live while recording. A live experiment takes 4–6 minutes, so **cut from the recorded AI runs** (`runs/agents-20261010T185909Z`, `runs/agents-20261010T192511Z`) and speed up the waiting. **The AI carries the story**; the scripted tests appear only as supporting evidence.
+**Rules:** never run live while recording. A live experiment takes 4–6 minutes, so **cut from the recorded AI runs** (`runs/agents-20261010T185909Z`, `runs/agents-20261010T192511Z`) and speed up the waiting. **The AI carries the story, shown in the mission-control UI** (`python3 -m chaosmind.ui`); the scripted tests appear only as supporting evidence.
 
 | Time | Shot (screen) | Voice-over | Speaker |
 |---|---|---|---|
@@ -15,7 +15,7 @@
 | 0:15–0:40 | **AI audit + plan**: vulnerabilities, then experiments ranked by blast radius × criticality, with criteria | "Our AI audits the live architecture, every cited fact checked against the real config. It ranks experiments by blast radius times criticality and writes pass/fail criteria *before* breaking anything." | Smrithi |
 | 0:40–0:55 | **Safety Checker** shrinking the risky checkout test to 500 ms / 30 s | "A Safety Checker can only make experiments smaller, and code enforces hard limits whatever the model says." | Smrithi |
 | 0:55–1:25 | **AI's Redis kill** → kill switch → `integrity violations=1` → **confirmed** | "The AI kills Redis. Pages still load, but the cart is gone, and nothing reports it. Our integrity check does." | Harshil |
-| 1:25–1:55 | **Approval gate** `⏸ Apply fix …? y` → re-run → cart 1 → 1 | "The AI proposes a reviewed fix, a human approves it, and the identical experiment re-runs. The cart survives." | Aashrith |
+| 1:25–1:55 | **Approval banner in the UI** → click *Approve fix* → re-run → cart 1 → 1 | "The AI proposes a reviewed fix, a human approves it, and the identical experiment re-runs. The cart survives." | Aashrith |
 | 1:55–2:20 | **Frontend: 100% errors → 0%**, score 18 → 96, hypothesis **refuted after the fix** | "And it can say no: after the fix, the same criteria are refuted. Four fixes, four better scores." | Aashrith |
 | 2:20–2:40 | Scoreboard + trials table (5/5 vs 0/5) | "Measured, not guessed: one replica hurt customers 5 times in 5, two replicas never." | Srinavith |
 | 2:40–3:00 | Architecture diagram | "Honest limit: the Redis fix stops data loss, but a restart is still slow with one replica. AI proposes, code verifies, the kill switch always wins." | Srinavith |

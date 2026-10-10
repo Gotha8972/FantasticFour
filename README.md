@@ -5,7 +5,7 @@
 **Findings report:** [FINDINGS.md](FINDINGS.md) · **Architecture (1 page):** [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · **Run it:** [docs/RUNNING.md](docs/RUNNING.md) · **Agents:** [docs/AGENTS.md](docs/AGENTS.md) · **Team form:** [docs/TEAM_FORM.md](docs/TEAM_FORM.md)
 
 ## Project status
-**Feature-complete and frozen.** One entry point: `.venv/bin/python -m chaosmind.graph` ([quick start](#quick-start)). 79 automated tests, no cluster or API key needed.
+**Feature-complete and frozen.** One entry point: `.venv/bin/python -m chaosmind.graph` ([quick start](#quick-start)). 82 automated tests, no cluster or API key needed. **Mission control** web UI: `python3 -m chaosmind.ui`.
 
 - **Proven live:** the kill switch (all three triggers, crash fail-safe, manual abort), and **three full AI runs end to end** ([run 1](runs/agents-20261010T185909Z), [run 2](runs/agents-20261010T192511Z), [run 3](runs/agents-20261010T200021Z)). The AI chose 9 experiments, ranked by blast radius × criticality. Code judged them against criteria written before each run, with thresholds above baseline noise: **8 confirmed, 1 refuted** (a checkout pod kill caused no measurable harm). In the Redis kill with the fix already in place, only the latency criterion held; the data-loss criterion failed, meaning the fix worked. The AI proposed **4 fixes; a human approved each on screen; each was applied and the same experiment re-run. All 4 scored higher, and 2 hypotheses were refuted after their fix.** The Analyst wrote a report for each run; code marks the claims in it that the measurements or the config contradict.
 - **Fault types proven live:** pod failure, pod kill, network delay. **Defined and validated, not yet run live:** packet loss, network partition, CPU stress, full disk.
@@ -171,13 +171,17 @@ Repeat one experiment to measure how often customers are hurt (with a 95% interv
 ```bash
 python3 -m chaosmind.agents.trials run experiments/catalog-podkill.json --repeat 5
 ```
-Run the full AI workflow. It pauses for your approval before any fix; `--resume runs/agents-…` continues an interrupted run:
+Open **mission control**, the web UI: architecture map, the AI's weak spots and ranked experiments, live customer-impact charts with the kill-switch limits, verdicts, scores, and fix approval in the browser. Then open http://127.0.0.1:8090:
 ```bash
-.venv/bin/python -m chaosmind.graph --budget 3 --remediate
+python3 -m chaosmind.ui
+```
+Run the full AI workflow, approving fixes in the UI (without `--ui`, approve in the terminal; `--resume runs/agents-…` continues an interrupted run):
+```bash
+.venv/bin/python -m chaosmind.graph --budget 3 --remediate --ui
 ```
 Tests (no cluster or API key needed):
 ```bash
-python3 -m chaosmind.test_guard && python3 -m unittest chaosmind.agents.test_agents chaosmind.agents.test_day2 chaosmind.test_c_tests && .venv/bin/python -m unittest chaosmind.test_graph
+python3 -m chaosmind.test_guard && python3 -m unittest chaosmind.agents.test_agents chaosmind.agents.test_day2 chaosmind.test_c_tests && .venv/bin/python -m unittest chaosmind.test_graph chaosmind.test_ui
 ```
 
 ## Repository layout
@@ -187,7 +191,7 @@ python3 -m chaosmind.test_guard && python3 -m unittest chaosmind.agents.test_age
 - `docs/adk/`: a design we evaluated and didn't build. `docs/team/log/`: the build log (run reports, checklists, how this implementation was chosen). Not needed to run the project.
 
 ```
-chaosmind/            graph.py (LangGraph workflow) · inject.py · guard.py (kill switch) · monitor.py · baseline.py
+chaosmind/            graph.py (LangGraph workflow) · ui.py + ui.html (mission control) · inject.py · guard.py (kill switch) · monitor.py · baseline.py
 chaosmind/agents/     cartographer · strategist · safety · remediation · analyst · integrity · score · scoreboard · trials · steps (shared by graph + fallback loop)
 experiments/          one experiment per failure type in the brief
 remediation/          reviewed fix catalog (Redis persistence, replicas) + scripts/redis-fix.sh

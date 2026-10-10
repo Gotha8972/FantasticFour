@@ -2,12 +2,14 @@
 
 Three tasks are left, in this order: **record the AI loop for the video → clean install from scratch → push.** The clean install deletes the cluster, so it must come last.
 
+**The video is shown through the mission-control UI** (`python3 -m chaosmind.ui`, http://127.0.0.1:8090), the team's main priority. The UI is built and tested; before recording, open it once on a finished run (e.g. `?run=agents-20261010T192511Z`) and check that it looks right on this screen.
+
 ## Ground rules (read first)
 - **Read first:** [README](../../README.md), [FINDINGS](../../FINDINGS.md), [MODEL_AND_IMPLEMENTATION](MODEL_AND_IMPLEMENTATION.md), [PRESENTATION_PLAN](PRESENTATION_PLAN.md).
 - **Feature freeze:** don't change agent, guard, injector or scoring logic. Allowed: README/doc fixes that the clean install proves necessary; adding the new run to `chaosmind/agents/scoreboard.py`'s `EVIDENCE` list; regenerating reports.
 - **Secrets:** never commit `.env`, `.runtime/` or `checkpoints.sqlite`. The model is NVIDIA-hosted `gpt-oss-20b` via `NVIDIA_API_KEY`; never use an OpenAI key.
 - **Commits:** no `Co-Authored-By` or AI-attribution lines (team rule). `git pull` before editing: Srinavith's Claude also edits this repo.
-- **Interactive steps belong to Aashrith.** The graph pauses with `Approve? [y/N]`, so **Aashrith runs it in his own terminal while screen recording** and types `y` on camera. Claude prepares the cluster before and verifies the results after. Claude never answers approval prompts and never uses `--auto-approve` for the video.
+- **Interactive steps belong to Aashrith.** The graph pauses with `Approve? [y/N]`, so **Aashrith runs it in his own terminal while screen recording** and clicks **Approve fix** in the UI on camera (or types `y` without `--ui`). Claude prepares the cluster before and verifies the results after. Claude never answers approval prompts, never clicks Approve in the UI, and never uses `--auto-approve` for the video.
 - **kubectl prefix:** `kubectl --kubeconfig .runtime/kubeconfig --context kind-online-boutique -n online-boutique`.
 - **After every experiment:** `bash scripts/chaos.sh status` shows no podchaos/networkchaos/stresschaos, and all deployments are ready.
 
@@ -16,12 +18,12 @@ Three tasks are left, in this order: **record the AI loop for the video → clea
 ## Task 1: record the AI loop for the video (≈ 40 min)
 The video must show the **AI's** moments: plan → safety shrink → integrity violation → approval gate → re-run → refuted after the fix. See [PRESENTATION_PLAN](PRESENTATION_PLAN.md).
 
-1. **Update and test** (no API calls in the tests; expect 79 OK):
+1. **Update and test** (no API calls in the tests; expect 82 OK):
    ```bash
    git pull
    ```
    ```bash
-   python3 -m chaosmind.test_guard && python3 -m unittest chaosmind.agents.test_agents chaosmind.agents.test_day2 chaosmind.test_c_tests && .venv/bin/python -m unittest chaosmind.test_graph tests.portable.test_workflow
+   python3 -m chaosmind.test_guard && python3 -m unittest chaosmind.agents.test_agents chaosmind.agents.test_day2 chaosmind.test_c_tests && .venv/bin/python -m unittest chaosmind.test_graph chaosmind.test_ui tests.portable.test_workflow
    ```
 2. **Health check:** all deployments ready, no active chaos, 20 shoppers running (`bash scripts/load.sh start 20 2` if not).
 3. **Put the original weaknesses back**, so the AI has something to find and fix on camera. The fixes from last night are still applied.
@@ -36,11 +38,15 @@ The video must show the **AI's** moments: plan → safety shrink → integrity v
    ```bash
    bash scripts/baseline.sh --duration 300
    ```
-5. **Recording (Aashrith).** Start the screen recorder: the terminal at a large font plus the Grafana *Chaos Overview* dashboard side by side. In your own terminal:
+5. **Recording (Aashrith).** In one terminal start mission control, then open http://127.0.0.1:8090 full screen in the browser:
    ```bash
-   .venv/bin/python -m chaosmind.graph --budget 3 --remediate
+   python3 -m chaosmind.ui
    ```
-   Type `y` on camera at each approval. Expect about 15–20 minutes. Then, still recording, the safety test (it must print `shrink` with `500ms`/`30`, or `reject`):
+   Start the screen recorder on the browser (keep a small terminal visible if you like). In a second terminal:
+   ```bash
+   .venv/bin/python -m chaosmind.graph --budget 3 --remediate --ui
+   ```
+   The UI switches to the live run by itself: map, plan, live charts, then an amber **approval banner**. Click **Approve fix** on camera. Expect about 15–20 minutes. Then, still recording, the safety test (it must print `shrink` with `500ms`/`30`, or `reject`):
    ```bash
    python3 -m chaosmind.agents.safety experiments/risky-checkout.json --review-only
    ```
