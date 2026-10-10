@@ -44,6 +44,7 @@ graph TD;
 | Cartographer · Strategist · Safety Checker | ✅ Running against the live cluster with OpenAI `gpt-5.6-luna` |
 | Integrity checks · resilience score · Remediation · Analyst | ✅ Built and tested |
 | Orchestration: LangGraph state machine with a **human approval gate** before any fix and **checkpoint/resume** for long runs | ✅ Built and tested (incl. resume in a fresh process) |
+| **Chosen by measurement:** two independent agent implementations, 12 real dry runs on frozen identical inputs, scored by one script | ✅ This one won ([bake-off](docs/team/BAKEOFF_RESULT.md)): 0 hallucinated facts, 100% valid experiments, 3 fault types per plan, integrity checks on every Redis test |
 | Injector + kill switch (`inject.py`, `guard.py`) | ✅ Proven live |
 | Grafana dashboard | ✅ Running |
 | Fault types: **proven live** | Pod failure · pod kill · network delay |
@@ -158,6 +159,7 @@ remediation/          reviewed fix catalog (Redis persistence, replicas) + scrip
 scripts/ deploy/ chaos/ monitoring/   cluster, Chaos Mesh, load generation, Prometheus/Grafana
 runs/                 evidence from every run
 docs/                 architecture, running guide, agents, evidence reports
+chaosmind/portable/   prototype: the same workflow for any app via profiles + an HTTP API (offline demos; not used for live runs)
 ```
 
 ## Team, tools and models

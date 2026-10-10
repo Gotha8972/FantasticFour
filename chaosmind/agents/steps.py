@@ -26,7 +26,9 @@ def load_baseline(path):
                 if p == Path(path) and Path(path).exists():
                     raise SystemExit(f'Baseline {p} has no completed measurement window')
                 continue
-            return {'source': str(p), 'metrics': b['metrics'], 'window': b['window'],
+            # metrics.checkout_success is sampled from a cumulative counter; the window value is the real one.
+            metrics = {k: v for k, v in b['metrics'].items() if k != 'checkout_success'}
+            return {'source': str(p), 'metrics': metrics, 'window': b['window'],
                     'baseline_suitable': b.get('baseline_suitable'),
                     'findings': b.get('findings', []), 'notes': b.get('notes', [])}
     raise SystemExit('No completed baseline found: run bash scripts/baseline.sh first')

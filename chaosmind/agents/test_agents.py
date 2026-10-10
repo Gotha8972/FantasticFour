@@ -66,6 +66,12 @@ class AgentTests(unittest.TestCase):
         self.assertEqual(strategist.evaluate([], {'p95_ms': 90})[0], 'needs_integrity_check')
         self.assertEqual(strategist.evaluate(crit, None)[0], 'inconclusive')
 
+    def test_safety_never_sees_cumulative_counters(self):
+        seen = {}
+        with patch.object(llm, 'ask', side_effect=lambda system, user: seen.update(user) or {'decision': 'reject'}):
+            safety.review(EXP, {'error_rate': 0.0, 'checkout_success': 0.989, 'failures': 21}, {})
+        self.assertEqual(seen['current_health'], {'error_rate': 0.0})
+
     def test_safety_cannot_enlarge(self):
         bigger = {'decision': 'shrink', 'experiment': {**EXP, 'params': {'latency': '1500ms'}}, 'ramp': [100]}
         with patch.object(llm, 'ask', return_value=bigger):

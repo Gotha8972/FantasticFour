@@ -67,8 +67,18 @@ def clean_ramp(ramp, top):
     return ramp if ok else default_ramp(top)
 
 
+# Counters accumulated since the load generator started: they still carry failures from earlier experiments,
+# so they say nothing about health *now*. (Both agents in the bake-off wrongly read 98.9% cumulative checkout
+# success as "degraded".) Recent-window metrics (error_rate, p95_ms, rps, unhealthy_services) stay.
+CUMULATIVE = ('checkout_success', 'checkout_requests', 'checkout_failures', 'requests', 'failures')
+
+
+def current_health(snapshot):
+    return {k: v for k, v in (snapshot or {}).items() if k not in CUMULATIVE}
+
+
 def review(exp, snapshot, baseline):
-    reply = llm.ask(SYSTEM, {'experiment': exp, 'current_health': snapshot, 'baseline': baseline})
+    reply = llm.ask(SYSTEM, {'experiment': exp, 'current_health': current_health(snapshot), 'baseline': baseline})
     decision = reply.get('decision')
     proposed = reply.get('experiment') if isinstance(reply.get('experiment'), dict) else exp
     if decision not in ('approve', 'shrink', 'reject'):

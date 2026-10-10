@@ -57,6 +57,7 @@ Speaking order: Srinavith (1–3) → Aashrith (4) → Harshil (5) → Srinavith
 | *Is the resilience score meaningful?* | It's plain, documented code: error, latency, recovery and integrity penalties relative to the baseline. A silent data-loss case can never score well. |
 | *Why Online Boutique? Everyone used it.* | Because it's realistic: 11 services, 5 languages, gRPC, a stateful store. What's different is what we found in it: silent data loss, and "healthy ≠ recovered". |
 | *What was the hardest part?* | Proving things are *actually* safe and *actually* fixed, rather than looking fine on a dashboard. |
+| *How did you choose your agent design?* | We built two independent implementations and ran 12 real dry runs on frozen, fingerprinted inputs, scored by one script: hallucinated facts, ranking quality, valid experiments, fault variety, safety. The current one won, and we ported the other's best ideas into it. |
 | *Why LangGraph?* | Our workflow is a state machine where code decides every transition. LangGraph models exactly that, adds a human approval gate before fixes and checkpoint/resume, and stays model-agnostic: our nodes call any LLM through one small client. |
 | *Does it work on other apps?* | Yes. The Cartographer reads any deployment's config and call graph from standard Kubernetes objects; faults are standard Chaos Mesh resources. |
 
