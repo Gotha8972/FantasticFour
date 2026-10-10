@@ -1,0 +1,188 @@
+{
+ "vulnerabilities": [
+  {
+   "id": "V1",
+   "service": "frontend",
+   "severity": "critical",
+   "weakness": "Single replica entrypoint with no PDB",
+   "evidence": {
+    "replicas": 1,
+    "entrypoint": true,
+    "pdb": false
+   },
+   "hypothesis": "if the frontend pod crashes, the entire site becomes unavailable",
+   "blast_radius": [
+    "adservice",
+    "cartservice",
+    "checkoutservice",
+    "currencyservice",
+    "emailservice",
+    "frontend",
+    "paymentservice",
+    "productcatalogservice",
+    "recommendationservice",
+    "redis-cart",
+    "shippingservice"
+   ],
+   "unverified_evidence_dropped": {},
+   "predicted_blast_radius": [
+    "frontend"
+   ],
+   "risk_score": 7,
+   "status": "untested"
+  },
+  {
+   "id": "V2",
+   "service": "redis-cart",
+   "severity": "high",
+   "weakness": "Single replica stateful store without PDB",
+   "evidence": {
+    "replicas": 1,
+    "volumes": [
+     "persistentVolumeClaim"
+    ],
+    "pdb": false
+   },
+   "hypothesis": "if the redis-cart pod dies, cart data becomes unavailable, breaking checkout",
+   "blast_radius": [
+    "cartservice",
+    "checkoutservice",
+    "frontend",
+    "redis-cart"
+   ],
+   "unverified_evidence_dropped": {},
+   "predicted_blast_radius": [
+    "cartservice",
+    "checkoutservice",
+    "frontend",
+    "redis-cart"
+   ],
+   "risk_score": 9,
+   "status": "untested"
+  },
+  {
+   "id": "V3",
+   "service": "cartservice",
+   "severity": "high",
+   "weakness": "Single replica cart service without PDB",
+   "evidence": {
+    "replicas": 1,
+    "pdb": false
+   },
+   "hypothesis": "if the cartservice pod dies, users cannot add items to cart, halting checkout",
+   "blast_radius": [
+    "cartservice",
+    "checkoutservice",
+    "frontend"
+   ],
+   "unverified_evidence_dropped": {},
+   "predicted_blast_radius": [
+    "cartservice",
+    "checkoutservice",
+    "frontend"
+   ],
+   "risk_score": 8,
+   "status": "untested"
+  },
+  {
+   "id": "V4",
+   "service": "checkoutservice",
+   "severity": "high",
+   "weakness": "Single replica checkout orchestrator without PDB",
+   "evidence": {
+    "replicas": 1,
+    "pdb": false
+   },
+   "hypothesis": "if the checkoutservice pod dies, the entire checkout flow stops, causing revenue loss",
+   "blast_radius": [
+    "checkoutservice",
+    "frontend"
+   ],
+   "unverified_evidence_dropped": {},
+   "predicted_blast_radius": [
+    "checkoutservice",
+    "frontend"
+   ],
+   "risk_score": 7,
+   "status": "untested"
+  },
+  {
+   "id": "V5",
+   "service": "productcatalogservice",
+   "severity": "medium",
+   "weakness": "Two replicas but no PDB, risking catalog unavailability",
+   "evidence": {
+    "replicas": 2,
+    "pdb": false
+   },
+   "hypothesis": "if one catalog pod dies, the remaining pod may be overloaded, degrading catalog performance",
+   "blast_radius": [
+    "checkoutservice",
+    "frontend",
+    "productcatalogservice",
+    "recommendationservice"
+   ],
+   "unverified_evidence_dropped": {},
+   "predicted_blast_radius": [
+    "checkoutservice",
+    "frontend",
+    "productcatalogservice",
+    "recommendationservice"
+   ],
+   "risk_score": 7,
+   "status": "untested"
+  },
+  {
+   "id": "V6",
+   "service": "adservice",
+   "severity": "low",
+   "weakness": "Single replica optional service, likely to fail gracefully",
+   "evidence": {
+    "replicas": 1,
+    "on_checkout_path": false
+   },
+   "hypothesis": "if the adservice pod dies, ads will not display but checkout proceeds normally",
+   "blast_radius": [
+    "adservice",
+    "frontend"
+   ],
+   "unverified_evidence_dropped": {},
+   "predicted_blast_radius": [
+    "adservice",
+    "frontend"
+   ],
+   "risk_score": 5,
+   "status": "untested"
+  },
+  {
+   "id": "V7",
+   "service": "recommendationservice",
+   "severity": "low",
+   "weakness": "Single replica optional service, likely to fail gracefully",
+   "evidence": {
+    "replicas": 1,
+    "on_checkout_path": false
+   },
+   "hypothesis": "if the recommendationservice pod dies, recommendations will be missing but checkout proceeds normally",
+   "blast_radius": [
+    "frontend",
+    "recommendationservice"
+   ],
+   "unverified_evidence_dropped": {},
+   "predicted_blast_radius": [
+    "recommendationservice",
+    "frontend"
+   ],
+   "risk_score": 5,
+   "status": "untested"
+  }
+ ],
+ "rejected": [],
+ "systemic": [
+  "All services lack PDBs and HPA, single replicas for critical entrypoints and stateful stores",
+  "No HPA or PDB across services, risking scalability and resilience"
+ ],
+ "blind_spots": [
+  "Facts do not reveal internal timeout/retry logic, circuit breaker usage, or rate limiting behavior within services"
+ ]
+}

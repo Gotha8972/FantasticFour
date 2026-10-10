@@ -1,0 +1,48 @@
+{
+ "plan": [
+  {
+   "vulnerability": "V3",
+   "rank": 1,
+   "fault": "pod_kill",
+   "target": "cartservice",
+   "params": {},
+   "duration_s": 30,
+   "reason": "Cartservice is a single\u2011replica, stateless service with no PDB; killing its pod should expose a customer\u2011impacting outage (errors or latency spike).",
+   "prediction": {
+    "affected": [
+     "cartservice",
+     "checkoutservice",
+     "frontend"
+    ],
+    "summary": "Killing the cartservice pod will cause cart operations to fail, leading to checkout errors and increased latency for downstream services."
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 500
+    }
+   ],
+   "experiment": {
+    "id": "v3-pod-kill-cartservice",
+    "fault": "pod_kill",
+    "target": "cartservice",
+    "params": {},
+    "duration_s": 30
+   },
+   "priority": {
+    "blast_radius": 3,
+    "criticality": "high",
+    "score": 9
+   }
+  }
+ ],
+ "dropped": [],
+ "replan_note": "No prior pod_kill on cartservice has been executed; this experiment will distinguish a single\u2011point failure hypothesis from other failure modes.",
+ "feedback": null
+}

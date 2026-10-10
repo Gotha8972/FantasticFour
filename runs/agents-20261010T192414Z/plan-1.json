@@ -1,0 +1,191 @@
+{
+ "plan": [
+  {
+   "vulnerability": "V1",
+   "rank": 1,
+   "fault": "pod_kill",
+   "target": "frontend",
+   "params": {},
+   "duration_s": 30,
+   "reason": "Critical single\u2011replica entrypoint; pod kill tests site unavailability.",
+   "prediction": {
+    "affected": [
+     "frontend",
+     "adservice",
+     "cartservice",
+     "checkoutservice",
+     "currencyservice",
+     "emailservice",
+     "paymentservice",
+     "productcatalogservice",
+     "recommendationservice",
+     "redis-cart",
+     "shippingservice"
+    ],
+    "summary": "Expect site-wide unavailability and increased error rate."
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 485
+    }
+   ],
+   "experiment": {
+    "id": "v1-pod-kill-frontend",
+    "fault": "pod_kill",
+    "target": "frontend",
+    "params": {},
+    "duration_s": 30
+   },
+   "priority": {
+    "blast_radius": 11,
+    "criticality": "critical",
+    "score": 44
+   }
+  },
+  {
+   "vulnerability": "V3",
+   "rank": 2,
+   "fault": "pod_kill",
+   "target": "cartservice",
+   "params": {},
+   "duration_s": 30,
+   "reason": "Single replica cart service; pod kill tests inability to add items and checkout halt.",
+   "prediction": {
+    "affected": [
+     "cartservice",
+     "checkoutservice",
+     "frontend"
+    ],
+    "summary": "Expect checkout errors and increased latency."
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 485
+    }
+   ],
+   "experiment": {
+    "id": "v3-pod-kill-cartservice",
+    "fault": "pod_kill",
+    "target": "cartservice",
+    "params": {},
+    "duration_s": 30
+   },
+   "priority": {
+    "blast_radius": 3,
+    "criticality": "high",
+    "score": 9
+   }
+  }
+ ],
+ "dropped": [
+  {
+   "item": {
+    "vulnerability": "V2",
+    "rank": 1,
+    "fault": "pod_kill",
+    "target": "redis-cart",
+    "params": {},
+    "duration_s": 30,
+    "reason": "Stateful service with single replica; pod kill tests data loss and checkout failure.",
+    "prediction": {
+     "affected": [
+      "redis-cart",
+      "cartservice",
+      "checkoutservice",
+      "frontend"
+     ],
+     "summary": "Expect cart data loss and checkout errors."
+    },
+    "criteria": [
+     {
+      "metric": "integrity_violations",
+      "op": ">",
+      "value": 0
+     }
+    ]
+   },
+   "reason": "predicts data loss, but the target mounts a persistent volume"
+  },
+  {
+   "item": {
+    "vulnerability": "V2",
+    "rank": 1,
+    "fault": "pod_kill",
+    "target": "redis-cart",
+    "params": {},
+    "duration_s": 30,
+    "reason": "Highest risk score and stateful store; pod kill tests data loss.",
+    "prediction": {
+     "affected": [
+      "redis-cart",
+      "cartservice",
+      "checkoutservice",
+      "frontend"
+     ],
+     "summary": "Expect cart data loss and checkout failures."
+    },
+    "criteria": [
+     {
+      "metric": "integrity_violations",
+      "op": ">",
+      "value": 0
+     },
+     {
+      "metric": "error_rate",
+      "op": ">",
+      "value": 0
+     }
+    ]
+   },
+   "reason": "predicts data loss, but the target mounts a persistent volume"
+  },
+  {
+   "item": {
+    "vulnerability": "V3",
+    "rank": 3,
+    "fault": "pod_kill",
+    "target": "cartservice",
+    "params": {},
+    "duration_s": 30,
+    "reason": "High risk of blocking checkout; tests cart addition failure.",
+    "prediction": {
+     "affected": [
+      "cartservice",
+      "checkoutservice",
+      "frontend"
+     ],
+     "summary": "Expect cart addition failures and checkout stalls."
+    },
+    "criteria": [
+     {
+      "metric": "error_rate",
+      "op": ">",
+      "value": 0
+     },
+     {
+      "metric": "p95_ms",
+      "op": ">",
+      "value": 485
+     }
+    ]
+   },
+   "reason": "already run or planned"
+  }
+ ],
+ "replan_note": "All selected faults are unused; experiments target stateful and stateless services with distinct failure modes and customer\u2011impact criteria.",
+ "feedback": "pod_kill on redis-cart was dropped: predicts data loss, but the target mounts a persistent volume. Return corrected or replacement experiments only; keep integrity criteria for stateful services."
+}
