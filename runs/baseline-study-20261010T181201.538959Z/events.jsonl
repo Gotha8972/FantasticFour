@@ -1,0 +1,15 @@
+{"timestamp_utc": "2026-10-10T18:12:01.650668+00:00", "elapsed_s": 0.111, "event": "START_LOAD", "users": 20, "rate": 2}
+{"timestamp_utc": "2026-10-10T18:12:02.273193+00:00", "elapsed_s": 0.734, "event": "WARMUP_STARTED", "seconds": 60}
+{"timestamp_utc": "2026-10-10T18:13:02.273524+00:00", "elapsed_s": 60.734, "event": "STUDY_STARTED"}
+{"timestamp_utc": "2026-10-10T18:13:08.531075+00:00", "elapsed_s": 66.992, "event": "SAMPLE", "users": 20, "rps": 3.4, "error_rate": 0.0, "p50_ms": 11.0, "p95_ms": 160.0, "unhealthy_services": []}
+{"timestamp_utc": "2026-10-10T18:13:14.764841+00:00", "elapsed_s": 73.226, "event": "SAMPLE", "users": 20, "rps": 3.4, "error_rate": 0.0, "p50_ms": 13.0, "p95_ms": 160.0, "unhealthy_services": []}
+{"timestamp_utc": "2026-10-10T18:13:20.969841+00:00", "elapsed_s": 79.431, "event": "SAMPLE", "users": 20, "rps": 4.3, "error_rate": 0.0, "p50_ms": 12.0, "p95_ms": 75.0, "unhealthy_services": []}
+{"timestamp_utc": "2026-10-10T18:13:27.164214+00:00", "elapsed_s": 85.625, "event": "SAMPLE", "users": 20, "rps": 3.7, "error_rate": 0.0, "p50_ms": 11.0, "p95_ms": 30.0, "unhealthy_services": []}
+{"timestamp_utc": "2026-10-10T18:13:33.445348+00:00", "elapsed_s": 91.906, "event": "SAMPLE", "users": 20, "rps": 3.9, "error_rate": 0.0, "p50_ms": 11.0, "p95_ms": 43.0, "unhealthy_services": []}
+{"timestamp_utc": "2026-10-10T18:13:39.628326+00:00", "elapsed_s": 98.089, "event": "SAMPLE", "users": 20, "rps": 5.0, "error_rate": 0.0, "p50_ms": 11.0, "p95_ms": 45.0, "unhealthy_services": []}
+{"timestamp_utc": "2026-10-10T18:13:45.774781+00:00", "elapsed_s": 104.236, "event": "SAMPLE", "users": 20, "rps": 4.6, "error_rate": 0.0, "p50_ms": 12.0, "p95_ms": 45.0, "unhealthy_services": []}
+{"timestamp_utc": "2026-10-10T18:13:51.972196+00:00", "elapsed_s": 110.433, "event": "SAMPLE", "users": 20, "rps": 5.0, "error_rate": 0.0, "p50_ms": 12.0, "p95_ms": 53.0, "unhealthy_services": []}
+{"timestamp_utc": "2026-10-10T18:13:58.134476+00:00", "elapsed_s": 116.595, "event": "SAMPLE", "users": 20, "rps": 4.7, "error_rate": 0.0, "p50_ms": 11.0, "p95_ms": 70.0, "unhealthy_services": []}
+{"timestamp_utc": "2026-10-10T18:14:04.241626+00:00", "elapsed_s": 122.702, "event": "SAMPLE", "users": 20, "rps": 4.1, "error_rate": 0.0, "p50_ms": 12.0, "p95_ms": 48.0, "unhealthy_services": []}
+{"timestamp_utc": "2026-10-10T18:14:10.475127+00:00", "elapsed_s": 128.936, "event": "SAMPLE", "users": 20, "rps": 3.5, "error_rate": 0.0, "p50_ms": 12.0, "p95_ms": 68.0, "unhealthy_services": []}
+{"timestamp_utc": "2026-10-10T18:14:16.159392+00:00", "elapsed_s": 134.62, "event": "ERROR", "reason": "command terminated with exit code 137\n"}

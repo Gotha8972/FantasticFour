@@ -1,0 +1,144 @@
+{
+ "vulnerabilities": [
+  {
+   "id": "V1",
+   "service": "redis-cart",
+   "severity": "medium",
+   "weakness": "Stateful emptyDir volume without PVC; pod restart loses cart data, degrading user experience",
+   "evidence": {
+    "volumes": [
+     "emptyDir"
+    ]
+   },
+   "hypothesis": "if the redis-cart pod is killed, cart contents are lost and users must rebuild their cart",
+   "blast_radius": [
+    "redis-cart",
+    "cartservice",
+    "checkoutservice",
+    "frontend"
+   ],
+   "unverified_evidence_dropped": {
+    "stateful_without_pvc": "true"
+   },
+   "risk_score": 13,
+   "status": "confirmed"
+  }
+ ],
+ "rejected": [
+  {
+   "id": "V1",
+   "service": "frontend",
+   "severity": "critical",
+   "weakness": "Single replica entrypoint with no PDB or HPA, so a pod failure or traffic surge can bring down the entire site",
+   "evidence": {
+    "replicas": "1",
+    "entrypoint": "true",
+    "pdb": "false",
+    "hpa": "false"
+   },
+   "hypothesis": "if the frontend pod is killed, the site becomes unavailable for all users",
+   "blast_radius": [
+    "frontend"
+   ],
+   "rejected_because": "no evidence matches the real config"
+  },
+  {
+   "id": "V2",
+   "service": "checkoutservice",
+   "severity": "high",
+   "weakness": "Single replica checkout service with no PDB or HPA; failure or overload can stall the entire checkout path",
+   "evidence": {
+    "replicas": "1",
+    "pdb": "false",
+    "hpa": "false"
+   },
+   "hypothesis": "if the checkoutservice pod is killed, checkout requests time out and users cannot complete purchases",
+   "blast_radius": [
+    "checkoutservice",
+    "frontend"
+   ],
+   "rejected_because": "no evidence matches the real config"
+  },
+  {
+   "id": "V4",
+   "service": "all",
+   "severity": "medium",
+   "weakness": "No PodDisruptionBudget defined for any service, allowing voluntary disruptions to take down replicas",
+   "evidence": {
+    "pdb": "false"
+   },
+   "hypothesis": "if a node drain occurs, pods can be evicted without guarantees, potentially causing outages",
+   "blast_radius": [
+    "all"
+   ],
+   "rejected_because": "unknown service"
+  },
+  {
+   "id": "V5",
+   "service": "all",
+   "severity": "medium",
+   "weakness": "No HorizontalPodAutoscaler on any service, so traffic spikes cannot be handled gracefully",
+   "evidence": {
+    "hpa": "false"
+   },
+   "hypothesis": "if traffic surges, pods will not scale and requests will be throttled or fail",
+   "blast_radius": [
+    "all"
+   ],
+   "rejected_because": "unknown service"
+  },
+  {
+   "id": "V6",
+   "service": "all",
+   "severity": "low",
+   "weakness": "All services have a single replica; they will fail gracefully only if the application handles pod restarts, but no redundancy is present",
+   "evidence": {
+    "replicas": "1"
+   },
+   "hypothesis": "if a pod restarts, the service may temporarily be unavailable until the new pod is ready",
+   "blast_radius": [
+    "all"
+   ],
+   "rejected_because": "unknown service"
+  },
+  {
+   "id": "V7",
+   "service": "cartservice",
+   "severity": "low",
+   "weakness": "Single replica cartservice without PDB or HPA; a pod failure will temporarily block cart updates but can recover once pod restarts",
+   "evidence": {
+    "replicas": "1",
+    "pdb": "false",
+    "hpa": "false"
+   },
+   "hypothesis": "if the cartservice pod is killed, cart updates fail until the pod is back up",
+   "blast_radius": [
+    "cartservice",
+    "checkoutservice",
+    "frontend"
+   ],
+   "rejected_because": "no evidence matches the real config"
+  },
+  {
+   "id": "V8",
+   "service": "all",
+   "severity": "low",
+   "weakness": "No explicit readiness or liveness probes for some services (none listed), but all have them true; still, lack of probe configuration could lead to traffic to unhealthy pods",
+   "evidence": {
+    "readiness_probe": "true",
+    "liveness_probe": "true"
+   },
+   "hypothesis": "if a pod becomes unhealthy but probes are misconfigured, traffic may be routed to it causing failures",
+   "blast_radius": [
+    "all"
+   ],
+   "rejected_because": "unknown service"
+  }
+ ],
+ "systemic": [
+  "All services lack PDB and HPA, single replica deployments, and no persistent volumes for stateful data"
+ ],
+ "blind_spots": [
+  "Facts do not reveal internal retry logic, timeout settings, or circuit breaker configurations that could mitigate or exacerbate these weaknesses"
+ ]
+}

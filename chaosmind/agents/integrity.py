@@ -18,7 +18,7 @@ PRODUCT = 'OLJCESPC7Z'
 # Same demo values the shop's own checkout form is pre-filled with.
 CHECKOUT_FORM = {'email': 'someone@example.com', 'street_address': '1600 Amphitheatre Parkway', 'zip_code': '94043',
                  'city': 'Mountain View', 'state': 'CA', 'country': 'United States',
-                 'credit_card_number': '4432-8015-6152-0454', 'credit_card_expiration_month': '1',
+                 'credit_card_number': '4432801561520454', 'credit_card_expiration_month': '1',
                  'credit_card_expiration_year': '2030', 'credit_card_cvv': '672'}
 # ponytail: matched against Online Boutique's order.html wording; confirm once on a live success page.
 ORDER_PLACED = re.compile(r'order confirmation id|your order is complete', re.I)

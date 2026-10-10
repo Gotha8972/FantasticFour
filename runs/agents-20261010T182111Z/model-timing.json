@@ -1,0 +1,27 @@
+{
+  "upstream_commit": "d1c6cee",
+  "model": "openai/gpt-oss-20b",
+  "extra_body": {
+    "reasoning_effort": "low"
+  },
+  "total_seconds": 45.819,
+  "calls": [
+    {
+      "call": 1,
+      "seconds": 34.327,
+      "role": "You are a senior SRE auditing a Kubernetes microservice architecture BEFORE chaos testing."
+    },
+    {
+      "call": 2,
+      "seconds": 7.786,
+      "role": "You design chaos experiments that PROVE or REFUTE suspected vulnerabilities."
+    },
+    {
+      "call": 3,
+      "seconds": 2.763,
+      "role": "You are the Safety Checker for a chaos-engineering system running in a local sandbox."
+    }
+  ],
+  "dry_run": true,
+  "baseline": "runs/baseline-study-20261010T181454.739973Z/baseline.json"
+}

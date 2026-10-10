@@ -2,18 +2,16 @@
   "schema_version": 1,
   "status": "completed",
   "baseline_suitable": true,
-  "run_started_utc": "2026-10-10T09:30:22.185868+00:00",
+  "run_started_utc": "2026-10-10T18:14:54.740159+00:00",
   "requested_duration_s": 300.0,
   "warmup_s": 60,
   "interval_s": 5,
   "expected_users": 20,
   "context": "kind-online-boutique",
   "namespace": "online-boutique",
-  "artifact_dir": "/home/aashrith/Desktop/boschthon/runs/baseline-study-20261010T093022.185681Z",
+  "artifact_dir": "/home/aashrith/Desktop/boschthon/runs/baseline-study-20261010T181454.739973Z",
   "findings": [],
-  "notes": [
-    "1 failed requests (0.07%) without faults: background error rate."
-  ],
+  "notes": [],
   "collection_errors": [],
   "acceptance_policy": {
     "window_error_rate_exclusive_max": 0.01,
@@ -35,88 +33,88 @@
     "checkout_success": "fraction 0..1",
     "metrics_age_s": "seconds"
   },
-  "study_started_utc": "2026-10-10T09:31:22.915841+00:00",
-  "first_observation_utc": "2026-10-10T09:31:24.392988+00:00",
-  "sample_count": 62,
-  "collection_finished_utc": "2026-10-10T09:36:26.155568+00:00",
+  "study_started_utc": "2026-10-10T18:15:55.476297+00:00",
+  "first_observation_utc": "2026-10-10T18:15:56.123847+00:00",
+  "sample_count": 61,
+  "collection_finished_utc": "2026-10-10T18:20:56.462760+00:00",
   "metrics": {
     "users": {
-      "samples": 62,
+      "samples": 61,
       "mean": 20.0,
       "p95": 20.0,
       "min": 20,
       "max": 20
     },
     "rps": {
-      "samples": 62,
-      "mean": 4.509677419354839,
-      "p95": 5.395,
-      "min": 3.3,
+      "samples": 61,
+      "mean": 4.424590163934426,
+      "p95": 5.5,
+      "min": 3.2,
       "max": 5.7
     },
     "error_rate": {
-      "samples": 62,
-      "mean": 0.0005816512607684085,
+      "samples": 61,
+      "mean": 0.0,
       "p95": 0.0,
       "min": 0.0,
-      "max": 0.018518518518518517
+      "max": 0.0
     },
     "p50_ms": {
-      "samples": 62,
-      "mean": 10.774193548387096,
+      "samples": 61,
+      "mean": 11.081967213114755,
       "p95": 12.0,
       "min": 10.0,
-      "max": 13.0
+      "max": 12.0
     },
     "p95_ms": {
-      "samples": 62,
-      "mean": 34.693548387096776,
-      "p95": 59.949999999999996,
-      "min": 16.0,
-      "max": 94.0
+      "samples": 61,
+      "mean": 27.459016393442624,
+      "p95": 85.0,
+      "min": 17.0,
+      "max": 86.0
     },
     "checkout_success": {
-      "samples": 62,
-      "mean": 0.9990704469731767,
+      "samples": 61,
+      "mean": 1.0,
       "p95": 1.0,
-      "min": 0.9976133651551312,
+      "min": 1.0,
       "max": 1.0
     },
     "unhealthy_count": {
-      "samples": 62,
+      "samples": 61,
       "mean": 0.0,
       "p95": 0.0,
       "min": 0,
       "max": 0
     },
     "total_restarts": {
-      "samples": 62,
-      "mean": 9.0,
-      "p95": 9.0,
-      "min": 9,
-      "max": 9
+      "samples": 61,
+      "mean": 14.0,
+      "p95": 14.0,
+      "min": 14,
+      "max": 14
     },
     "metrics_age_s": {
-      "samples": 62,
-      "mean": 1.904455788673893,
-      "p95": 2.4004605650901794,
-      "min": 0.31876420974731445,
-      "max": 3.3925986289978027
+      "samples": 61,
+      "mean": 3.4844839768331557,
+      "p95": 4.19503378868103,
+      "min": 1.1849162578582764,
+      "max": 4.2020533084869385
     }
   },
-  "last_observation_utc": "2026-10-10T09:36:25.894120+00:00",
-  "measured_span_s": 301.501,
+  "last_observation_utc": "2026-10-10T18:20:56.192962+00:00",
+  "measured_span_s": 300.069,
   "window": {
-    "requests": 1372,
-    "failures": 1,
-    "completed_rps": 4.55056441078316,
-    "error_rate": 0.0007288629737609329,
-    "checkout_requests": 69,
-    "checkout_failures": 1,
-    "checkout_success": 0.9855072463768116
+    "requests": 1308,
+    "failures": 0,
+    "completed_rps": 4.358998199387956,
+    "error_rate": 0.0,
+    "checkout_requests": 55,
+    "checkout_failures": 0,
+    "checkout_success": 1.0
   },
-  "unique_history_timestamps": 62,
-  "max_sample_gap_s": 5.10236930847168,
+  "unique_history_timestamps": 61,
+  "max_sample_gap_s": 5.065471649169922,
   "restart_increases": {},
   "services_with_pod_changes": []
 }

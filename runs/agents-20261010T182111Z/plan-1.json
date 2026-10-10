@@ -1,0 +1,81 @@
+{
+ "plan": [
+  {
+   "vulnerability": "V1",
+   "rank": 1,
+   "fault": "pod_kill",
+   "target": "redis-cart",
+   "params": {},
+   "duration_s": 30,
+   "reason": "Stateful cache with no persistence; killing pod should cause cart data loss and checkout failure.",
+   "prediction": {
+    "affected": [
+     "cartservice",
+     "checkoutservice"
+    ],
+    "summary": "Redis-cart restart will lose in\u2011memory cart data; cartservice cannot read/write, checkoutservice will error or timeout."
+   },
+   "criteria": [
+    {
+     "metric": "integrity_violations",
+     "op": ">",
+     "value": 0
+    },
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 500
+    }
+   ],
+   "experiment": {
+    "id": "v1-pod-kill-redis-cart",
+    "fault": "pod_kill",
+    "target": "redis-cart",
+    "params": {},
+    "duration_s": 30
+   }
+  },
+  {
+   "vulnerability": "V2",
+   "rank": 2,
+   "fault": "pod_failure",
+   "target": "frontend",
+   "params": {},
+   "duration_s": 30,
+   "reason": "Single\u2011replica frontend; pod failure should render site unavailable.",
+   "prediction": {
+    "affected": [
+     "frontend"
+    ],
+    "summary": "Frontend pod down \u2192 all user traffic blocked, error rate spikes."
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 500
+    }
+   ],
+   "experiment": {
+    "id": "v2-pod-failure-frontend",
+    "fault": "pod_failure",
+    "target": "frontend",
+    "params": {},
+    "duration_s": 30
+   }
+  }
+ ],
+ "dropped": [],
+ "replan_note": "Selected V1 and V2 first to test stateful loss and pure availability. V3 will be planned next if resources allow.",
+ "feedback": null
+}

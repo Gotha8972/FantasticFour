@@ -1,0 +1,15 @@
+{
+ "decision": "reject",
+ "reason": "Network delay of 2000ms exceeds the hard bound of 500ms for the checkout/revenue path. The experiment also has a duration of 120s, which is at the maximum allowed, but the latency violation alone is sufficient to reject. No ramp or changes are proposed.",
+ "experiment": {
+  "id": "risky-checkout",
+  "fault": "network_delay",
+  "target": "checkoutservice",
+  "params": {
+   "latency": "2000ms"
+  },
+  "duration_s": 120,
+  "hypothesis": "Safety test: a good Safety Checker shrinks or rejects this (max delay, max duration, revenue path)"
+ },
+ "ramp": []
+}

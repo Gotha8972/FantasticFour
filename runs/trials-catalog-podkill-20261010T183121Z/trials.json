@@ -1,0 +1,151 @@
+{
+ "experiment": {
+  "id": "catalog-podkill",
+  "fault": "pod_kill",
+  "target": "productcatalogservice",
+  "duration_s": 30,
+  "hypothesis": "With 1 replica a catalog kill breaks pages and checkout; with 2 replicas customers barely notice"
+ },
+ "criteria": [
+  {
+   "metric": "error_rate",
+   "op": ">",
+   "value": 0.05
+  },
+  {
+   "metric": "p95_ms",
+   "op": ">",
+   "value": 1000
+  },
+  {
+   "metric": "integrity_violations",
+   "op": ">",
+   "value": 0
+  }
+ ],
+ "conditions": {
+  "fault": "pod_kill",
+  "target": "productcatalogservice",
+  "params": {},
+  "duration_s": 30,
+  "users": 20,
+  "target_replicas": 2
+ },
+ "trials": [
+  {
+   "trial": 1,
+   "outcome": "held",
+   "criteria_met": [],
+   "observed": {
+    "error_rate": 0.0,
+    "p95_ms": 56.0,
+    "unhealthy_count": 1,
+    "breach": null,
+    "recovery_s": 0.898,
+    "service_ready_s": 3.2,
+    "customer_recovered_s": 32.1,
+    "users": 20,
+    "integrity_violations": 0
+   },
+   "integrity": [],
+   "run_dir": "runs/catalog-podkill-t1-20261010T183122.447363Z"
+  },
+  {
+   "trial": 2,
+   "outcome": "held",
+   "criteria_met": [],
+   "observed": {
+    "error_rate": 0.023809523809523808,
+    "p95_ms": 57.0,
+    "unhealthy_count": 1,
+    "breach": null,
+    "recovery_s": 0.902,
+    "service_ready_s": 3.2,
+    "customer_recovered_s": 32.1,
+    "users": 20,
+    "integrity_violations": 0
+   },
+   "integrity": [],
+   "run_dir": "runs/catalog-podkill-t2-20261010T183225.821813Z"
+  },
+  {
+   "trial": 3,
+   "outcome": "held",
+   "criteria_met": [],
+   "observed": {
+    "error_rate": 0.0,
+    "p95_ms": 42.0,
+    "unhealthy_count": 1,
+    "breach": null,
+    "recovery_s": 0.91,
+    "service_ready_s": 3.2,
+    "customer_recovered_s": 32.1,
+    "users": 20,
+    "integrity_violations": 0
+   },
+   "integrity": [],
+   "run_dir": "runs/catalog-podkill-t3-20261010T183329.145599Z"
+  },
+  {
+   "trial": 4,
+   "outcome": "held",
+   "criteria_met": [],
+   "observed": {
+    "error_rate": 0.0,
+    "p95_ms": 45.0,
+    "unhealthy_count": 1,
+    "breach": null,
+    "recovery_s": 0.893,
+    "service_ready_s": 3.2,
+    "customer_recovered_s": 32.1,
+    "users": 20,
+    "integrity_violations": 0
+   },
+   "integrity": [],
+   "run_dir": "runs/catalog-podkill-t4-20261010T183432.589468Z"
+  },
+  {
+   "trial": 5,
+   "outcome": "held",
+   "criteria_met": [],
+   "observed": {
+    "error_rate": 0.0,
+    "p95_ms": 71.0,
+    "unhealthy_count": 1,
+    "breach": null,
+    "recovery_s": 0.905,
+    "service_ready_s": 3.2,
+    "customer_recovered_s": 32.1,
+    "users": 20,
+    "integrity_violations": 0
+   },
+   "integrity": [],
+   "run_dir": "runs/catalog-podkill-t5-20261010T183535.919410Z"
+  }
+ ],
+ "summary": {
+  "valid_trials": 5,
+  "invalid_trials": 0,
+  "breaches": 0,
+  "breach_rate": 0.0,
+  "wilson_95": [
+   0.0,
+   0.434
+  ],
+  "evidence": "ok",
+  "service_ready_s": [
+   3.2,
+   3.2,
+   3.2,
+   3.2,
+   3.2
+  ],
+  "customer_recovered_s": [
+   32.1,
+   32.1,
+   32.1,
+   32.1,
+   32.1
+  ]
+ }
+}

@@ -1,0 +1,153 @@
+{
+ "plan": [
+  {
+   "vulnerability": "V1",
+   "rank": 1,
+   "fault": "pod_kill",
+   "target": "redis-cart",
+   "params": {},
+   "duration_s": 30,
+   "reason": "Stateful emptyDir volume loses data on pod restart, expected cart contents loss.",
+   "prediction": {
+    "affected": [
+     "redis-cart",
+     "cartservice",
+     "checkoutservice",
+     "frontend"
+    ],
+    "summary": "Redis-cart pod restart will delete in\u2011memory cart data; cartservice will return empty carts, checkoutservice may fail to create orders, frontend may show empty cart."
+   },
+   "criteria": [
+    {
+     "metric": "integrity_violations",
+     "op": ">",
+     "value": 0
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 425
+    }
+   ],
+   "experiment": {
+    "id": "v1-pod-kill-redis-cart",
+    "fault": "pod_kill",
+    "target": "redis-cart",
+    "params": {},
+    "duration_s": 30
+   }
+  }
+ ],
+ "dropped": [
+  {
+   "item": {
+    "vulnerability": "V1",
+    "rank": 2,
+    "fault": "network_delay",
+    "target": "redis-cart",
+    "params": {
+     "latency": "2000"
+    },
+    "duration_s": 30,
+    "reason": "High latency to redis-cart may propagate to cartservice and affect user experience.",
+    "prediction": {
+     "affected": [
+      "redis-cart",
+      "cartservice",
+      "checkoutservice",
+      "frontend"
+     ],
+     "summary": "Redis-cart responses delayed up to 2s, causing cartservice latency spikes and potential timeouts for checkout."
+    },
+    "criteria": [
+     {
+      "metric": "p95_ms",
+      "op": ">",
+      "value": 425
+     },
+     {
+      "metric": "error_rate",
+      "op": ">",
+      "value": 0
+     }
+    ]
+   },
+   "reason": "latency must be a nonnegative duration in ms"
+  },
+  {
+   "item": {
+    "vulnerability": "V1",
+    "rank": 1,
+    "fault": "pod_kill",
+    "target": "redis-cart",
+    "params": {},
+    "duration_s": 30,
+    "reason": "Stateful emptyDir volume loses data on pod restart; pod_kill tests data loss hypothesis",
+    "prediction": {
+     "affected": [
+      "redis-cart",
+      "cartservice",
+      "checkoutservice",
+      "frontend"
+     ],
+     "summary": "redis-cart pod will be killed and recreated, causing cart contents to be lost and subsequent cartservice/checkoutservice calls to fail or return empty carts; frontend may see empty cart state"
+    },
+    "criteria": [
+     {
+      "metric": "integrity_violations",
+      "op": ">",
+      "value": 0
+     },
+     {
+      "metric": "error_rate",
+      "op": ">",
+      "value": 0
+     },
+     {
+      "metric": "p95_ms",
+      "op": ">",
+      "value": 85
+     }
+    ]
+   },
+   "reason": "already run or planned"
+  },
+  {
+   "item": {
+    "vulnerability": "V1",
+    "rank": 2,
+    "fault": "network_delay",
+    "target": "redis-cart",
+    "params": {
+     "latency": "200"
+    },
+    "duration_s": 30,
+    "reason": "High fan\u2011in latency propagation from redis-cart to dependent services; network_delay tests whether increased latency causes customer impact",
+    "prediction": {
+     "affected": [
+      "redis-cart",
+      "cartservice",
+      "checkoutservice",
+      "frontend"
+     ],
+     "summary": "redis-cart responses will be delayed by ~200ms, potentially increasing overall request latency and causing p95_ms to exceed baseline"
+    },
+    "criteria": [
+     {
+      "metric": "p95_ms",
+      "op": ">",
+      "value": 85
+     },
+     {
+      "metric": "error_rate",
+      "op": ">",
+      "value": 0
+     }
+    ]
+   },
+   "reason": "latency must be a nonnegative duration in ms"
+  }
+ ],
+ "replan_note": "Added pod_kill to test data loss and network_delay to assess latency propagation; both faults not previously used.",
+ "feedback": "network_delay on redis-cart was dropped: latency must be a nonnegative duration in ms. Return corrected or replacement experiments only; keep integrity criteria for stateful services."
+}

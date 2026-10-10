@@ -1,0 +1,173 @@
+{
+ "vulnerabilities": [
+  {
+   "id": "V1",
+   "service": "redis-cart",
+   "severity": "critical",
+   "weakness": "Stateful cache with no persistent volume and single replica, no PDB or HPA, can lose cart data and halt checkout",
+   "evidence": {
+    "replicas": 1,
+    "volumes": [
+     "emptyDir"
+    ],
+    "stateful_without_pvc": true,
+    "pdb": false,
+    "hpa": false,
+    "on_checkout_path": true
+   },
+   "hypothesis": "if the redis-cart pod is killed, the cartservice will be unable to read or write cart data, causing checkout to fail",
+   "blast_radius": [
+    "cartservice",
+    "checkoutservice",
+    "frontend"
+   ],
+   "unverified_evidence_dropped": {},
+   "risk_score": 13,
+   "status": "untested"
+  },
+  {
+   "id": "V2",
+   "service": "frontend",
+   "severity": "critical",
+   "weakness": "Single replica, entrypoint, no PDB/HPA; pod loss brings down entire site",
+   "evidence": {
+    "replicas": 1,
+    "entrypoint": true,
+    "pdb": false,
+    "hpa": false
+   },
+   "hypothesis": "if the frontend pod is killed, all user-facing traffic is lost, causing site outage",
+   "blast_radius": [],
+   "unverified_evidence_dropped": {},
+   "risk_score": 7,
+   "status": "untested"
+  },
+  {
+   "id": "V3",
+   "service": "cartservice",
+   "severity": "high",
+   "weakness": "Single replica, no PDB/HPA, depends on redis-cart; pod loss stalls checkout",
+   "evidence": {
+    "replicas": 1,
+    "pdb": false,
+    "hpa": false,
+    "calls": [
+     "redis-cart"
+    ],
+    "on_checkout_path": true
+   },
+   "hypothesis": "if the cartservice pod is killed, checkoutservice will timeout waiting for cart data, slowing or breaking checkout",
+   "blast_radius": [
+    "checkoutservice",
+    "frontend"
+   ],
+   "unverified_evidence_dropped": {},
+   "risk_score": 8,
+   "status": "untested"
+  },
+  {
+   "id": "V4",
+   "service": "productcatalogservice",
+   "severity": "medium",
+   "weakness": "Single replica, no PDB/HPA, on checkout path; pod loss degrades product lookup",
+   "evidence": {
+    "replicas": 1,
+    "pdb": false,
+    "hpa": false,
+    "on_checkout_path": true
+   },
+   "hypothesis": "if the productcatalogservice pod is killed, checkoutservice will fail to retrieve product info, slowing checkout",
+   "blast_radius": [
+    "checkoutservice",
+    "frontend"
+   ],
+   "unverified_evidence_dropped": {},
+   "risk_score": 9,
+   "status": "untested"
+  },
+  {
+   "id": "V5",
+   "service": "currencyservice",
+   "severity": "medium",
+   "weakness": "Single replica, no PDB/HPA, on checkout path; pod loss delays currency conversion",
+   "evidence": {
+    "replicas": 1,
+    "pdb": false,
+    "hpa": false,
+    "on_checkout_path": true
+   },
+   "hypothesis": "if the currencyservice pod is killed, checkoutservice will wait for conversion, slowing checkout",
+   "blast_radius": [
+    "checkoutservice",
+    "frontend"
+   ],
+   "unverified_evidence_dropped": {},
+   "risk_score": 8,
+   "status": "untested"
+  },
+  {
+   "id": "V6",
+   "service": "emailservice",
+   "severity": "low",
+   "weakness": "Single replica, no PDB/HPA; pod loss only affects email notifications, expected to fail gracefully",
+   "evidence": {
+    "replicas": 1,
+    "pdb": false,
+    "hpa": false
+   },
+   "hypothesis": "if the emailservice pod is killed, checkoutservice will skip sending confirmation emails but still complete checkout",
+   "blast_radius": [
+    "checkoutservice",
+    "frontend"
+   ],
+   "unverified_evidence_dropped": {},
+   "risk_score": 8,
+   "status": "untested"
+  },
+  {
+   "id": "V7",
+   "service": "paymentservice",
+   "severity": "low",
+   "weakness": "Single replica, no PDB/HPA; pod loss may delay payment processing but checkout can retry",
+   "evidence": {
+    "replicas": 1,
+    "pdb": false,
+    "hpa": false
+   },
+   "hypothesis": "if the paymentservice pod is killed, checkoutservice will retry payment calls and eventually succeed",
+   "blast_radius": [
+    "checkoutservice",
+    "frontend"
+   ],
+   "unverified_evidence_dropped": {},
+   "risk_score": 8,
+   "status": "untested"
+  },
+  {
+   "id": "V8",
+   "service": "shippingservice",
+   "severity": "low",
+   "weakness": "Single replica, no PDB/HPA; pod loss delays shipping estimate but checkout can proceed",
+   "evidence": {
+    "replicas": 1,
+    "pdb": false,
+    "hpa": false
+   },
+   "hypothesis": "if the shippingservice pod is killed, checkoutservice will use default shipping estimate and continue checkout",
+   "blast_radius": [
+    "checkoutservice",
+    "frontend"
+   ],
+   "unverified_evidence_dropped": {},
+   "risk_score": 8,
+   "status": "untested"
+  }
+ ],
+ "rejected": [],
+ "systemic": [
+  "All services run a single replica with no PDB or HPA, exposing the entire stack to single\u2011point failures and lack of autoscaling"
+ ],
+ "blind_spots": [
+  "Facts do not reveal internal timeout, retry, or circuit\u2011breaker logic; cannot assess how services recover from transient network or CPU spikes"
+ ]
+}

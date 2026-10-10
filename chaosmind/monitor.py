@@ -9,9 +9,29 @@ def rows(path):
     with open(path, newline='') as f:
         return list(csv.DictReader(f))
 stats = rows('/stats/load_stats.csv')
-history = rows('/stats/load_stats_history.csv')
 aggregate = next(r for r in stats if r['Name'] == 'Aggregated')
-recent = next(r for r in reversed(history) if r.get('Name') == 'Aggregated')
+# Bound memory inside the Locust container, even after hours of CSV history.
+with open('/stats/load_stats_history.csv', 'rb') as f:
+    header = next(csv.reader([f.readline().decode()]))
+    header_end = f.tell()
+    f.seek(0, 2)
+    start = max(header_end, f.tell() - 1024 * 1024)
+    f.seek(start)
+    if start > header_end:
+        f.readline()
+    lines = f.read().splitlines(keepends=True)
+recent = None
+for line in reversed(lines):
+    if not line.endswith(b'\n'):
+        continue
+    values = next(csv.reader([line.decode()]))
+    if len(values) == len(header):
+        row = dict(zip(header, values))
+        if row.get('Name') == 'Aggregated':
+            recent = row
+            break
+if recent is None:
+    raise RuntimeError('No complete aggregate Locust history in recent CSV tail')
 checkout = [r for r in stats if r.get('Name') == '/cart/checkout']
 print(json.dumps({'aggregate': aggregate, 'recent': recent, 'checkout': checkout}))
 '''
