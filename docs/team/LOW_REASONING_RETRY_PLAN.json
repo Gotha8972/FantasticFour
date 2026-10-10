@@ -1,0 +1,82 @@
+{
+ "plan": [
+  {
+   "vulnerability": "V2",
+   "rank": 2,
+   "fault": "pod_failure",
+   "target": "cartservice",
+   "params": {},
+   "duration_s": 30,
+   "reason": "Single replica checkout service \u2013 failure tests availability impact on cart operations.",
+   "prediction": {
+    "affected": [
+     "cartservice",
+     "checkoutservice",
+     "frontend"
+    ],
+    "summary": "Expect cart add/checkout errors and latency spikes while pod is unavailable."
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.01
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 500
+    }
+   ],
+   "experiment": {
+    "id": "v2-pod-failure-cartservice",
+    "fault": "pod_failure",
+    "target": "cartservice",
+    "params": {},
+    "duration_s": 30
+   }
+  }
+ ],
+ "dropped": [
+  {
+   "item": {
+    "vulnerability": "V1",
+    "rank": 1,
+    "fault": "pod_kill",
+    "target": "redis-cart",
+    "params": {},
+    "duration_s": 30,
+    "reason": "Stateful cache with single replica \u2013 killing the pod tests data loss and restart latency.",
+    "prediction": {
+     "affected": [
+      "redis-cart",
+      "cartservice",
+      "checkoutservice",
+      "frontend"
+     ],
+     "summary": "Expect cart data loss and increased latency during pod recreation."
+    },
+    "criteria": [
+     {
+      "metric": "integrity_violations",
+      "op": ">",
+      "value": 0
+     },
+     {
+      "metric": "p95_ms",
+      "op": ">",
+      "value": 500
+     },
+     {
+      "metric": "error_rate",
+      "op": ">",
+      "value": 0.01
+     }
+    ]
+   },
+   "reason": "predicts data loss, but the target mounts a persistent volume"
+  }
+ ],
+ "replan_note": "Selected pod_kill for V1 to capture data loss, pod_failure for V2 to measure availability, and will use network_delay on frontend for V3 in the next experiment to distinguish latency propagation from outright unavailability.",
+ "diversity_retry": false
+}
