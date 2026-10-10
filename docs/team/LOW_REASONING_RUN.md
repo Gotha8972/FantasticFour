@@ -27,3 +27,10 @@ The earlier default-effort run took several minutes, but its individual calls we
 A fresh suitable baseline is required for live runs. Strategist needs persistence-aware prediction instructions and enforcement of fault diversity. Retain evidence validation and compare low reasoning against a timed default-effort run before claiming equal audit quality.
 
 Timing evidence is published alongside this report in `LOW_REASONING_TIMING.json`. Detailed audit, plan, and history remain local under `runs/agents-20261010T175342Z/`; runtime checkpoints and secrets are not published.
+
+## Status after review
+
+- Low reasoning effort is now the **default** for gpt-oss in `chaosmind/agents/llm.py`; the `.env` line is no longer needed.
+- The Strategist now receives the persistence facts, and code drops data-loss predictions for persisted targets.
+- A one-fault-type plan is sent back once with feedback (code, not prompt). Both have tests (71 total).
+- Still needed on the cluster laptop: a **suitable** baseline (free memory first). See [MODEL_AND_IMPLEMENTATION.md](MODEL_AND_IMPLEMENTATION.md), section 3.

@@ -28,18 +28,21 @@ Chosen by a real availability check ([MODEL_CHECK_FINDINGS.md](MODEL_CHECK_FINDI
   - an empty `content` is handled (retried with a correction) instead of crashing
   - 300 s timeout; network blips and timeouts are retried, so a long audit doesn't kill a live run
   - `NIM_EXTRA_BODY` (JSON) adds request fields a model needs, with no code change
+  - **low reasoning effort is the default for gpt-oss**: measured full dry run **45 s** (audit 25 s, plan 11 s) instead of several minutes ([LOW_REASONING_RUN.md](LOW_REASONING_RUN.md)). `NIM_EXTRA_BODY={}` restores the model's default effort
 - **Fallback:** Nemotron Lightning 30B (passed the JSON probe with thinking off):
   ```bash
   NIM_MODEL=nvidia/nemotron-3.5-lightning-30b-a3b NIM_EXTRA_BODY='{"chat_template_kwargs": {"enable_thinking": false}}' .venv/bin/python -m chaosmind.graph --dry-run
   ```
 - **Why the model choice is low-risk:** the model only *proposes*. Code verifies every fact, validates every experiment, enforces the safety limits and computes every verdict and score.
 
-### A's three findings from the gpt-oss dry run: all fixed in code (plus one more)
+### Findings from the gpt-oss dry runs: all fixed in code
 | Finding | Fix (deterministic, tested) |
 |---|---|
 | Predicted Redis **data loss** although Redis had a persistent volume | `cartographer.verify()` rejects any data-loss claim against a service that mounts a PVC (reason recorded in `rejected`). On the original emptyDir Redis the same claim is true and kept |
 | **Unsuitable baseline** didn't stop the model approving | `safety.review()` rejects every experiment without asking the model; live runs refuse to start (`steps.setup`) |
 | 500 ms / 60 s bounds were **prompt-only** | `safety.hard_bounds()` caps delay at 500 ms and shrinks > 60 s to 30 s on the checkout path + entrypoint (from the collected facts), whatever the model said. `risky-checkout.json` now always comes back `shrink` · 500 ms · 30 s |
+| *(low-effort run)* The **Strategist** still predicted Redis data loss: the PVC check only covered the Cartographer | The Strategist now receives `services_with_persistent_volume`; `strategist.check()` drops a data-loss prediction for those targets. Negations ("the PVC prevents data loss") don't count |
+| *(low-effort run)* Plan was **only pod kills**; diversity was prompt-only | `strategist.plan()` sends a one-fault-type plan back **once** with feedback, then accepts (`diversity_retry` in `plan-N.json`) |
 | *(found while fixing these)* After a fix, Remediation re-ran the **raw** proposal, not the reviewed one | `remediation.rerun_experiment()` re-runs exactly the reviewed step the "before" score was measured on (same intensity, same length), so the review can't be bypassed and before/after compare like with like |
 
 ## 3. Final steps to show it working (Aashrith, ≈60 min, recorded)
@@ -60,7 +63,7 @@ Chosen by a real availability check ([MODEL_CHECK_FINDINGS.md](MODEL_CHECK_FINDI
    ```bash
    kubectl --kubeconfig .runtime/kubeconfig --context kind-online-boutique -n online-boutique patch deployment productcatalogservice --type=json --patch-file remediation/replicas-1.json
    ```
-3. **Ping and tests** (69 tests, no API calls in the tests):
+3. **Ping and tests** (71 tests, no API calls in the tests):
    ```bash
    python3 -m chaosmind.agents.llm --ping
    ```
@@ -89,4 +92,4 @@ Chosen by a real availability check ([MODEL_CHECK_FINDINGS.md](MODEL_CHECK_FINDI
    git add -f runs baseline.json && git commit -m "Final runs on NVIDIA-hosted gpt-oss-20b" && git push
    ```
 
-**Audits take minutes on a reasoning model.** That's fine for the recording: cut the waiting in editing. To try a faster run, add `NIM_EXTRA_BODY='{"reasoning_effort": "low"}'` to one dry run. NVIDIA's docs don't say whether the hosted API accepts it, so if the call errors, just drop it.
+**Speed:** low reasoning effort is now the default, so a dry run takes about 45 s and the live run can be recorded without long waits. To compare quality against the default effort once, run a dry run with `NIM_EXTRA_BODY={}` and keep the low setting unless that run is clearly better.

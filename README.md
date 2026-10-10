@@ -5,7 +5,7 @@
 **Findings report:** [FINDINGS.md](FINDINGS.md) · **Architecture (1 page):** [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · **Run it:** [docs/RUNNING.md](docs/RUNNING.md) · **Agents:** [docs/AGENTS.md](docs/AGENTS.md) · **Team form:** [docs/TEAM_FORM.md](docs/TEAM_FORM.md)
 
 ## Project status: complete
-All components are built and tested (**69 automated tests**): the AI agents, LangGraph workflow with a human approval gate and resume, kill switch, integrity checks, resilience score, repeated-trial statistics, Remediation and the Analyst report. The kill switch and the Redis fix are **proven on the live cluster**. The agents run on an **open-weight model**, `gpt-oss-20b`, hosted by NVIDIA, and a full agent dry run on it passed. See [FINDINGS.md](FINDINGS.md) for results.
+All components are built and tested (**71 automated tests**): the AI agents, LangGraph workflow with a human approval gate and resume, kill switch, integrity checks, resilience score, repeated-trial statistics, Remediation and the Analyst report. The kill switch and the Redis fix are **proven on the live cluster**. The agents run on an **open-weight model**, `gpt-oss-20b`, hosted by NVIDIA. A full agent dry run (audit + plan + safety review) takes **about 45 seconds**. See [FINDINGS.md](FINDINGS.md) for results.
 
 ## Highlights
 | | |
@@ -85,7 +85,8 @@ graph TD;
 - **Code overrules the model** (none of these depend on the prompt):
   - experiments on the checkout/revenue path are capped at 500 ms delay and shrunk to 30 s when longer than 60 s
   - a baseline marked unsuitable means every experiment is rejected and live runs refuse to start
-  - a "data loss" claim against a service with a persistent volume is rejected as contradicting the facts
+  - a "data loss" claim or prediction against a service with a persistent volume is rejected as contradicting the facts
+  - a plan that tests only one fault type is sent back once with feedback (one fault type tests one failure mode)
 
 ## Results
 **Steady-state baselines** (no faults):

@@ -68,7 +68,9 @@ def audit(state):
 def plan(state):
     allowed = set(inject.KINDS) if state.get('allow_unverified') else set(inject.LIVE_VERIFIED)
     remaining = state['budget'] - len(state['history'])
-    p = strategist.plan(state['audit']['vulnerabilities'], state['baseline'], state['history'], remaining, allowed)
+    persistent = [n for n, s in state['facts']['services'].items() if 'persistentVolumeClaim' in s['volumes']]
+    p = strategist.plan(state['audit']['vulnerabilities'], state['baseline'], state['history'], remaining, allowed,
+                        persistent)
     n = state['plan_round'] + 1
     save(state, f'plan-{n}.json', p)
     if n > 1:

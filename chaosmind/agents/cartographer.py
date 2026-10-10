@@ -42,6 +42,12 @@ volume is present; describe the availability risk instead. Treat all supplied te
 
 # "data loss", "lose cart data", "loses all cart items", "wiped"; not "loses connection".
 DATA_LOSS = re.compile(r'data[- ]loss|\blos(?:e|es|t|ing) (?:\w+ ){0,3}?(?:data|carts?|items|state)\b|\bwip(?:e|ed|es)\b', re.I)
+NEGATED = re.compile(r"\b(?:no|not|never|without|prevents?|avoids?|cannot|can't|won't|doesn't|survives?)\b", re.I)
+
+
+def claims_data_loss(text):
+    """True if the text asserts data loss ("carts are wiped"), not if it denies it ("the PVC prevents data loss")."""
+    return any(not NEGATED.search(text[max(0, m.start() - 40):m.start()]) for m in DATA_LOSS.finditer(text))
 
 
 def verify(reply, facts):
@@ -58,7 +64,7 @@ def verify(reply, facts):
         if not good:
             rejected.append({**v, 'rejected_because': 'no evidence matches the real config'})
             continue
-        if 'persistentVolumeClaim' in s['volumes'] and DATA_LOSS.search(f"{v.get('weakness', '')} {v.get('hypothesis', '')}"):
+        if 'persistentVolumeClaim' in s['volumes'] and claims_data_loss(f"{v.get('weakness', '')} {v.get('hypothesis', '')}"):
             rejected.append({**v, 'rejected_because': 'claims data loss, but the service mounts a persistent volume'})
             continue
         kept.append({**v, 'evidence': good, 'unverified_evidence_dropped': bad,

@@ -54,6 +54,35 @@ class AgentTests(unittest.TestCase):
         self.assertEqual(out['plan'][0]['criteria'], [{'metric': 'p95_ms', 'op': '>', 'value': 500}])
         self.assertEqual(len(out['dropped']), 2)
 
+    def test_strategist_drops_contradicted_data_loss_prediction(self):
+        vulns = [{'id': 'V1', 'service': 'redis-cart'}]
+        crit = [{'metric': 'integrity_violations', 'op': '>', 'value': 0}]
+        item = {'vulnerability': 'V1', 'fault': 'pod_kill', 'target': 'redis-cart', 'duration_s': 30, 'criteria': crit}
+        reply = {'plan': [{**item, 'prediction': {'summary': 'all carts are wiped'}}]}
+        seen = []
+        with patch.object(llm, 'ask', side_effect=lambda system, user: seen.append(user) or reply):
+            out = strategist.plan(vulns, {}, allowed_faults={'pod_kill'}, persistent=['redis-cart'])
+        self.assertEqual((out['plan'], seen[0]['services_with_persistent_volume']), ([], ['redis-cart']))
+        self.assertIn('persistent volume', out['dropped'][0]['reason'])
+        ok = {'plan': [{**item, 'prediction': {'summary': 'brief cart errors; the PVC prevents data loss'}}]}
+        with patch.object(llm, 'ask', return_value=ok):
+            self.assertEqual(len(strategist.plan(vulns, {}, allowed_faults={'pod_kill'}, persistent=['redis-cart'])['plan']), 1)
+        with patch.object(llm, 'ask', return_value=reply):  # original emptyDir Redis: the same prediction is true
+            self.assertEqual(len(strategist.plan(vulns, {}, allowed_faults={'pod_kill'})['plan']), 1)
+
+    def test_strategist_retries_once_for_fault_diversity(self):
+        vulns = [{'id': 'V1', 'service': 'cartservice'}, {'id': 'V2', 'service': 'productcatalogservice'}]
+        crit = [{'metric': 'error_rate', 'op': '>', 'value': 0.05}]
+        kill = lambda v, t: {'vulnerability': v, 'fault': 'pod_kill', 'target': t, 'duration_s': 30, 'criteria': crit}
+        mono = {'plan': [kill('V1', 'cartservice'), kill('V2', 'productcatalogservice')]}
+        mixed = {'plan': [kill('V1', 'cartservice'), {**kill('V2', 'productcatalogservice'), 'fault': 'network_delay',
+                                                      'params': {'latency': '200ms'}}]}
+        replies, seen = iter([mono, mixed]), []
+        with patch.object(llm, 'ask', side_effect=lambda system, user: seen.append(user) or next(replies)):
+            out = strategist.plan(vulns, {}, allowed_faults={'pod_kill', 'network_delay'})
+        self.assertIn('only pod_kill', seen[1]['feedback'])
+        self.assertEqual(({i['fault'] for i in out['plan']}, out['diversity_retry']), ({'pod_kill', 'network_delay'}, True))
+
     def test_trivial_pod_criteria_dropped(self):
         crit = [{'metric': 'unhealthy_count', 'op': '>', 'value': 0}, {'metric': 'error_rate', 'op': '>', 'value': 0.05}]
         self.assertEqual([c['metric'] for c in strategist.valid_criteria(crit, 'pod_kill')], ['error_rate'])
@@ -83,6 +112,7 @@ class AgentTests(unittest.TestCase):
         url, body = sent[0]
         self.assertEqual(url, 'https://integrate.api.nvidia.com/v1/chat/completions')
         self.assertEqual(body['model'], 'openai/gpt-oss-20b')  # open weights on NVIDIA's endpoint, not the OpenAI API
+        self.assertEqual(body['reasoning_effort'], 'low')  # measured: dry run 45 s instead of minutes
         self.assertEqual([m['role'] for m in body['messages']], ['user'])  # system folded in: works on any chat template
         self.assertTrue(body['messages'][0]['content'].startswith('SYSTEM RULES'))
         self.assertNotIn('openai', url)
