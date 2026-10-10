@@ -1,0 +1,20 @@
+{
+  "model": "openai/gpt-oss-20b",
+  "extra_body": {
+    "reasoning_effort": "low"
+  },
+  "total_seconds": 45.167,
+  "calls": [
+    {
+      "call": 1,
+      "seconds": 25.109,
+      "role": "You are a senior SRE auditing a Kubernetes microservice architecture BEFORE chaos testing."
+    },
+    {
+      "call": 2,
+      "seconds": 11.136,
+      "role": "You design chaos experiments that PROVE or REFUTE suspected vulnerabilities."
+    }
+  ],
+  "dry_run": true
+}
