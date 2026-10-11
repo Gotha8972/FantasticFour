@@ -103,7 +103,7 @@ These commands load modules for the running kernel; no persistent boot-time modu
 
 ## 5. Request traffic and metric definitions
 
-Locust uses the upstream shopping tasks: browsing products, changing currency, adding items, viewing carts, and mock checkout. Each simulated user waits **1–10 seconds between tasks**.
+Locust uses the upstream shopping tasks: browsing products, changing currency, adding items, viewing carts, and mock checkout. Each simulated user waits **1 to 10 seconds between tasks**.
 
 `USERS` is the target number of concurrent shoppers. `RATE` is the rate at which new shoppers start, in users per second. Neither value directly specifies requests per second.
 

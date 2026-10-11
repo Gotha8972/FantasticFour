@@ -12,38 +12,53 @@ from statistics import median
 from chaosmind.agents import facts as facts_mod, safety, score, steps, trials
 
 # (finding in FINDINGS.md, experiment, condition, evidence kind, run[#target]). Same experiment twice = before/after.
-AI_RUN = 'runs/agents-20261010T185909Z'    # first full live AI loop (Redis and catalog fixes approved)
-AI_RUN2 = 'runs/agents-20261010T192511Z'   # fresh live AI loop, Redis fix already in place (frontend and cart fixes)
-AI_RUN3 = 'runs/agents-20261010T200021Z'   # third live AI loop: payment, currency, checkout (no reviewed fixes for them)
-AI_RUN4 = 'runs/agents-20261010T215020Z'   # recorded AI loop for the video: frontend and Redis fixes approved in the UI
+# Live AI runs, numbered in time order as in FINDINGS.md (run 1, agents-20261010T182208Z, stopped at its first
+# approval and was never resumed, so it has no before/after pair of its own).
+R2, R3, R4 = 'runs/agents-20261010T185909Z', 'runs/agents-20261010T192511Z', 'runs/agents-20261010T200021Z'
+R5 = 'runs/agents-20261010T215020Z'  # recorded for the demo video, fixes approved in mission control
+R6, R7, R8 = 'runs/agents-20261011T013741Z', 'runs/agents-20261011T015326Z', 'runs/agents-20261011T021019Z'
 FIXED = 'after the fix, approved by a human'
+
+
+def pair(finding, name, run, target, before='1 replica'):
+    return [(finding, name, before, 'agent', f'{run}#{target}'), (finding, name, FIXED, 'agent-after', f'{run}#{target}')]
+
+
 EVIDENCE = [
     (1, 'Redis restarted (cart test)', 'before fix', 'redis', 'runs/c-redis-20261010T070925.577773Z'),
     (1, 'Redis restarted (cart test)', 'after fix: PVC + append-only log', 'redis', 'runs/c-redis-20261010T102251.009037Z'),
-    (1, 'Redis pod kill, chosen and run by the AI', 'before fix', 'agent', f'{AI_RUN}#redis-cart'),
-    (1, 'Redis pod kill, chosen and run by the AI', FIXED, 'agent-after', f'{AI_RUN}#redis-cart'),
-    (1, 'Redis pod kill, fresh AI run', 'fix already in place', 'agent', f'{AI_RUN2}#redis-cart'),
-    (2, 'frontend unavailable, chosen and run by the AI', '1 replica', 'agent', f'{AI_RUN2}#frontend'),
-    (2, 'frontend unavailable, chosen and run by the AI', FIXED, 'agent-after', f'{AI_RUN2}#frontend'),
-    (3, 'currencyservice unavailable, chosen and run by the AI', '1 replica', 'agent', f'{AI_RUN3}#currencyservice'),
-    (4, 'cartservice unavailable', '1 replica', 'guard', 'runs/test-down-20261010T062320.861245Z'),
-    (4, 'cartservice pod kill, chosen and run by the AI', '1 replica', 'agent', f'{AI_RUN2}#cartservice'),
-    (4, 'cartservice pod kill, chosen and run by the AI', FIXED, 'agent-after', f'{AI_RUN2}#cartservice'),
+    *pair(1, 'Redis pod kill, AI run 2', R2, 'redis-cart', 'before fix'),
+    (1, 'Redis pod kill, AI run 3', 'fix already in place', 'agent', f'{R3}#redis-cart'),
+    *pair(1, 'Redis pod kill, AI run 5 (recorded)', R5, 'redis-cart', 'before fix'),
+    *pair(1, 'Redis pod kill, AI run 8', R8, 'redis-cart', 'before fix'),
+    *pair(2, 'frontend unavailable, AI run 3', R3, 'frontend'),
+    *pair(2, 'frontend unavailable, AI run 5 (recorded)', R5, 'frontend'),
+    *pair(2, 'frontend unavailable, AI run 8', R8, 'frontend'),
+    (2, 'frontend pod kill, AI run 7 (refuted: 2 replicas held)', '2 replicas', 'agent', f'{R7}#frontend'),
+    (3, 'currency unavailable, AI run 4', '1 replica', 'agent', f'{R4}#currencyservice'),
+    (3, 'currency pod kill, AI run 6', '1 replica', 'agent', f'{R6}#currencyservice'),
+    (4, 'cart unavailable (manual)', '1 replica', 'guard', 'runs/test-down-20261010T062320.861245Z'),
+    *pair(4, 'cart pod kill, AI run 3', R3, 'cartservice'),
+    *pair(4, 'cart pod kill, AI run 6', R6, 'cartservice'),
+    *pair(4, 'cart unavailable, AI run 8', R8, 'cartservice'),
     (5, 'catalog pod kill, 5 trials', '1 replica', 'trials', 'runs/trials-catalog-podkill-20261010T182606Z'),
     (5, 'catalog pod kill, 5 trials', '2 replicas', 'trials', 'runs/trials-catalog-podkill-20261010T183121Z'),
-    (5, 'catalog pod kill, chosen and run by the AI', '1 replica', 'agent', f'{AI_RUN}#productcatalogservice'),
-    (5, 'catalog pod kill, chosen and run by the AI', FIXED, 'agent-after', f'{AI_RUN}#productcatalogservice'),
-    (6, 'paymentservice pod kill, chosen and run by the AI', '1 replica', 'agent', f'{AI_RUN3}#paymentservice'),
-    (8, '+500 ms delay on productcatalogservice', 'no fix', 'guard', 'runs/test-delay-20261010T062255.501508Z'),
-    (10, 'adservice unavailable', 'no fix needed', 'guard', 'runs/c-ad-health-13973e53bd-20261010T070523.440196Z'),
-    (None, 'checkoutservice pod kill, chosen and run by the AI (hypothesis refuted)', '1 replica', 'agent',
-     f'{AI_RUN3}#checkoutservice'),
-    (1, 'Redis pod kill, recorded AI run', 'before fix', 'agent', f'{AI_RUN4}#redis-cart'),
-    (1, 'Redis pod kill, recorded AI run', FIXED, 'agent-after', f'{AI_RUN4}#redis-cart'),
-    (2, 'frontend unavailable, recorded AI run', '1 replica', 'agent', f'{AI_RUN4}#frontend'),
-    (2, 'frontend unavailable, recorded AI run', FIXED, 'agent-after', f'{AI_RUN4}#frontend'),
-    (7, 'checkoutservice unavailable, recorded AI run (no reviewed fix)', '1 replica', 'agent',
-     f'{AI_RUN4}#checkoutservice'),
+    *pair(5, 'catalog pod kill, AI run 2', R2, 'productcatalogservice'),
+    (5, 'catalog pod kill, AI run 6 (verdict missed the errors; fixed in code)', '1 replica', 'agent',
+     f'{R6}#productcatalogservice'),
+    *pair(5, 'catalog pod kill, AI run 7', R7, 'productcatalogservice'),
+    (6, 'network partition, catalog cut off from frontend, AI run 8', '1 replica', 'agent', f'{R8}#productcatalogservice'),
+    (6, 'network partition, payment cut off from checkout, AI run 7', '1 replica', 'agent', f'{R7}#paymentservice'),
+    (7, 'payment pod kill, AI run 4', '1 replica', 'agent', f'{R4}#paymentservice'),
+    (7, 'payment pod kill, AI run 6', '1 replica', 'agent', f'{R6}#paymentservice'),
+    (7, '20% packet loss on payment, AI run 8', '1 replica', 'agent', f'{R8}#paymentservice'),
+    (8, 'checkout unavailable for 30 s, AI run 5 (recorded)', '1 replica', 'agent', f'{R5}#checkoutservice'),
+    (8, 'checkout pod kill, AI run 4 (refuted: restart absorbed)', '1 replica', 'agent', f'{R4}#checkoutservice'),
+    (9, '+500 ms delay on catalog (manual)', 'no fix', 'guard', 'runs/test-delay-20261010T062255.501508Z'),
+    (9, '+500 ms delay on currency, AI run 8', 'no fix', 'agent', f'{R8}#currencyservice'),
+    (9, '30% packet loss on currency, AI run 7', 'no fix', 'agent', f'{R7}#currencyservice'),
+    (11, 'ads unavailable (manual)', 'no fix needed', 'guard', 'runs/c-ad-health-13973e53bd-20261010T070523.440196Z'),
+    (11, 'Redis under CPU stress (manual)', 'no fix needed', 'guard', 'runs/redis-cpu-20261011T013116.326478Z'),
 ]
 
 
@@ -113,13 +128,13 @@ def render(table):
              '**B** blast radius (only when customers were hurt), **I** integrity. Repeated trials show the median and '
              'the range. Baseline: the final suitable baseline (`baseline.json`, 20 shoppers).', '',
              '## Ranked, worst first', '',
-             '| Rank | Score | Experiment | Condition | E | L | R | B | I | Finding | Evidence |',
+             '| Rank | Score | Experiment | Condition | E | L | R | B | I | Finding # | Evidence |',
              '|---|---|---|---|---|---|---|---|---|---|---|']
     for n, r in enumerate(sorted(table, key=lambda r: r['score']), 1):
-        spread = f" ({r['range'][0]}–{r['range'][1]}, n={r['n']})" if r['n'] > 1 else ''
+        spread = f" ({r['range'][0]}-{r['range'][1]}, n={r['n']})" if r['n'] > 1 else ''
         b = r['breakdown']
         lines.append(f"| {n} | **{r['score']}**{spread} | {r['experiment']} | {r['condition']} | {b['E']} | {b['L']} | "
-                     f"{b['R']} | {b['B']} | {b['I']} | {'#' + str(r['finding']) if r['finding'] else '—'} | [{Path(r['run'].split('#')[0]).name}](../../{r['run'].split('#')[0]}) |")
+                     f"{b['R']} | {b['B']} | {b['I']} | {r['finding'] or 'n/a'} | [{Path(r['run'].split('#')[0]).name}](../../{r['run'].split('#')[0]}) |")
     lines += ['', '## Fixes proven by re-running the same experiment', '',
               '| Experiment | Before | After | Change |', '|---|---|---|---|']
     for name in dict.fromkeys(r['experiment'] for r in table):
@@ -162,10 +177,11 @@ def render_runs(runs):
              f"{', '.join(sorted({f for r in runs for f in r['faults']}))}.**" if gains else '', '',
              'Scores here are as each run recorded them; the first runs used an earlier score formula, so the ranked '
              'table above (recomputed from raw evidence with the current formula) is the one to compare across runs.', '',
-             '| Run | Experiments | Confirmed | Refuted | Fault types | Fixes (score before → after, as recorded) |', '|---|---|---|---|---|---|']
-    for r in runs:
-        fx = ', '.join(f'{f} {b} → {a}' for f, b, a in r['fixes']) or '—'
-        lines.append(f"| [{r['run']}](../../runs/{r['run']}) | {r['experiments']} | {r['confirmed']} | {r['refuted']} | "
+             '| Run | Folder | Experiments | Confirmed | Refuted | Fault types | Fixes (score before and after, as recorded) |',
+             '|---|---|---|---|---|---|---|']
+    for n, r in enumerate(runs, 1):
+        fx = ', '.join(f'{f} {b} to {a}' for f, b, a in r['fixes']) or 'none'
+        lines.append(f"| {n} | [{r['run']}](../../runs/{r['run']}) | {r['experiments']} | {r['confirmed']} | {r['refuted']} | "
                      f"{', '.join(r['faults'])} | {fx} |")
     return '\n'.join(lines) + '\n'
 

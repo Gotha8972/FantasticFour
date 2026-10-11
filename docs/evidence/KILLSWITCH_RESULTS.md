@@ -47,8 +47,8 @@ Across the checkpoint runner's baseline and recovery samples:
 | Measurement | Observed value |
 | --- | --- |
 | Users | 20 |
-| Recent completed throughput | 3.3–5.1 requests/second |
-| Recent aggregate p95 latency | 40–580 ms |
+| Recent completed throughput | 3.3 to 5.1 requests/second |
+| Recent aggregate p95 latency | 40 to 580 ms |
 | Recent aggregate error rate | 0 in the recorded samples |
 | Cumulative completed requests | 11,367 → 12,416; increase of 1,049 |
 | Cumulative failures | 207 → 207; no additional failures in this interval |

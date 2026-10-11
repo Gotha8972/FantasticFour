@@ -33,7 +33,7 @@ bash scripts/chaos.sh dashboard
 
 Open **http://localhost:2333**, keeping the terminal running. The dashboard uses a ClusterIP service and a localhost-only port-forward. Authentication is disabled for this local development setup. It is not configured for public access. Closing the port-forward does not stop an experiment.
 
-Use **New Experiment**, choose Pod Fault / Network Attack / Stress Test, select namespace `online-boutique`, and set a label selector such as `app=shippingservice`. Start with `mode: one` and a 30–60 second duration for continuous faults. Pod Kill is a one-time deletion; Kubernetes recreates the pod. The dashboard also displays experiment status and events. The supplied YAML manifests give reproducible configurations that the future agent can use directly.
+Use **New Experiment**, choose Pod Fault / Network Attack / Stress Test, select namespace `online-boutique`, and set a label selector such as `app=shippingservice`. Start with `mode: one` and a 30 to 60 second duration for continuous faults. Pod Kill is a one-time deletion; Kubernetes recreates the pod. The dashboard also displays experiment status and events. The supplied YAML manifests give reproducible configurations that the future agent can use directly.
 
 ## Start request traffic
 
@@ -64,7 +64,7 @@ bash scripts/load.sh measure 5 30
 bash scripts/load.sh export
 ```
 
-Wait until the `USERS` column reaches the target before comparing stable intervals. Raising users can increase RPS until the application or load generator saturates. Shipping delay does not itself increase user count or request rate; it can increase response time and reduce achieved RPS. The upstream user behavior waits 1–10 seconds between tasks, so 20 shoppers can produce only a few requests per second. Each new rollout resets counters, so compare rates rather than total counts across runs. There is no CPU metrics collection in this setup yet.
+Wait until the `USERS` column reaches the target before comparing stable intervals. Raising users can increase RPS until the application or load generator saturates. Shipping delay does not itself increase user count or request rate; it can increase response time and reduce achieved RPS. The upstream user behavior waits 1 to 10 seconds between tasks, so 20 shoppers can produce only a few requests per second. Each new rollout resets counters, so compare rates rather than total counts across runs. There is no CPU metrics collection in this setup yet.
 
 First record a baseline for 60 seconds without faults. In a second terminal, start one chaos experiment while the traffic continues. Compare request failures, latency percentiles, and recovery after the experiment ends. The experiment does not automatically determine whether the application's behavior passes a resilience requirement.
 

@@ -69,7 +69,7 @@ python3 -m chaosmind.verify --dry-run
 ```bash
 bash scripts/grafana-stress.sh
 ```
-20 shoppers → 100 shoppers → 500 ms delay on the product catalog through the guard → automatic revert → recovery, all visible on the **Online Boutique — Chaos Overview** dashboard.
+20 shoppers, then 100 shoppers, then 500 ms delay on the product catalog through the guard, then the automatic revert and recovery, all visible on the **Online Boutique: Chaos Overview** dashboard.
 
 ### An experiment is a JSON file
 ```json
@@ -81,19 +81,19 @@ bash scripts/grafana-stress.sh
 |---|---|
 | `fault` | `pod_failure`, `pod_kill`, `network_delay`, `network_loss`, `network_partition`, `cpu_stress`, `disk_full` (see coverage table below) |
 | `target` | Any deployment name, e.g. `cartservice`, `productcatalogservice` |
-| `duration_s` | 1–120 |
-| `params` | `network_delay`: `latency`, `jitter` (ms, ≤ 2000) · `network_loss`: `loss` (≤ 50%) · `network_partition`: `to` (the dependency to cut off) · `cpu_stress`: `load` (1–100), `workers` (1–2) · `disk_full`: `path` (a mounted volume, e.g. `/data`), `percent` (1–100) |
+| `duration_s` | 1 to 120 |
+| `params` | `network_delay`: `latency`, `jitter` (ms, at most 2000); `network_loss`: `loss` (at most 50%); `network_partition`: `to` (the dependency to cut off); `cpu_stress`: `load` (1 to 100), `workers` (1 or 2); `disk_full`: `path` (a mounted volume, e.g. `/data`), `percent` (1 to 100) |
 
 **Coverage of the failure types listed in the brief**
 
 | Brief's example | How we inject it | Live status |
 |---|---|---|
-| Service or container crash | `pod_failure` (down for N s), `pod_kill` (instant kill + recreate) | ✅ pod_failure via guard; pod_kill via the Grafana demo script |
-| Slow or lossy network | `network_delay`, `network_loss` | ✅ delay; loss defined, not yet run |
-| Full disk | `disk_full`: Chaos Mesh IOChaos returns `ENOSPC` ("no space left on device") on the volume | Defined, not yet run |
-| Overloaded database | `cpu_stress` on `redis-cart` | Defined, not yet run |
-| Failed dependency | `network_partition`: e.g. `cartservice` can no longer reach `redis-cart` | Defined, not yet run |
-| Sudden traffic spike | 20 → 100 shoppers (`scripts/grafana-stress.sh`) | ✅ run twice |
+| Service or container crash | `pod_failure` (down for N s), `pod_kill` (instant kill and recreate) | Proven live, manually and in all 8 AI runs |
+| Slow or lossy network | `network_delay`, `network_loss` | Proven live, manually ([delay](../runs/test-delay-20261010T062255.501508Z), [loss](../runs/catalog-loss-20261011T012959.046378Z)) and in AI runs 7 and 8 |
+| Full disk | `disk_full`: Chaos Mesh IOChaos returns `ENOSPC` ("no space left on device") on the volume | Not runnable on this application: Chaos Mesh's disk-fault helper cannot start in Online Boutique's read-only containers ([attempt](../runs/redis-disk-full-20261011T013212.812294Z)) |
+| Overloaded database | `cpu_stress` on `redis-cart` | Proven live ([run](../runs/redis-cpu-20261011T013116.326478Z)): no customer impact |
+| Failed dependency | `network_partition`: e.g. `cartservice` can no longer reach `redis-cart` | Proven live, manually ([run](../runs/cart-redis-partition-20261011T013040.963758Z)) and in AI runs 7 and 8 |
+| Sudden traffic spike | 20 to 100 shoppers (`scripts/grafana-stress.sh`) | Proven live, run twice |
 
 Ready-made experiments for each are in [`experiments/`](../experiments).
 
@@ -170,7 +170,7 @@ Approved fixes stay applied. To give the AI the original weaknesses again (for e
 bash scripts/reset-weaknesses.sh
 ```
 By default the AI may only use fault types already proven live (`inject.LIVE_VERIFIED`: pod failure, pod kill, network delay, packet loss, network partition, CPU stress); `--allow-unverified` adds full disk, which can't inject on Online Boutique's read-only containers.
-A live run takes roughly 4–6 minutes per experiment (ramp steps + recovery), so pre-record it for the demo.
+A live run takes roughly 4 to 6 minutes per experiment (ramp steps and recovery), so pre-record it for the demo.
 
 Offline tests (no cluster, no API key):
 ```bash
@@ -199,7 +199,7 @@ bash scripts/install-monitoring.sh
 ```bash
 bash scripts/monitoring.sh grafana
 ```
-Then open the **Online Boutique — Chaos Overview** dashboard at http://127.0.0.1:3000. Full guide: [monitoring/README.md](../monitoring/README.md).
+Then open the **Online Boutique: Chaos Overview** dashboard at http://127.0.0.1:3000. Full guide: [monitoring/README.md](../monitoring/README.md).
 
 ### Optional: standalone customer simulator
 `customer_simulator.py` runs scripted shopper journeys with per-request error tracing and Prometheus metrics. See [`CUSTOMER_SIMULATION.md`](CUSTOMER_SIMULATION.md).

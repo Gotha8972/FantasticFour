@@ -153,12 +153,12 @@ class Day2Tests(unittest.TestCase):
         self.assertTrue(all(0 <= r['score'] <= 100 for r in table))
         self.assertLess(by[('Redis restarted (cart test)', 'before fix')],
                         by[('Redis restarted (cart test)', 'after fix: PVC + append-only log')])
-        ai = 'Redis pod kill, chosen and run by the AI'
+        ai = 'Redis pod kill, AI run 5 (recorded)'
         self.assertLess(by[(ai, 'before fix')], by[(ai, 'after the fix, approved by a human')])  # live AI loop
         self.assertLess(by[('catalog pod kill, 5 trials', '1 replica')], by[('catalog pod kill, 5 trials', '2 replicas')])
-        self.assertLess(by[('cartservice unavailable', '1 replica')], by[('adservice unavailable', 'no fix needed')])
+        self.assertLess(by[('cart unavailable (manual)', '1 replica')], by[('ads unavailable (manual)', 'no fix needed')])
         pairs = [l for l in scoreboard.render(table).split('## Fixes proven')[1].splitlines() if l.startswith('| ') and '**' in l]
-        self.assertGreaterEqual(len(pairs), 6)  # 2 manual/trial pairs + 4 fixes approved inside the live AI loop
+        self.assertGreaterEqual(len(pairs), 13)  # 2 manual/trial pairs + 11 fixes approved inside the live AI loop
         self.assertTrue(all('**+' in l for l in pairs))  # every fix scored higher on the identical re-run
 
     def test_trials_wilson_and_invalid_runs(self):

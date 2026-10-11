@@ -69,7 +69,7 @@ metric windows and sampling overhead mean this is not an instantaneous guard.
 
 Cleanup removes only the uniquely named IOChaos/Job created by the selected
 run, removes its probe file, exports available Locust CSVs, restores previous
-user/rate/replica settings for choices 2–6, and checks recovery when the original
+user/rate/replica settings for choices 2 to 6, and checks recovery when the original
 loadgenerator was enabled. Choice 1 retains the existing demonstration's
 restore-to-20 behavior. No Git commands or publication are performed.
 
@@ -80,7 +80,7 @@ bypass cleanup. Failed cleanup and recovery are reported as errors.
 
 ## Evidence and Grafana
 
-Choices 2–6 print an artifact directory under `runs/incident-*` with:
+Choices 2 to 6 print an artifact directory under `runs/incident-*` with:
 
 - `events.csv`, `events.jsonl`, `metrics.csv`: phase timestamps, breaches,
   request metrics, health and cleanup/recovery results.
@@ -120,4 +120,4 @@ After the previous experiment has recovered, run:
 python3 scripts/incidents/menu.py --choice 2 --network-mode loss --users 100 --rate 10
 ```
 
-This establishes a baseline at 100 shoppers, then requests 10% catalog packet loss for up to 60 seconds through the guard. Baseline health must pass first; overload at 100 shoppers prevents injection. The guard retains its approved limits and restores the previous load settings afterward. Compare against the 100-shopper baseline to distinguish load effects from loss effects. Shopper count can be 1–200 and spawn rate 1–100/second. Starting new load settings rolls Locust and resets its live CSV counters. No higher-load result is claimed until run evidence is captured.
+This establishes a baseline at 100 shoppers, then requests 10% catalog packet loss for up to 60 seconds through the guard. Baseline health must pass first; overload at 100 shoppers prevents injection. The guard retains its approved limits and restores the previous load settings afterward. Compare against the 100-shopper baseline to distinguish load effects from loss effects. Shopper count can be 1 to 200 and spawn rate 1 to 100 per second. Starting new load settings rolls Locust and resets its live CSV counters. No higher-load result is claimed until run evidence is captured.

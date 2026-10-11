@@ -38,7 +38,7 @@ Username: **admin**. Obtain the generated password in a different terminal:
 bash scripts/monitoring.sh password
 ```
 
-The dashboard is **Online Boutique — Chaos Overview**. If the direct link does
+The dashboard is **Online Boutique: Chaos Overview**. If the direct link does
 not load immediately, wait for provisioning and find it under Dashboards.
 Use **Last 15 minutes** or **Last 30 minutes** and a **5-second refresh**.
 Dashboard times use your browser's timezone; experiment CSVs use UTC.
@@ -110,7 +110,7 @@ Returning to 20 shoppers also rolls the loadgenerator. On an interrupted run,
 the wrapper attempts to restore 20 shoppers, while guard cleanup is handled by
 the guard itself; verify experiment status before starting another run.
 
-The errors chart is fixed to 0–100% so a period with zero errors does not get
+The errors chart is fixed to 0 to 100% so a period with zero errors does not get
 an artificial 10,000% vertical scale.
 
 ### Individual experiments
@@ -324,7 +324,7 @@ needs one before these volumes can bind. Prometheus requests 4 GiB and Grafana
 CPU/RAM and can change the measured baseline; collect a new baseline after
 installation if comparing future experiments.
 
-## Recorded pod kill results — October 10, 2026
+## Recorded pod kill results, October 10, 2026
 
 Run: [`grafana-pod-kill-1a0c612c9e`](../runs/grafana-pod-kill-1a0c612c9e).
 These results come from the saved files, not an inferred Grafana screenshot.
@@ -340,11 +340,11 @@ and an exact pod-name selector for
 
 | Time (IST) | Saved observation |
 | --- | --- |
-| 14:25:33.9–14:26:31.4 | Baseline samples: shoppers ramped from 50 to 100; mean sampled throughput 23.49 requests/sec, peak recent p95 290 ms, and no unhealthy services. Cumulative failures reached 2 before injection. |
+| 14:25:33.9 to 14:26:31.4 | Baseline samples: shoppers ramped from 50 to 100; mean sampled throughput 23.49 requests/sec, peak recent p95 290 ms, and no unhealthy services. Cumulative failures reached 2 before injection. |
 | **14:26:34** | Chaos Mesh recorded `Apply: Succeeded`, `injectedCount: 1`, and `AllInjected: True` for the original catalog pod. |
 | 14:26:34.2 | First post-kill sample already contained the replacement UID, but `productcatalogservice` was unhealthy. Cumulative failures were 9. |
 | **14:26:36.9** | First sample with no unhealthy deployments. Catalog availability had recovered approximately **3 seconds after injection**. |
-| 14:26:34–14:26:55 | History recorded failure count rising from 2 to 68: **66 additional failures** after injection. |
+| 14:26:34 to 14:26:55 | History recorded failure count rising from 2 to 68: **66 additional failures** after injection. |
 | 14:26:47.3 and 14:26:49.9 | Peak sampled recent aggregate error rate: **25.62%**. |
 | 14:26:57.7 and 14:27:00.3 | Peak sampled recent aggregate p95: **10,000 ms (10 seconds)**. |
 | **14:27:08.1 onward** | Every remaining sample had healthy deployments and metrics within the approved 5% error / 1,000 ms p95 limits: approximately **34 seconds after injection**. |

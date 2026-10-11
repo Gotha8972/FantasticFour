@@ -4,13 +4,13 @@ A Python simulation tool for testing the resilience and performance of the **Goo
 
 ---
 
-## 📋 Overview
+## Overview
 
 The customer simulator automates multi-step, realistic shopping sessions. It performs browsing, currency conversion, cart additions, and checkout transactions while exporting Prometheus metrics and tracking detailed error paths, HTTP status codes, and server response bodies.
 
 ---
 
-## 🚀 Key Features
+## Key Features
 
 - **Realistic E-Commerce Journey**: Simulates complete end-to-end user actions with natural delays between steps.
 - **Prometheus Metrics Exporter**: Exposes live application metrics on port `9091` (`/metrics`).
@@ -23,7 +23,7 @@ The customer simulator automates multi-step, realistic shopping sessions. It per
 
 ---
 
-## 🚶 Customer Journey Workflow
+## Customer Journey Workflow
 
 Each customer journey performs the following actions:
 
@@ -38,7 +38,7 @@ Each customer journey performs the following actions:
 
 ## ⏱️ Execution Time & Duration
 
-- **Default Execution (~30–60 seconds)**:
+- **Default Execution (about 30 to 60 seconds)**:
   - Runs **1 iteration** with **10 customers** sequentially.
   - Each customer journey takes roughly **2 to 5 seconds** depending on network latency and randomized delays.
   - After all 10 customers complete, it prints an error and metrics summary and exits.
@@ -48,7 +48,7 @@ Each customer journey performs the following actions:
 
 ---
 
-## 📦 Prerequisites & Installation
+## Prerequisites and Installation
 
 ### Requirements
 - Python 3.10+
@@ -70,7 +70,7 @@ pip install requests prometheus_client
 
 ---
 
-## 💻 Usage Examples
+## Usage Examples
 
 ### 1. Standard Run (10 Customers)
 ```bash
@@ -96,7 +96,7 @@ python customer_simulator.py --base-url http://localhost:8080
 
 ---
 
-## ⚙️ Command-Line Arguments
+## Command-Line Arguments
 
 | Argument | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
@@ -111,7 +111,7 @@ python customer_simulator.py --base-url http://localhost:8080
 
 ---
 
-## 📊 Prometheus Metrics
+## Prometheus Metrics
 
 The simulator exposes metrics on `http://localhost:9091/metrics`:
 
@@ -127,7 +127,7 @@ The simulator exposes metrics on `http://localhost:9091/metrics`:
 
 ---
 
-## 🔴 Error Output & Diagnostics
+## Error Output and Diagnostics
 
 When an HTTP or network error occurs, the script captures:
 - **HTTP Method & Path**: e.g., `POST /cart`, `POST /cart/checkout`

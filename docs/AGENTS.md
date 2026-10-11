@@ -1,6 +1,6 @@
 # The agents: what each one does and how it's kept honest
 
-Back to the [README](../README.md) · one-page view: [ARCHITECTURE.md](ARCHITECTURE.md)
+Back to the [README](../README.md). One-page view: [ARCHITECTURE.md](ARCHITECTURE.md)
 
 Every agent follows one pattern: **code gathers facts → the AI reasons and returns JSON → code verifies → code acts.**
 No agent runs `kubectl` or touches the cluster. All live actions go through `inject.py` / `guard.py` or a reviewed allow-list.
@@ -21,7 +21,7 @@ Model: NVIDIA-hosted `openai/gpt-oss-20b` (open weights; 21B total, 3.6B active)
 | Integrity checks | `agents/integrity.py` | Catch silent failures: the cart keeps its items across the fault, and checkout really produces an order (HTTP 200 alone isn't trusted) |
 | Resilience score | `agents/score.py` | `100 − errors (≤ 40, square-root scale) − latency (≤ 25, square-root scale) − recovery (≤ 15) − blast radius (≤ 10, only when customers were hurt) − integrity (40)`, relative to the baseline |
 | Scoreboard | `agents/scoreboard.py` | Recomputes every published score from the raw evidence, ranks worst first, and lists before/after-fix pairs ([SCOREBOARD.md](evidence/SCOREBOARD.md)) |
-| Workflow | `chaosmind/graph.py` (LangGraph) · `agents/steps.py` · fallback `agents/__main__.py` | audit → plan → [execute → judge → optional fix (human-approved) → re-plan] → Analyst. Diagram: [WORKFLOW.md](WORKFLOW.md). The fallback runs the same steps without LangGraph |
+| Workflow | `chaosmind/graph.py` (LangGraph), `agents/steps.py`, fallback `agents/__main__.py` | audit → plan → [execute → judge → optional fix (human-approved) → re-plan] → Analyst. Diagram: [WORKFLOW.md](WORKFLOW.md). The fallback runs the same steps without LangGraph |
 | Injector + kill switch | `inject.py`, `guard.py` | Validation, Chaos Mesh resources, 2-second polling, auto-revert, recovery confirmation |
 
 **Fault types** (`inject.py`): `pod_failure`, `pod_kill`, `network_delay`, `network_loss`, `network_partition`, `cpu_stress`, `disk_full`. Proven live so far: `pod_failure`, `pod_kill`, `network_delay`, `network_loss`, `network_partition`, `cpu_stress` (`inject.LIVE_VERIFIED`); `disk_full` can't inject on Online Boutique's read-only containers. Add each one there after its first successful live guarded run.

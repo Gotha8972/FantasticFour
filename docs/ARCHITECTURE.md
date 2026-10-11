@@ -1,53 +1,77 @@
-# Architecture overview (one page)
+# Architecture overview
+
+**ChaosMind** by Team FantasticFour | Bosch Hackathon 2026
+
+ChaosMind finds weak spots in a Kubernetes application, tests them with controlled failures, and proves its fixes. One rule runs through the whole design: **the AI proposes, code verifies, and the kill switch always wins.** The AI never touches the cluster; it only returns JSON, and deterministic code checks it and acts on it.
 
 ```mermaid
 flowchart LR
-    subgraph AI["AI agents · gpt-oss-20b on NVIDIA NIM"]
-        CA["② Cartographer<br/>audits config → ranked vulnerabilities"] --> ST["① Strategist<br/>experiment + prediction + pass/fail criteria"]
-        ST --> SC["④ Safety Checker<br/>approve / shrink / reject + intensity ramp"]
-        AN["Analyst<br/>root cause from logs → FINDINGS.md"]
-        RM["⑤ Remediation<br/>picks a reviewed fix"]
+    subgraph AI["AI agents (gpt-oss-20b, hosted by NVIDIA)"]
+        CA["Cartographer<br/>finds weak spots in the config"] --> ST["Strategist<br/>experiment, prediction,<br/>pass/fail criteria"]
+        ST --> SC["Safety Checker<br/>approve, shrink or reject"]
+        RM["Remediation<br/>picks a reviewed fix"]
+        AN["Analyst<br/>explains results from logs"]
     end
-    subgraph CODE["Deterministic code · no AI"]
-        INJ["inject.py<br/>validate → Chaos Mesh resource"]
-        GU["guard.py · kill switch<br/>poll 2 s → auto-revert → confirm recovery"]
-        INT["integrity checks<br/>cart kept? order placed?"]
-        SCO["score.py<br/>0–100 resilience score"]
-        VER["verdict<br/>criteria met? → confirmed / refuted"]
+    subgraph CODE["Deterministic code (no AI)"]
+        FA["Fact collector<br/>call graph, replicas, storage"]
+        GU["Kill switch<br/>polls every 2 s, auto-revert"]
+        INT["Integrity checks<br/>cart kept? order placed?"]
+        VER["Verdict and score<br/>confirmed or refuted, 0 to 100"]
     end
-    SC -->|experiment JSON| GU --> INJ --> CM["Chaos Mesh"] --> APP["Online Boutique<br/>11 services on kind"]
+    HU(["Human approval<br/>in mission control"])
+    FA --> CA
+    SC -->|experiment JSON| GU --> CM["Chaos Mesh"] --> APP["Online Boutique<br/>10 services + Redis on kind"]
     LG["Locust shoppers"] --> APP
-    APP --> MON["monitor.py · Prometheus/Grafana"] --> GU
+    APP -->|metrics| GU
+    GU --> VER
     INT --> VER
-    GU --> VER --> SCO
     VER -->|re-plan| ST
-    VER -->|confirmed| RM -->|patch + re-run same experiment| GU
-    SCO --> AN
+    VER -->|confirmed| RM --> HU -->|approved: apply fix, rerun same experiment| GU
+    VER --> AN
 ```
 
+## Components
+
+| Layer | Component | What it does |
+|---|---|---|
+| AI agents | Cartographer | Reads the live configuration and names the weak spots, citing configuration facts as evidence |
+| | Strategist | Turns each weak spot into an experiment with a predicted impact and pass/fail criteria written before the run |
+| | Safety Checker | Approves, shrinks or rejects each experiment and plans a gradual intensity ramp |
+| | Remediation | Chooses a fix from a catalog of reviewed changes; it cannot write its own patches |
+| | Analyst | Explains each result from the error logs captured during that experiment and writes the run's report |
+| Deterministic code | Fact collector | Builds the dependency map from the deployed manifests and computes blast radius and severity |
+| | Injector and kill switch | Validates every experiment, creates the Chaos Mesh fault, polls every 2 s and reverts on a breach |
+| | Integrity checks | Confirm that a test cart kept its item and a real order goes through, since HTTP 200 alone proves nothing |
+| | Verdict, score, trials | Decide confirmed or refuted, compute a 0 to 100 resilience score, and repeat experiments for a 95% interval |
+| Orchestration | LangGraph state machine | Runs audit, plan, execute, judge, fix and report; pauses for human approval; resumes after an interruption |
+| Interface | Mission control | Local web UI: dependency map, the AI's plan, live customer-impact charts, verdicts, scores and the approval button |
+| Platform | kind on rootless Podman | Online Boutique v0.10.4, Chaos Mesh 2.8.4, Locust load, Prometheus and Grafana |
+
 ## How the AI makes decisions
-1. **Audit before breaking anything.** Code reads every deployment's real configuration (call graph from `*_ADDR` variables, replicas, probes, storage) and computes a risk score. The **Cartographer** judges which combinations are dangerous. **Every fact it cites is checked against the real config**, and unverifiable claims are dropped.
-2. **Hypothesis with pre-registered criteria.** The **Strategist** turns each vulnerability into an experiment, predicts the affected services, and writes measurable pass/fail criteria (e.g. `p95_ms > 500`, `integrity_violations > 0`) **before** the run.
-3. **Safe execution.** The **Safety Checker** approves, shrinks or rejects (code guarantees it can only make experiments *smaller*), then ramps intensity in steps (e.g. 62 → 125 → 250 → 500 ms) through the guard, recording the highest tolerated level and where our safety limit was crossed.
-4. **Verdict by code, not AI.** Integrity checks catch silent failures (HTTP 200 but data lost). Code compares observations with the criteria → **confirmed / refuted**, and computes a 0–100 **resilience score** (errors, latency, recovery, blast radius, integrity). A [scoreboard](evidence/SCOREBOARD.md) recomputes every published score from raw evidence.
-5. **Measure likelihood.** `trials.py` repeats an experiment under identical conditions (fault, load, replicas) and reports how often customer thresholds were breached, with a 95% Wilson interval. Failed injections or missing telemetry are kept as *invalid*, never counted as passes. Recovery is timed twice: when capacity is back (service ready) and when customers are back (metrics normal).
-6. **Learn and re-plan.** Results go back to the Strategist, which re-ranks the remaining vulnerabilities.
-7. **Fix and prove.** For confirmed weaknesses, **Remediation** chooses a fix from a reviewed catalog (it can't write arbitrary patches), applies it after a server-side dry run, **re-runs the identical experiment**, and keeps the fix only if the score improves.
-8. **Report.** The **Analyst** explains root causes from error logs captured during each fault (quotes are verified to be real log lines) and writes `FINDINGS.md`, with every number fact-checked against the measured data and any data-loss claim that the integrity checks contradict flagged. If the model fails, the measured part is still written.
+1. **Audit.** Code collects the facts (who calls whom, replicas, probes, storage). The Cartographer names the dangerous combinations, and code drops any claim whose cited fact does not match the real configuration.
+2. **Rank.** Code ranks experiments by blast radius times criticality: how many services break with the target, times how severe the weakness is.
+3. **Predict.** The Strategist writes the expected impact and measurable criteria before anything breaks. Code raises any threshold that normal noise could meet.
+4. **Inject safely.** The Safety Checker can only make an experiment smaller. Every step runs through the kill switch.
+5. **Judge.** Code compares the measurements with the criteria and decides confirmed or refuted. Integrity checks catch silent failures, such as an emptied cart behind an HTTP 200.
+6. **Fix and prove.** For a confirmed weakness, Remediation picks a reviewed fix, a person approves it, and the identical experiment runs again. The fix is kept only if the score improves.
+7. **Report.** The Analyst explains the results. Code fact-checks every number and marks claims that the measurements or the configuration contradict.
 
 ## Safety controls
-| Layer | Guarantee |
+
+| Control | Guarantee |
 |---|---|
-| Validation | Only 7 known fault types, only real deployments, only namespace `online-boutique`, duration ≤ 120 s, intensity caps |
-| AI can't touch the cluster | Agents return JSON only; code validates and acts |
-| Only-smaller rule | The Safety Checker can't enlarge or retarget an experiment (enforced in code) |
-| Pre-flight | Refuses to inject if the app is unhealthy or another fault is active |
-| Kill switch | Polls every 2 s; reverts on error rate > 5%, p95 > 1,000 ms or > 2 unhealthy services (moderate error spikes must persist 2 polls, to avoid false trips from background noise) |
-| Fail-safe | Every fault carries Chaos Mesh's own `duration`, so it ends even if the guard crashes (tested with `kill -9`) |
-| Always revert | `finally` block on errors and Ctrl-C; scoped manual abort |
-| Tighten-only | Runtime limit overrides may only be stricter |
-| Remediation allow-list | Only catalogued, reviewed fixes; dry-run first; automatic rollback if the score drops |
+| Validation | Only 7 known fault types, only real deployments, only the `online-boutique` namespace, at most 120 s, capped intensity |
+| No AI access to the cluster | Agents return JSON only; code validates it and acts |
+| Only smaller | The Safety Checker cannot enlarge or retarget an experiment (enforced in code) |
+| Hard limits on revenue paths | On the checkout path, delay is capped at 500 ms and runs longer than 60 s are cut to 30 s, whatever the model says |
+| Pre-flight | No injection into an unhealthy application or while another fault is active |
+| Kill switch | Reverts when errors exceed 5%, p95 exceeds 1,000 ms or more than 2 services are unhealthy |
+| Fail-safe | Every fault carries Chaos Mesh's own timer, so it ends even if the kill switch crashes (tested with `kill -9`) |
+| Human approval | No fix touches the cluster until a person approves it; fixes come only from the reviewed catalog |
 
-**Orchestration:** the stages run as a LangGraph state machine ([diagram generated from the code](WORKFLOW.md)). LangGraph adds a human approval gate before any fix is applied and checkpointing, so an interrupted live run resumes from its last finished step. It stays model-agnostic: nodes call our own `llm.py` (NVIDIA NIM, gpt-oss-20b by default), with no LangChain dependency. We evaluated Google ADK ([design notes](adk/README.md)) and chose LangGraph because our workflow is a code-routed state machine, while ADK is built around model-driven tool calls and Gemini.
+## Design choices
+- **LangGraph** fits a workflow whose routing is decided by code: it adds the approval pause and checkpointing without letting the model choose the next step. We evaluated Google ADK and chose LangGraph for that reason.
+- **A small open-weight model** (gpt-oss-20b, 3.6B active parameters per token) is enough because the model only proposes. Facts, verdicts, scores and safety limits are all enforced by code, so a weaker answer costs a retry, never an unsafe action.
+- **Customer metrics over pod health.** A pod can be ready in 3 seconds while customers suffer for 35. Every verdict and score is based on what shoppers experience, measured against a baseline taken on the same machine.
 
-**Honest limits:** breaches are detected **~6–10 s after injection**, because Locust reports a rolling ~10 s window. Pod kills are instantaneous and can't be "reverted", only observed until recovery.
+**Known limits:** a breach is detected 6 to 10 s after injection because the load generator reports a rolling window, and the kill switch watches the aggregate error rate and finished requests only (see findings 6 and 7 in the [findings report](../FINDINGS.md)).
