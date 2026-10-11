@@ -6,6 +6,8 @@ the AI only writes explanations and must quote log lines exactly. Code then fact
 python3 -m chaosmind.agents.analyst runs/agents-<time>
 """
 from collections import Counter
+import csv
+import functools
 from datetime import datetime, timedelta
 import json
 from pathlib import Path
@@ -25,6 +27,7 @@ For each experiment write: what happened, the most likely root cause, and the re
 Rules:
 - Do NOT invent numbers. Mention a number only if it appears in the fact sheet.
 - "evidence" must be log lines copied EXACTLY from the input. If logs don't explain it, say so in "root_cause".
+- "log_background" lines also occur with no fault injected (e.g. card rejections): never cite them as evidence.
 - Order findings by severity: data loss first, then checkout/site outage, then slowdowns, then graceful cases.
 - Claim data loss ONLY for an experiment whose integrity_violations list is non-empty; otherwise data was kept.
 - Use "observed" for an experiment's worst numbers: it covers the fault and the recovery after it.
@@ -38,6 +41,58 @@ Return JSON: {"summary": "3 sentences for a judge", "findings": [{"experiment_id
 def load_events(run_dir):
     path = Path(run_dir or '') / 'events.jsonl'
     return [json.loads(line) for line in path.read_text().splitlines() if line.strip()] if path.exists() else []
+
+
+def signature(line):
+    """The innermost error message of a log line, without ids and numbers, so the same failure matches across
+    services, pods and runs ('frontend: {"error": "... desc = Sorry, we cannot process ..."}' and
+    'paymentservice: UnacceptedCreditCard [Error]: Sorry, we cannot process ...' give the same signature).
+    None for lines without an explicit error message (e.g. "request complete" with status 500): those are the
+    evidence of a fault and must never be treated as background."""
+    text = re.sub(r'\s+\(x\d+\)$', '', line.split(': ', 1)[-1])
+    try:
+        obj = json.loads(text)
+        if isinstance(obj, dict):
+            if not obj.get('error'):
+                return None
+            text = str(obj['error'])
+    except ValueError:
+        pass
+    for marker in ('desc = ', '[Error]: ', 'Error: '):
+        if marker in text:
+            text = text.rsplit(marker, 1)[-1]
+            break
+    else:
+        if not text.startswith('{'):  # plain text without an error marker: not specific enough
+            return None
+    text = re.sub(r'[0-9a-f]{8}-[0-9a-f-]{27,}|\b[0-9a-f]{12,}\b|\d+', '#', text.lower())
+    return re.sub(r'\s+', ' ', text).strip() or None
+
+
+@functools.lru_cache(maxsize=1)
+def background_signatures(root='runs'):
+    """Error signatures logged inside the measured window of a suitable, fault-free baseline: those happen with no fault
+    injected, so they are never evidence of one (a card rejection was once cited as evidence of packet loss). Only the
+    window counts: log collection starts earlier and can include rollouts (connection refused), which faults do cause."""
+    sigs = set()
+    for study in Path(root).glob('baseline-study-*/baseline.json'):
+        b = json.loads(study.read_text())
+        start, end = b.get('study_started_utc'), b.get('collection_finished_utc')
+        if b.get('status') != 'completed' or not b.get('baseline_suitable') or not start or not end:
+            continue
+        start, end = datetime.fromisoformat(start), datetime.fromisoformat(end)
+        for path in study.parent.glob('*-logs.csv'):
+            with path.open(newline='') as f:
+                for row in csv.DictReader(f):
+                    message, stamp = row.get('message') or '', row.get('timestamp_utc') or ''
+                    try:
+                        when = datetime.fromisoformat(stamp.replace('Z', '+00:00')[:26] + '+00:00' if stamp.endswith('Z') else stamp)
+                    except ValueError:
+                        continue
+                    if start <= when <= end and ERROR_LINE.search(message):
+                        sigs.add(signature(f'x: {message}'))
+    sigs.discard(None)
+    return frozenset(sigs)
 
 
 def phases(events):
@@ -119,6 +174,12 @@ def after_verdict(h):
     return {**r, 'after_verdict': strategist.evaluate(h.get('criteria', []), observed)[0]}
 
 
+def split_background(lines):
+    background = background_signatures()
+    return {'log_errors': [l for l in lines if signature(l) not in background],
+            'log_background': [l for l in lines if signature(l) in background]}
+
+
 def fact_sheet(run_dir):
     run_dir = Path(run_dir)
     history = json.loads((run_dir / 'history.json').read_text())
@@ -143,7 +204,7 @@ def fact_sheet(run_dir):
             'recovery_s': (h.get('observed') or {}).get('recovery_s'),
             'integrity_violations': h.get('integrity', []), 'score': h.get('score'),
             'remediation': after_verdict(h), 'run_dir': steps[-1]['run_dir'] if steps else None,
-            'log_errors': error_lines(events, h['experiment']['target']) if events else []})
+            **split_background(error_lines(events, h['experiment']['target']) if events else [])})
     return {'vulnerabilities': [{k: v.get(k) for k in ('id', 'service', 'severity', 'weakness', 'status')}
                                 for v in vulns['vulnerabilities']],
             'experiments': experiments,
@@ -175,6 +236,24 @@ def fixes_line(facts):
                     and not (e.get('remediation') or {}).get('fix')})
     return (f"**Fixes applied (from the data):** {', '.join(done) or 'none'}. "
             f"**Confirmed weaknesses still open:** {', '.join(still) or 'none'}.")
+
+
+def criteria_after(e):
+    """Which pre-registered criteria still held on the after-fix re-run. "Confirmed after the fix" alone reads as "the fix
+    failed" even when only latency still held and the data-loss criterion (what the fix was for) no longer did."""
+    r = e.get('remediation') or {}
+    if not r.get('after_observed') or not e.get('criteria'):
+        return ''
+    obs = {**r['after_observed'], 'integrity_violations': len(r.get('after_integrity') or [])}
+    parts = []
+    for c in e['criteria']:
+        value = obs.get(c['metric'])
+        if value is None:
+            continue
+        held = value > c['value'] if c['op'] == '>' else value < c['value']
+        shown = f'{value:.1%}' if c['metric'] == 'error_rate' else f'{value:g}'
+        parts.append(f"{c['metric']} {shown} ({'still met' if held else 'no longer met'})")
+    return f" ({'; '.join(parts)})" if parts else ''
 
 
 def render(facts, reply):
@@ -217,7 +296,7 @@ def render(facts, reply):
         if r and r.get('fix') and r.get('after') is not None:
             lines += [f"**Remediation:** `{r['fix']}` applied after human approval; the same experiment re-run: score "
                       f"{r.get('before')} → {r['after']} ({r.get('verdict')}); hypothesis **{r.get('after_verdict', '?')}** "
-                      "after the fix.", '']
+                      f"after the fix{criteria_after(e)}.", '']
         elif r:
             lines += [f"**Remediation:** no fix applied ({r.get('verdict')}).", '']
         lines += [f"Evidence: `{e.get('run_dir')}`", '']

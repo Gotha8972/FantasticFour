@@ -198,6 +198,25 @@ class Day2Tests(unittest.TestCase):
         self.assertEqual(e['config']['volumes'], ['emptyDir'])
         self.assertEqual(analyst.contradictions('Redis uses an emptyDir volume, wiped on restart', e), [])
 
+    def test_background_log_errors_are_never_fault_evidence(self):
+        # Live run 2026-10-11: the Analyst cited a card rejection (also logged with no fault) as evidence of packet loss.
+        card = ('frontend: {"error":"failed to complete the order: rpc error: code = Internal desc = failed to charge card: '
+                'rpc error: code = Code(400) desc = Sorry, we cannot process visa_electron credit cards. Only VISA or '
+                'MasterCard is accepted.","http.req.id":"c92dadf6-6d76-414b-abc7-9aeb23c08721"}')
+        payment = 'paymentservice: UnacceptedCreditCard [Error]: Sorry, we cannot process visa_electron credit cards. Only VISA or MasterCard is accepted.'
+        refused = 'frontend: {"error":"rpc error: code = Unavailable desc = connection error: desc = \\"transport: error while dialing: dial tcp 10.96.0.1:7070: connect: connection refused\\""}'
+        served = 'frontend: {"http.resp.status":500,"message":"request complete"}'
+        self.assertEqual(analyst.signature(card), analyst.signature(payment))
+        self.assertIsNone(analyst.signature(served))  # a 500 is fault evidence, never background
+        with patch.object(analyst, 'background_signatures', return_value=frozenset({analyst.signature(card)})):
+            split = analyst.split_background([card, payment, refused, served])
+        self.assertEqual((split['log_errors'], split['log_background']), ([refused, served], [card, payment]))
+
+    def test_after_fix_report_names_the_criteria_that_still_held(self):
+        e = {'criteria': [{'metric': 'integrity_violations', 'op': '>', 'value': 0}, {'metric': 'p95_ms', 'op': '>', 'value': 500}],
+             'remediation': {'after_observed': {'error_rate': 0.0, 'p95_ms': 4300.0}, 'after_integrity': []}}
+        self.assertEqual(analyst.criteria_after(e), ' (integrity_violations 0 (no longer met); p95_ms 4300 (still met))')
+
     def test_full_live_loop_with_everything_faked(self):
         workloads = str(sorted(Path('runs').glob('baseline-study-*/workloads-initial.json'))[0])
         replies = iter([

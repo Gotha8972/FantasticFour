@@ -131,5 +131,44 @@ def render(table):
     return '\n'.join(lines) + '\n'
 
 
+def ai_runs(root='runs'):
+    """Every live AI run (a run with at least one measured experiment), counted from its history: the README's run
+    counts come from here, so they can't drift from the evidence."""
+    from chaosmind.agents import analyst
+    out = []
+    for path in sorted(Path(root).glob('agents-*/history.json')):
+        ran = [h for h in json.loads(path.read_text()) if h.get('observed') is not None]
+        if not ran:
+            continue
+        fixes = [h['remediation'] for h in ran if (h.get('remediation') or {}).get('fix')]
+        out.append({'run': path.parent.name, 'experiments': len(ran),
+                    'confirmed': sum(h['verdict'] == 'confirmed' for h in ran),
+                    'refuted': sum(h['verdict'] == 'refuted' for h in ran),
+                    'faults': sorted({h['experiment']['fault'] for h in ran}),
+                    'fixes': [(r['fix'], r.get('before'), r.get('after')) for r in fixes],
+                    'refuted_after_fix': sum((analyst.after_verdict(h) or {}).get('after_verdict') == 'refuted' for h in ran)})
+    return out
+
+
+def render_runs(runs):
+    fixes = [f for r in runs for f in r['fixes'] if f[1] is not None and f[2] is not None]
+    gains = [after - before for _, before, after in fixes]
+    total = {k: sum(r[k] for r in runs) for k in ('experiments', 'confirmed', 'refuted', 'refuted_after_fix')}
+    lines = ['', '## Live AI runs (generated)', '',
+             f"**{len(runs)} runs, {total['experiments']} measured experiments: {total['confirmed']} confirmed, "
+             f"{total['refuted']} refuted. {len(fixes)} fixes approved and re-run: {sum(g > 0 for g in gains)} scored "
+             f"higher (mean {sum(gains) / len(gains):+.0f}, best {max(gains):+d}); {total['refuted_after_fix']} "
+             f"hypotheses refuted after their fix. Fault types the AI chose: "
+             f"{', '.join(sorted({f for r in runs for f in r['faults']}))}.**" if gains else '', '',
+             'Scores here are as each run recorded them; the first runs used an earlier score formula, so the ranked '
+             'table above (recomputed from raw evidence with the current formula) is the one to compare across runs.', '',
+             '| Run | Experiments | Confirmed | Refuted | Fault types | Fixes (score before → after, as recorded) |', '|---|---|---|---|---|---|']
+    for r in runs:
+        fx = ', '.join(f'{f} {b} → {a}' for f, b, a in r['fixes']) or '—'
+        lines.append(f"| [{r['run']}](../../runs/{r['run']}) | {r['experiments']} | {r['confirmed']} | {r['refuted']} | "
+                     f"{', '.join(r['faults'])} | {fx} |")
+    return '\n'.join(lines) + '\n'
+
+
 if __name__ == '__main__':
-    print(render(rows()), end='')
+    print(render(rows()) + render_runs(ai_runs()), end='')
