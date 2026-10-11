@@ -6,7 +6,7 @@ be checkpointed and resumed.
 import json
 from pathlib import Path
 
-from chaosmind import inject
+from chaosmind import app, inject
 from chaosmind.agents import analyst, cartographer, facts as facts_mod, integrity, remediation, safety, score, strategist
 
 STOP_EVENTS = {'NOT_RECOVERED', 'REVERT_FAILED', 'INTERRUPTED'}
@@ -21,6 +21,10 @@ def load_baseline(path):
     for p in candidates:
         if p.exists():
             b = json.loads(p.read_text())
+            if b.get('namespace', app.NS) != app.NS:  # another app's baseline never stands in for this one's
+                if p == Path(path):
+                    raise SystemExit(f'Baseline {p} was measured in {b.get("namespace")}, not {app.NS}')
+                continue
             # Failed/preflight-only runs must never stand in for measurements.
             if b.get('status') != 'completed' or not b.get('metrics') or not b.get('window'):
                 if p == Path(path) and Path(path).exists():

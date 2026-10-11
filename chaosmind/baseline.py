@@ -9,7 +9,7 @@ import statistics
 import subprocess
 import time
 
-from chaosmind import capture, guard, inject
+from chaosmind import app, capture, guard, inject
 from chaosmind.monitor import snapshot
 
 FIELDS = ['timestamp_utc', 'phase', 'elapsed_s', 'ts', 'locust_history_ts', 'users', 'rps',
@@ -144,6 +144,8 @@ def run(args):
         handle.flush()
         try:
             no_faults()
+            if args.start_load and app.NAME != 'online-boutique':
+                raise RuntimeError('scripts/load.sh starts Online Boutique\'s load generator; start this app\'s yourself')
             if args.start_load:
                 log('START_LOAD', users=args.users, rate=args.rate)
                 subprocess.run(['bash', str(inject.ROOT / 'scripts/load.sh'), 'start',
@@ -274,7 +276,7 @@ def run(args):
             result['findings'].append('Some supporting log or raw CSV exports failed; see collection_errors.')
         save_report(directory, result)
         if result['baseline_suitable']:
-            (inject.ROOT / 'baseline.json').write_text(json.dumps(result, indent=2) + '\n')
+            app.BASELINE.write_text(json.dumps(result, indent=2) + '\n')  # this app's baseline (its profile names the file)
     print(f'Results: {directory / "BASELINE_RESULTS.md"}', flush=True)
     print(f'Status: {result["status"]}; baseline suitable: {result["baseline_suitable"]}', flush=True)
     return 0 if result['baseline_suitable'] and not result['collection_errors'] else 1

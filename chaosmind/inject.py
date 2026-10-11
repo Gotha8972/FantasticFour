@@ -5,9 +5,12 @@ from pathlib import Path
 import re
 import subprocess
 
+from chaosmind import app
+
 ROOT = Path(__file__).resolve().parents[1]
-NS = 'online-boutique'
-CONTEXT = 'kind-online-boutique'
+NS = app.NS  # one namespace per app profile (apps/<name>/profile.json); nothing outside it can be touched
+CONTEXT = app.CONTEXT
+LABEL = app.SERVICE_LABEL
 MAX_DURATION_S = 120
 KINDS = {'pod_failure': 'PodChaos', 'network_delay': 'NetworkChaos', 'network_loss': 'NetworkChaos',
          'cpu_stress': 'StressChaos', 'pod_kill': 'PodChaos',
@@ -80,7 +83,7 @@ def validate(exp):
 def manifest(exp):
     validate(exp)
     spec = {'mode': 'one', 'duration': f"{exp['duration_s']}s",
-            'selector': {'namespaces': [NS], 'labelSelectors': {'app': exp['target']}}}
+            'selector': {'namespaces': [NS], 'labelSelectors': {LABEL: exp['target']}}}
     params = exp.get('params', {})
     if exp['fault'] == 'network_delay':
         spec.update(action='delay', delay={'latency': params.get('latency', '500ms'),
@@ -92,7 +95,7 @@ def manifest(exp):
     elif exp['fault'] == 'network_partition':
         # Failed dependency: target can no longer reach params.to
         spec.update(action='partition', direction='to',
-                    target={'mode': 'all', 'selector': {'namespaces': [NS], 'labelSelectors': {'app': params['to']}}})
+                    target={'mode': 'all', 'selector': {'namespaces': [NS], 'labelSelectors': {LABEL: params['to']}}})
     elif exp['fault'] == 'disk_full':
         # Full disk: writes under the mount fail with ENOSPC (errno 28, "No space left on device")
         path = params.get('path', '/data')
@@ -109,18 +112,26 @@ def manifest(exp):
             'metadata': metadata, 'spec': spec}
 
 
+def service_deployments(service):
+    """The deployments whose pods carry the service label the fault selector uses (one per version in some apps).
+    Raises if there are none, so a fault can never be created for a service that isn't there."""
+    items = json.loads(kubectl('get', 'deployments', '-n', NS, '-l', f'{LABEL}={service}', '-o', 'json'))['items']
+    items = [d for d in items if d['spec']['template']['metadata'].get('labels', {}).get(LABEL) == service]
+    if not items:
+        raise ValueError(f'no deployment in {NS} has pods labelled {LABEL}={service}')
+    return items
+
+
 def apply(exp, dry_run=False):
     validate(exp)
-    deployment = json.loads(kubectl('get', 'deployment', exp['target'], '-n', NS, '-o', 'json'))
-    if deployment['spec']['template']['metadata'].get('labels', {}).get('app') != exp['target']:
-        raise ValueError("target deployment's app label does not match the selector")
-    if deployment['spec'].get('replicas', 1) < 1:
+    deployments = service_deployments(exp['target'])
+    if sum(d['spec'].get('replicas', 1) for d in deployments) < 1:
         raise ValueError('target has no running replicas')
     params = exp.get('params', {})
     if exp['fault'] == 'network_partition':
-        kubectl('get', 'deployment', params['to'], '-n', NS)  # raises if the dependency doesn't exist
+        service_deployments(params['to'])  # raises if the dependency doesn't exist
     if exp['fault'] == 'disk_full':
-        mounts = {m['mountPath'] for c in deployment['spec']['template']['spec']['containers']
+        mounts = {m['mountPath'] for d in deployments for c in d['spec']['template']['spec']['containers']
                   for m in c.get('volumeMounts', [])}
         if params.get('path', '/data') not in mounts:
             raise ValueError(f"target has no volume mounted at {params.get('path', '/data')}")

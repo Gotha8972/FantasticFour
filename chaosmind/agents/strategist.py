@@ -6,7 +6,7 @@ Code validates the experiment and decides confirmed/refuted against those criter
 import json
 import re
 
-from chaosmind import guard, inject
+from chaosmind import app, guard, inject
 from chaosmind.agents import llm
 from chaosmind.agents.cartographer import claims_data_loss
 
@@ -139,7 +139,7 @@ def check(reply, by_id, done, allowed, persistent, baseline=None):
             dropped.append({'item': item, 'reason': 'already run or planned'})
             continue
         criteria = with_customer_harm(valid_criteria(item.get('criteria', []), exp['fault'], baseline))
-        if exp['target'] == 'redis-cart' and not any(c['metric'] == 'integrity_violations' for c in criteria):
+        if exp['target'] in app.STATEFUL and not any(c['metric'] == 'integrity_violations' for c in criteria):
             dropped.append({'item': item, 'reason': 'Stateful target requires an integrity criterion'})
             continue
         if exp['target'] in persistent and claims_data_loss(json.dumps(item.get('prediction', ''))):

@@ -1,7 +1,7 @@
 """Real Locust CSV statistics and Kubernetes deployment/pod health."""
 import json
 import time
-from chaosmind import inject
+from chaosmind import app, inject
 
 READ_STATS = r'''
 import csv, json
@@ -32,7 +32,7 @@ for line in reversed(lines):
             break
 if recent is None:
     raise RuntimeError('No complete aggregate Locust history in recent CSV tail')
-checkout = [r for r in stats if r.get('Name') == '/cart/checkout']
+checkout = [r for r in stats if r.get('Name') == __JOURNEY__]
 print(json.dumps({'aggregate': aggregate, 'recent': recent, 'checkout': checkout}))
 '''
 
@@ -44,17 +44,21 @@ def snapshot():
         name = item["metadata"]["name"]
         if item["kind"] == "Deployment" and item["spec"].get("replicas", 1) > 0:
             if item.get("status", {}).get("readyReplicas", 0) < item["spec"].get("replicas", 1):
-                bad.append(name)
+                # reported by service (the label faults select on); a deployment per version maps to one service
+                service = item["spec"]["template"]["metadata"].get("labels", {}).get(app.SERVICE_LABEL, name)
+                if service not in bad:
+                    bad.append(service)
         elif item["kind"] == "Pod":
-            service = item["metadata"].get("labels", {}).get("app", name)
+            service = item["metadata"].get("labels", {}).get(app.SERVICE_LABEL, name)
             if not item["metadata"].get("deletionTimestamp"):
                 pod_uids.setdefault(service, []).append(item["metadata"]["uid"])
-            if service == "loadgenerator" and not item["metadata"].get("deletionTimestamp"):
+            if service == app.LOADGENERATOR and not item["metadata"].get("deletionTimestamp"):
                 loadgenerator_uids.append(item["metadata"]["uid"])
             restarts[service] = restarts.get(service, 0) + sum(
                 c.get("restartCount", 0) for c in item.get("status", {}).get("containerStatuses", []))
-    data = json.loads(inject.kubectl("exec", "-i", "deployment/loadgenerator", "-n", inject.NS,
-                                     "-c", "main", "--", "python", "-", stdin=READ_STATS))
+    data = json.loads(inject.kubectl("exec", "-i", f"deployment/{app.LOADGENERATOR}", "-n", inject.NS,
+                                     "-c", "main", "--", "python", "-",
+                                     stdin=READ_STATS.replace("__JOURNEY__", repr(app.JOURNEY_PATH))))
     total, recent = data["aggregate"], data["recent"]
     age = time.time() - float(recent["Timestamp"])
     users = int(recent["User Count"])

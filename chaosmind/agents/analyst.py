@@ -15,7 +15,7 @@ import re
 import subprocess
 import sys
 
-from chaosmind import inject
+from chaosmind import app, inject
 from chaosmind.agents import llm, strategist
 from chaosmind.agents.cartographer import NEGATED, claims_data_loss
 
@@ -117,9 +117,9 @@ def error_lines(events, target, limit=60):
     end = next((e['timestamp_utc'] for e in reversed(events) if e.get('timestamp_utc')), start)
     until = datetime.fromisoformat(end) + timedelta(seconds=5)
     lines = []
-    for app in sorted({'frontend', target}):
+    for svc in sorted({app.ENTRY_LOGS or target, target}):  # the entry service (what customers saw) and the target
         try:
-            out = inject.kubectl('logs', f'deployment/{app}', '-n', inject.NS, f'--since-time={since}',
+            out = inject.kubectl('logs', '-l', f'{app.SERVICE_LABEL}={svc}', '--tail=-1', '--max-log-requests=20', '-n', inject.NS, f'--since-time={since}',
                                  '--all-containers', '--timestamps')
         except (subprocess.SubprocessError, OSError):
             continue
@@ -131,7 +131,7 @@ def error_lines(events, target, limit=60):
             except ValueError:
                 pass
             if ERROR_LINE.search(text):
-                lines.append(f'{app}: {text.strip()[:300]}')
+                lines.append(f'{svc}: {text.strip()[:300]}')
     counts = Counter(lines)
     return [l if n == 1 else f'{l}  (x{n})' for l, n in counts.most_common(limit)]
 

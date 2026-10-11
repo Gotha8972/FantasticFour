@@ -1,0 +1,24 @@
+{
+ "name": "Online Boutique",
+ "namespace": "online-boutique",
+ "context": "kind-online-boutique",
+ "service_label": "app",
+ "calls": {"env_suffix": "_ADDR"},
+ "soft_calls": [["checkoutservice", "emailservice"], ["frontend", "adservice"], ["frontend", "recommendationservice"]],
+ "every_page": {"frontend": ["currencyservice", "productcatalogservice", "cartservice"]},
+ "journey_service": "checkoutservice",
+ "journey_path": "/cart/checkout",
+ "entry_service": "frontend",
+ "ignore": ["loadgenerator"],
+ "loadgenerator": "loadgenerator",
+ "stateful_services": ["redis-cart"],
+ "integrity": "online-boutique",
+ "remediation_catalog": "remediation/catalog.json",
+ "baseline": "baseline.json",
+ "notes": {
+  "calls": "Every *_ADDR environment variable is a service-to-service call.",
+  "soft_calls": "Reviewed in the source. checkoutservice/main.go PlaceOrder: errors from cart, catalog, currency, shipping and payment abort the order; a failed confirmation email is only logged (main.go:272-273). frontend/handlers.go: failed ads and recommendations are only logged. cartservice fails without Redis (RedisCartStore.cs).",
+  "every_page": "frontend/handlers.go homeHandler renders an error without currencies, products, the cart or a price conversion; checkout and shipping are only needed on the cart and checkout pages.",
+  "integrity": "Cart kept across the fault (same session) and a new checkout really produces an order (chaosmind/agents/integrity.py)."
+ }
+}

@@ -1,0 +1,5 @@
+[
+ {"id": "productpage-replicas", "target": "productpage", "deployment": "productpage-v1", "fixes": "single replica of the only page: one pod failure takes the whole site down", "patch": "remediation/replicas-2.json", "revert_patch": "remediation/replicas-1.json"},
+ {"id": "details-replicas", "target": "details", "deployment": "details-v1", "fixes": "single replica: one pod failure hides every book's details", "patch": "remediation/replicas-2.json", "revert_patch": "remediation/replicas-1.json"},
+ {"id": "ratings-replicas", "target": "ratings", "deployment": "ratings-v1", "fixes": "single replica: one pod failure hides every rating", "patch": "remediation/replicas-2.json", "revert_patch": "remediation/replicas-1.json"}
+]

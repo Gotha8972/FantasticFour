@@ -6,11 +6,11 @@ from pathlib import Path
 import subprocess
 import time
 
-from chaosmind import guard, inject
+from chaosmind import app, guard, inject
 from chaosmind.agents import integrity, llm, safety, score, strategist
 
 ROOT = Path(__file__).resolve().parents[2]
-CATALOG = json.loads((ROOT / 'remediation/catalog.json').read_text())
+CATALOG = json.loads(app.CATALOG.read_text())  # the reviewed fixes for this app (its profile names the file)
 
 SYSTEM = """You are the Remediation engineer for a chaos-engineering system.
 Given a CONFIRMED weakness (the experiment, what was observed, integrity violations) and a catalog of reviewed fixes,
@@ -23,8 +23,8 @@ def applied(fix):
     """True if the live deployment already has this fix: a server-side dry run of its patch changes nothing.
     (The model once proposed the Redis fix again, claiming emptyDir while the PVC was live.)"""
     try:
-        live = json.loads(inject.kubectl('get', 'deployment', fix['target'], '-n', inject.NS, '-o', 'json'))['spec']
-        patched = json.loads(inject.kubectl('patch', 'deployment', fix['target'], '-n', inject.NS, '--type=json',
+        live = json.loads(inject.kubectl('get', 'deployment', deployment(fix), '-n', inject.NS, '-o', 'json'))['spec']
+        patched = json.loads(inject.kubectl('patch', 'deployment', deployment(fix), '-n', inject.NS, '--type=json',
                                             '-p', (ROOT / fix['patch']).read_text(), '--dry-run=server', '-o', 'json'))['spec']
     except (subprocess.SubprocessError, OSError, ValueError):
         return False  # can't tell (e.g. offline): the human approval gate still decides
@@ -60,13 +60,18 @@ def _patch(target, patch_file):
     inject.kubectl('rollout', 'status', f'deployment/{target}', '-n', inject.NS, '--timeout=180s', timeout=200)
 
 
+def deployment(fix):
+    """The deployment a fix patches: named in the catalog entry when it differs from the service (e.g. details-v1)."""
+    return fix.get('deployment', fix['target'])
+
+
 def apply(fix):
     _kubectl_files('apply', fix.get('apply_files', []))
-    _patch(fix['target'], fix['patch'])
+    _patch(deployment(fix), fix['patch'])
 
 
 def revert(fix):
-    _patch(fix['target'], fix['revert_patch'])
+    _patch(deployment(fix), fix['revert_patch'])
     _kubectl_files('delete', fix.get('delete_on_revert', []))
 
 

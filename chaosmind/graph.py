@@ -27,6 +27,7 @@ from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Command, interrupt
 
+from chaosmind import app
 from chaosmind.agents import steps
 
 
@@ -127,7 +128,7 @@ def drive(app, config, first_input: Any, ask=input, out_dir=None, via='terminal'
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--budget', type=int, default=4)
-    parser.add_argument('--baseline', default='baseline.json')
+    parser.add_argument('--baseline', default=str(app.BASELINE.relative_to(app.ROOT)), help='default: this app\'s baseline (CHAOSMIND_APP)')
     parser.add_argument('--workloads', help='saved deployments JSON instead of the live cluster')
     parser.add_argument('--dry-run', action='store_true', help='audit + plan + safety review; injects nothing')
     parser.add_argument('--remediate', action='store_true', help='propose a catalog fix for confirmed weaknesses')

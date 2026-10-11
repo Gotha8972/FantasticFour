@@ -5,12 +5,14 @@ and that a brand-new checkout really produces an order. The Redis restart wiped 
 what catches it.
 """
 import http.cookiejar
+import json
 import os
 import re
 import urllib.error
 import urllib.parse
 import urllib.request
 
+from chaosmind import app, inject
 from chaosmind.c_tests import cart_count
 
 BASE = os.environ.get('FRONTEND_URL', 'http://localhost:8080')
@@ -50,7 +52,7 @@ def items_in_cart(session):
         return None, str(error)
 
 
-def prepare():
+def boutique_prepare():
     """Before the fault: one item in a fresh cart. Returns the state verify() needs."""
     session = new_session()
     fetch(session, '/')
@@ -59,7 +61,7 @@ def prepare():
     return {'session': session, 'cart_before': count}
 
 
-def verify(state):
+def boutique_verify(state):
     """After recovery: list of violations ([] = everything correct)."""
     violations = []
     if state.get('cart_before'):
@@ -83,5 +85,53 @@ def verify(state):
 if __name__ == '__main__':
     import json
     s = prepare()
-    print('cart before:', s['cart_before'])
+    print('state before:', {k: v for k, v in s.items() if k != 'session'})
     print(json.dumps(verify(s), indent=1))
+
+
+# ── per app ──────────────────────────────────────────────────────────────────
+# Integrity checks are the one part that must know what "correct" means for an app. Online Boutique: the cart is kept
+# and checkout produces an order. Apps with "integrity": "page" list page checks in their profile: after recovery the
+# page must render in full (HTTP 200 alone isn't trusted). Fetched from inside the cluster, from the load generator pod.
+
+PAGE_FETCH = r'''
+import json, sys, urllib.error, urllib.request
+out = []
+for c in json.loads(sys.stdin.readline()):
+    try:
+        with urllib.request.urlopen(c["url"], timeout=5) as r:
+            out.append({"status": r.status, "body": r.read().decode(errors="replace")})
+    except urllib.error.HTTPError as e:
+        out.append({"status": e.code, "body": e.read().decode(errors="replace")})
+    except Exception as e:
+        out.append({"status": None, "body": str(e)})
+print(json.dumps(out))
+'''
+
+
+def page_verify():
+    checks = app.PAGE_CHECKS
+    fetched = json.loads(inject.kubectl('exec', '-i', f'deployment/{app.LOADGENERATOR}', '-n', inject.NS, '-c', 'main',
+                                        '--', 'python', '-c', PAGE_FETCH, stdin=json.dumps(checks) + '\n'))
+    violations = []
+    for c, got in zip(checks, fetched):
+        missing = [s for s in c.get('must_contain', []) if s not in got['body']]
+        present = [s for s in c.get('must_not_contain', []) if s in got['body']]
+        if got['status'] != 200 or missing or present:
+            violations.append({'check': c['name'], 'expected': c.get('expected', 'HTTP 200 with the full page'),
+                               'actual': f"HTTP {got['status']}" + (f'; missing {missing}' if missing else '')
+                                         + (f'; shows {present}' if present else ''),
+                               'evidence': re.sub(r'\s+', ' ', got['body'])[:200]})
+    return violations
+
+
+def prepare():
+    """Before the fault: whatever verify() needs (Online Boutique: one item in a fresh cart)."""
+    return boutique_prepare() if app.INTEGRITY == 'online-boutique' else {}
+
+
+def verify(state):
+    """After recovery: list of violations ([] = everything correct)."""
+    if app.INTEGRITY == 'online-boutique':
+        return boutique_verify(state)
+    return page_verify() if app.INTEGRITY == 'page' else []

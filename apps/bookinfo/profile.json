@@ -1,0 +1,29 @@
+{
+ "name": "Istio Bookinfo",
+ "namespace": "bookinfo",
+ "context": "kind-online-boutique",
+ "service_label": "app",
+ "calls": {"edges": [["productpage", "details"], ["productpage", "reviews"], ["reviews", "ratings"]]},
+ "soft_calls": [["productpage", "details"], ["productpage", "reviews"], ["reviews", "ratings"]],
+ "every_page": {"productpage": []},
+ "journey_service": "productpage",
+ "journey_path": "/productpage",
+ "entry_service": "productpage",
+ "ignore": ["loadgenerator"],
+ "loadgenerator": "loadgenerator",
+ "stateful_services": [],
+ "integrity": "page",
+ "page_checks": [
+  {"name": "book_page_complete", "url": "http://productpage:9080/productpage?u=normal",
+   "expected": "HTTP 200 with the book's details and reviews",
+   "must_contain": ["Book Details", "Book Reviews"],
+   "must_not_contain": ["currently unavailable"]}
+ ],
+ "remediation_catalog": "apps/bookinfo/catalog.json",
+ "baseline": "apps/bookinfo/baseline.json",
+ "notes": {
+  "calls": "Bookinfo's services reach each other by fixed hostnames (details:9080, reviews:9080, ratings:9080), so the calls are listed here instead of discovered from environment variables.",
+  "soft_calls": "Reviewed in the source (istio 1.24.2 samples/bookinfo). productpage.py front(): details and reviews errors are caught with 3 s timeouts and the page still renders with HTTP 200 ('Sorry, product details are currently unavailable for this book.'). reviews LibertyRestEndpoint.java: a ratings failure becomes 'Ratings service is currently unavailable' (timeout 2.5 s, 10 s for reviews-v2). So every call is tolerated: the app is designed to degrade gracefully, and only the page itself is critical.",
+  "integrity": "HTTP 200 isn't trusted: after recovery the book page must show its details and reviews again. Bookinfo's traffic (locustfile.py) also counts a page missing details or reviews as a failed request, because that's what a reader sees."
+ }
+}

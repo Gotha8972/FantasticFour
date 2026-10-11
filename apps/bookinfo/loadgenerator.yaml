@@ -1,0 +1,36 @@
+# Bookinfo readers (Locust), writing the CSV the guard reads, like Online Boutique's load generator.
+# kubectl -n bookinfo create configmap bookinfo-locustfile --from-file=apps/bookinfo/locustfile.py
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loadgenerator
+  labels: {app: loadgenerator}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: loadgenerator}
+  template:
+    metadata:
+      labels: {app: loadgenerator}
+    spec:
+      containers:
+        - name: main
+          image: us-central1-docker.pkg.dev/google-samples/microservices-demo/loadgenerator:v0.10.4
+          command: [locust]
+          args: [-f, /config/locustfile.py, --host=http://productpage:9080, --headless, --users=$(USERS),
+                 --spawn-rate=$(RATE), --print-stats, --csv=/stats/load, --csv-full-history]
+          env:
+            - {name: USERS, value: "20"}
+            - {name: RATE, value: "2"}
+            - {name: PYTHONUNBUFFERED, value: "1"}
+          resources:
+            requests: {cpu: 100m, memory: 128Mi}
+            limits: {cpu: 500m, memory: 256Mi}
+          volumeMounts:
+            - {name: stats, mountPath: /stats}
+            - {name: locustfile, mountPath: /config}
+      volumes:
+        - name: stats
+          emptyDir: {}
+        - name: locustfile
+          configMap: {name: bookinfo-locustfile}

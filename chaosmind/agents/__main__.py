@@ -8,6 +8,7 @@ import argparse
 from datetime import datetime, timezone
 from pathlib import Path
 
+from chaosmind import app
 from chaosmind.agents import integrity, safety, steps  # noqa: F401  (re-exported for tests that patch them)
 
 
@@ -40,7 +41,7 @@ def run(state, ask=input):
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--budget', type=int, default=4, help='max experiments (default 4)')
-    parser.add_argument('--baseline', default='baseline.json')
+    parser.add_argument('--baseline', default=str(app.BASELINE.relative_to(app.ROOT)))
     parser.add_argument('--workloads', help='saved deployments JSON instead of the live cluster')
     parser.add_argument('--dry-run', action='store_true', help='no injection')
     parser.add_argument('--remediate', action='store_true', help='propose a catalog fix for confirmed weaknesses')

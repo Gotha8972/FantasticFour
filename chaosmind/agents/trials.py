@@ -38,7 +38,7 @@ def wilson(k, n, z=1.96):
 
 def conditions(exp, users):
     """What must match for trials to be comparable."""
-    replicas = json.loads(inject.kubectl('get', 'deployment', exp['target'], '-n', inject.NS, '-o', 'json'))['spec'].get('replicas', 1)
+    replicas = sum(d['spec'].get('replicas', 1) for d in inject.service_deployments(exp['target']))
     return {'fault': exp['fault'], 'target': exp['target'], 'params': exp.get('params', {}),
             'duration_s': exp['duration_s'], 'users': users, 'target_replicas': replicas}
 
