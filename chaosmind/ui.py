@@ -42,6 +42,11 @@ def read(path, default=None):
         return default
 
 
+def visible_run(name):
+    """A local demo reset hides old evidence without deleting committed artifacts."""
+    return name not in read(ROOT / '.runtime/ui-reset.json', {}).get('hidden_runs', [])
+
+
 def safe_dir(name):
     if not name or not NAME.match(name) or name in ('.', '..'):
         raise ValueError('bad run name')
@@ -66,7 +71,7 @@ def is_live(d):
 def list_runs():
     out = []
     for d in sorted(RUNS.glob('agents-*'), reverse=True):
-        if (d / 'facts.json').exists():
+        if visible_run(d.name) and (d / 'facts.json').exists():
             history = read(d / 'history.json', [])
             out.append({'name': d.name, 'experiments': len(history), 'done': (d / 'FINDINGS.md').exists(),
                         'dry_run': bool(history) and all(h.get('observed') is None for h in history),
@@ -128,7 +133,8 @@ def scoreboard():
         name = Path(directory).name
         query = {'run': name, 'target': target} if name.startswith('agents-') else {'evidence': name}
         row['detail_url'] = '/?' + urlencode(query)
-    return sorted(rows, key=lambda r: r['score'])
+    return sorted((r for r in rows if visible_run(Path(r['run'].split('#')[0]).name)),
+                  key=lambda r: r['score'])
 
 
 EVIDENCE_FILES = {'history.json', 'facts.json', 'facts_for_report.json', 'analyst_reply.json',
@@ -178,7 +184,7 @@ def incidents():
     """Measured agent experiments only; dry runs and plans never inflate the KPIs."""
     records = []
     for directory in sorted(RUNS.glob('agents-*'), reverse=True):
-        if not directory.is_dir():
+        if not directory.is_dir() or not visible_run(directory.name):
             continue
         for h in read(directory / 'history.json', []):
             if h.get('observed') is None:
