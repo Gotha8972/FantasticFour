@@ -1,0 +1,789 @@
+[
+ {
+  "vulnerability": "V7",
+  "experiment": {
+   "id": "v7-pod-kill-frontend",
+   "fault": "pod_kill",
+   "target": "frontend",
+   "params": {},
+   "duration_s": 30
+  },
+  "criteria": [
+   {
+    "metric": "error_rate",
+    "op": ">",
+    "value": 0.01
+   }
+  ],
+  "prediction": {
+   "affected": [
+    "frontend",
+    "adservice",
+    "cartservice",
+    "checkoutservice",
+    "currencyservice",
+    "emailservice",
+    "paymentservice",
+    "productcatalogservice",
+    "recommendationservice",
+    "redis-cart",
+    "shippingservice"
+   ],
+   "summary": "Frontend crash will make the entire site unavailable, causing high error_rate across all services."
+  },
+  "safety": {
+   "decision": "approve",
+   "reason": "Current health metrics are fresh and within baseline limits; no unhealthy services and no excessive latency or duration. The pod_kill fault on the frontend is within acceptable risk bounds.",
+   "experiment": {
+    "id": "v7-pod-kill-frontend",
+    "fault": "pod_kill",
+    "target": "frontend",
+    "params": {},
+    "duration_s": 30
+   },
+   "ramp": [
+    null
+   ],
+   "steps": [
+    {
+     "intensity": null,
+     "run_dir": "runs/v7-pod-kill-frontend-s1-20261011T015401.333326Z",
+     "observed": {
+      "error_rate": 0.0,
+      "p95_ms": 180.0,
+      "unhealthy_count": 1,
+      "breach": null,
+      "recovery_s": 1.19,
+      "service_ready_s": 12.5,
+      "customer_recovered_s": 0.0,
+      "users": 20
+     },
+     "stopped_by": null
+    }
+   ],
+   "tolerated_up_to": null,
+   "limit_crossed_at": null,
+   "status": "approve",
+   "health_at_review": {
+    "ts": 1791683634.5692582,
+    "error_rate": 0.0,
+    "p50_ms": 20.0,
+    "p95_ms": 67.0,
+    "users": 20,
+    "rps": 4.6,
+    "requests": 64550,
+    "failures": 882,
+    "checkout_success": 0.9881932021466905,
+    "checkout_requests": 2795,
+    "checkout_failures": 33,
+    "locust_history_ts": 1791683631.0,
+    "loadgenerator_pod_uids": [
+     "62ff364f-2626-44ab-8521-9241489ef8ba"
+    ],
+    "pod_uids": {
+     "adservice": [
+      "b3e738a7-840a-4c10-bcad-6c355a45c756"
+     ],
+     "cartservice": [
+      "ac72f15e-a2d7-4f78-bd30-3b0ea624027c",
+      "bf5fa320-18f0-4919-a2fe-6a5643fe201e"
+     ],
+     "checkoutservice": [
+      "d6aad341-577f-495e-b8e8-4dbf0fe79d8a"
+     ],
+     "currencyservice": [
+      "caa813af-700d-4fa9-985b-4bc34e0d4c34"
+     ],
+     "emailservice": [
+      "793a3c99-875f-4729-91b8-6f65e55c36ea"
+     ],
+     "frontend": [
+      "85a00582-7c76-4c33-9ccf-859df0597b6b",
+      "c7e4e5cb-aefc-4459-96c5-f7ee6d883dc7"
+     ],
+     "loadgenerator": [
+      "62ff364f-2626-44ab-8521-9241489ef8ba"
+     ],
+     "paymentservice": [
+      "d51c5566-f179-4d99-8ba7-c5a80527c8b2"
+     ],
+     "productcatalogservice": [
+      "456d76b3-99d9-4c52-bf2a-63fa53ebbef6"
+     ],
+     "recommendationservice": [
+      "28a150eb-7b88-4b04-ad7f-111f3ba0124a"
+     ],
+     "redis-cart": [
+      "7ab7ccde-9c10-412c-b822-16b04f925841"
+     ],
+     "shippingservice": [
+      "d2d6b37f-db07-4932-9991-30773150aa1c"
+     ]
+    },
+    "unhealthy_services": [],
+    "restarts": {
+     "adservice": 7,
+     "cartservice": 0,
+     "checkoutservice": 2,
+     "currencyservice": 0,
+     "emailservice": 0,
+     "frontend": 6,
+     "loadgenerator": 1,
+     "paymentservice": 0,
+     "productcatalogservice": 0,
+     "recommendationservice": 1,
+     "redis-cart": 0,
+     "shippingservice": 0
+    },
+    "metrics_age_s": 3.5692098140716553,
+    "source": "locust_csv_and_kubernetes"
+   }
+  },
+  "observed": {
+   "error_rate": 0.0,
+   "p95_ms": 180.0,
+   "unhealthy_count": 1,
+   "breach": null,
+   "recovery_s": 1.19,
+   "service_ready_s": 12.5,
+   "customer_recovered_s": 0.0,
+   "users": 20,
+   "integrity_violations": 0
+  },
+  "integrity": [],
+  "verdict": "refuted",
+  "criteria_met": [],
+  "score": {
+   "score": 97,
+   "breakdown": {
+    "E": 0.0,
+    "L": 2.8,
+    "R": 0.3,
+    "B": 0.0,
+    "I": 0.0
+   }
+  },
+  "blast_share": 1.0
+ },
+ {
+  "vulnerability": "V1",
+  "experiment": {
+   "id": "v1-pod-kill-productcatalogservice",
+   "fault": "pod_kill",
+   "target": "productcatalogservice",
+   "params": {},
+   "duration_s": 30
+  },
+  "criteria": [
+   {
+    "metric": "error_rate",
+    "op": ">",
+    "value": 0.01
+   },
+   {
+    "metric": "p95_ms",
+    "op": ">",
+    "value": 268.2787,
+    "raised_from": 250
+   }
+  ],
+  "prediction": {
+   "affected": [
+    "checkoutservice",
+    "frontend",
+    "productcatalogservice",
+    "recommendationservice"
+   ],
+   "summary": "Pod kill will cause checkout and product pages to fail, raising error_rate >0.01 and p95_ms >5\u00d7baseline."
+  },
+  "safety": {
+   "decision": "approve",
+   "reason": "Current health is healthy, fault targets only one service, and latency is within acceptable limits. No risk of exceeding 500\u202fms or 60\u202fs. The experiment is safe to run.",
+   "experiment": {
+    "id": "v1-pod-kill-productcatalogservice",
+    "fault": "pod_kill",
+    "target": "productcatalogservice",
+    "params": {},
+    "duration_s": 30
+   },
+   "ramp": [
+    null
+   ],
+   "steps": [
+    {
+     "intensity": null,
+     "run_dir": "runs/v1-pod-kill-productcatalogservice-s1-20261011T015453.929802Z",
+     "observed": {
+      "error_rate": 0.5161290322580645,
+      "p95_ms": 60000.0,
+      "unhealthy_count": 1,
+      "breach": {
+       "metric": "error_rate",
+       "value": 0.5161290322580645,
+       "limit": 0.05
+      },
+      "recovery_s": 15.773,
+      "service_ready_s": 3.8,
+      "customer_recovered_s": 25.4,
+      "users": 20
+     },
+     "stopped_by": null
+    }
+   ],
+   "tolerated_up_to": null,
+   "limit_crossed_at": null,
+   "status": "crossed limit at the lowest step; no tolerated level found, try a lower start",
+   "health_at_review": {
+    "ts": 1791683690.5451324,
+    "error_rate": 0.0,
+    "p50_ms": 21.0,
+    "p95_ms": 96.0,
+    "users": 20,
+    "rps": 3.2,
+    "requests": 64752,
+    "failures": 882,
+    "checkout_success": 0.988205861329521,
+    "checkout_requests": 2798,
+    "checkout_failures": 33,
+    "locust_history_ts": 1791683688.0,
+    "loadgenerator_pod_uids": [
+     "62ff364f-2626-44ab-8521-9241489ef8ba"
+    ],
+    "pod_uids": {
+     "adservice": [
+      "b3e738a7-840a-4c10-bcad-6c355a45c756"
+     ],
+     "cartservice": [
+      "ac72f15e-a2d7-4f78-bd30-3b0ea624027c",
+      "bf5fa320-18f0-4919-a2fe-6a5643fe201e"
+     ],
+     "checkoutservice": [
+      "d6aad341-577f-495e-b8e8-4dbf0fe79d8a"
+     ],
+     "currencyservice": [
+      "caa813af-700d-4fa9-985b-4bc34e0d4c34"
+     ],
+     "emailservice": [
+      "793a3c99-875f-4729-91b8-6f65e55c36ea"
+     ],
+     "frontend": [
+      "0a2d1377-ada8-4b5c-936a-ece0066bde71",
+      "85a00582-7c76-4c33-9ccf-859df0597b6b"
+     ],
+     "loadgenerator": [
+      "62ff364f-2626-44ab-8521-9241489ef8ba"
+     ],
+     "paymentservice": [
+      "d51c5566-f179-4d99-8ba7-c5a80527c8b2"
+     ],
+     "productcatalogservice": [
+      "456d76b3-99d9-4c52-bf2a-63fa53ebbef6"
+     ],
+     "recommendationservice": [
+      "28a150eb-7b88-4b04-ad7f-111f3ba0124a"
+     ],
+     "redis-cart": [
+      "7ab7ccde-9c10-412c-b822-16b04f925841"
+     ],
+     "shippingservice": [
+      "d2d6b37f-db07-4932-9991-30773150aa1c"
+     ]
+    },
+    "unhealthy_services": [],
+    "restarts": {
+     "adservice": 7,
+     "cartservice": 0,
+     "checkoutservice": 2,
+     "currencyservice": 0,
+     "emailservice": 0,
+     "frontend": 2,
+     "loadgenerator": 1,
+     "paymentservice": 0,
+     "productcatalogservice": 0,
+     "recommendationservice": 1,
+     "redis-cart": 0,
+     "shippingservice": 0
+    },
+    "metrics_age_s": 2.545109748840332,
+    "source": "locust_csv_and_kubernetes"
+   }
+  },
+  "observed": {
+   "error_rate": 0.5161290322580645,
+   "p95_ms": 60000.0,
+   "unhealthy_count": 1,
+   "breach": {
+    "metric": "error_rate",
+    "value": 0.5161290322580645,
+    "limit": 0.05
+   },
+   "recovery_s": 15.773,
+   "service_ready_s": 3.8,
+   "customer_recovered_s": 25.4,
+   "users": 20,
+   "integrity_violations": 0
+  },
+  "integrity": [],
+  "verdict": "confirmed",
+  "criteria_met": [
+   {
+    "metric": "error_rate",
+    "op": ">",
+    "value": 0.01
+   },
+   {
+    "metric": "p95_ms",
+    "op": ">",
+    "value": 268.2787,
+    "raised_from": 250
+   }
+  ],
+  "score": {
+   "score": 27,
+   "breakdown": {
+    "E": 40.0,
+    "L": 25.0,
+    "R": 3.9,
+    "B": 3.6,
+    "I": 0.0
+   }
+  },
+  "blast_share": 0.364,
+  "remediation": {
+   "choice": {
+    "fix_id": "productcatalog-replicas",
+    "reason": "The experiment killed the only pod of productcatalogservice, exposing the single\u2011replica failure mode. The catalog fix increases replicas to 2, eliminating the single point of failure.",
+    "expected_effect": "On re\u2011run, error_rate should drop below the 0.05 threshold, p95 latency should be near normal, and the service will remain healthy during the fault."
+   },
+   "fix": "productcatalog-replicas",
+   "before": 27,
+   "after": 98,
+   "after_breakdown": {
+    "E": 0.0,
+    "L": 1.5,
+    "R": 0.3,
+    "B": 0.0,
+    "I": 0.0
+   },
+   "after_observed": {
+    "error_rate": 0.0,
+    "p95_ms": 90.0,
+    "unhealthy_count": 1,
+    "breach": null,
+    "recovery_s": 1.293,
+    "service_ready_s": 3.8,
+    "customer_recovered_s": 0.0,
+    "users": 20
+   },
+   "after_integrity": [],
+   "after_run_dir": "runs/v1-pod-kill-productcatalogservice-after-20261011T015559.823382Z",
+   "verdict": "improved",
+   "kept": true,
+   "after_verdict": "refuted"
+  }
+ },
+ {
+  "vulnerability": "V3",
+  "experiment": {
+   "id": "v3-network-partition-paymentservice",
+   "fault": "network_partition",
+   "target": "paymentservice",
+   "params": {
+    "to": "checkoutservice"
+   },
+   "duration_s": 30
+  },
+  "criteria": [
+   {
+    "metric": "error_rate",
+    "op": ">",
+    "value": 0.01
+   },
+   {
+    "metric": "p95_ms",
+    "op": ">",
+    "value": 268.2787,
+    "raised_from": 260
+   }
+  ],
+  "prediction": {
+   "affected": [
+    "checkoutservice",
+    "frontend",
+    "paymentservice"
+   ],
+   "summary": "Network partition will make paymentservice unreachable, causing checkout failures and a spike in error_rate >0.01 and p95_ms >5\u00d7baseline."
+  },
+  "safety": {
+   "decision": "approve",
+   "reason": "Current health is fresh and within acceptable limits. No unhealthy services, error rate is 0, metrics age is 4.5\u202fs (<5\u202fs). The experiment targets a single service (paymentservice) and the duration (30\u202fs) is below the 60\u202fs threshold for checkout/revenue path. Therefore the experiment can proceed as proposed.",
+   "experiment": {
+    "id": "v3-network-partition-paymentservice",
+    "fault": "network_partition",
+    "target": "paymentservice",
+    "params": {
+     "to": "checkoutservice"
+    },
+    "duration_s": 30
+   },
+   "ramp": [
+    null
+   ],
+   "steps": [
+    {
+     "intensity": null,
+     "run_dir": "runs/v3-network-partition-paymentservice-s1-20261011T015649.667099Z",
+     "observed": {
+      "error_rate": 0.0,
+      "p95_ms": 17000.0,
+      "unhealthy_count": 0,
+      "breach": null,
+      "recovery_s": 10.136,
+      "service_ready_s": null,
+      "customer_recovered_s": 39.4,
+      "users": 20
+     },
+     "stopped_by": null
+    }
+   ],
+   "tolerated_up_to": null,
+   "limit_crossed_at": null,
+   "status": "approve",
+   "health_at_review": {
+    "ts": 1791683805.5261753,
+    "error_rate": 0.0,
+    "p50_ms": 17.0,
+    "p95_ms": 33.0,
+    "users": 20,
+    "rps": 4.0,
+    "requests": 65226,
+    "failures": 904,
+    "checkout_success": 0.9882645803698435,
+    "checkout_requests": 2812,
+    "checkout_failures": 33,
+    "locust_history_ts": 1791683801.0,
+    "loadgenerator_pod_uids": [
+     "62ff364f-2626-44ab-8521-9241489ef8ba"
+    ],
+    "pod_uids": {
+     "adservice": [
+      "b3e738a7-840a-4c10-bcad-6c355a45c756"
+     ],
+     "cartservice": [
+      "ac72f15e-a2d7-4f78-bd30-3b0ea624027c",
+      "bf5fa320-18f0-4919-a2fe-6a5643fe201e"
+     ],
+     "checkoutservice": [
+      "d6aad341-577f-495e-b8e8-4dbf0fe79d8a"
+     ],
+     "currencyservice": [
+      "caa813af-700d-4fa9-985b-4bc34e0d4c34"
+     ],
+     "emailservice": [
+      "793a3c99-875f-4729-91b8-6f65e55c36ea"
+     ],
+     "frontend": [
+      "0a2d1377-ada8-4b5c-936a-ece0066bde71",
+      "85a00582-7c76-4c33-9ccf-859df0597b6b"
+     ],
+     "loadgenerator": [
+      "62ff364f-2626-44ab-8521-9241489ef8ba"
+     ],
+     "paymentservice": [
+      "d51c5566-f179-4d99-8ba7-c5a80527c8b2"
+     ],
+     "productcatalogservice": [
+      "0f1a342e-4b40-448b-9078-1aab309ce537",
+      "fc38078e-e3ef-4ff9-a463-a35e4c9b6dcf"
+     ],
+     "recommendationservice": [
+      "28a150eb-7b88-4b04-ad7f-111f3ba0124a"
+     ],
+     "redis-cart": [
+      "7ab7ccde-9c10-412c-b822-16b04f925841"
+     ],
+     "shippingservice": [
+      "d2d6b37f-db07-4932-9991-30773150aa1c"
+     ]
+    },
+    "unhealthy_services": [],
+    "restarts": {
+     "adservice": 7,
+     "cartservice": 0,
+     "checkoutservice": 2,
+     "currencyservice": 0,
+     "emailservice": 0,
+     "frontend": 2,
+     "loadgenerator": 1,
+     "paymentservice": 0,
+     "productcatalogservice": 0,
+     "recommendationservice": 1,
+     "redis-cart": 0,
+     "shippingservice": 0
+    },
+    "metrics_age_s": 4.526158094406128,
+    "source": "locust_csv_and_kubernetes"
+   }
+  },
+  "observed": {
+   "error_rate": 0.0,
+   "p95_ms": 17000.0,
+   "unhealthy_count": 0,
+   "breach": null,
+   "recovery_s": 10.136,
+   "service_ready_s": null,
+   "customer_recovered_s": 39.4,
+   "users": 20,
+   "integrity_violations": 0
+  },
+  "integrity": [],
+  "verdict": "confirmed",
+  "criteria_met": [
+   {
+    "metric": "p95_ms",
+    "op": ">",
+    "value": 268.2787,
+    "raised_from": 260
+   }
+  ],
+  "score": {
+   "score": 70,
+   "breakdown": {
+    "E": 0.0,
+    "L": 25.0,
+    "R": 2.5,
+    "B": 2.7,
+    "I": 0.0
+   }
+  },
+  "blast_share": 0.273,
+  "remediation": {
+   "verdict": "no_fix",
+   "choice": {
+    "fix_id": "none",
+    "reason": "no reviewed fix for paymentservice"
+   }
+  }
+ },
+ {
+  "vulnerability": "V2",
+  "experiment": {
+   "id": "v2-network-loss-currencyservice",
+   "fault": "network_loss",
+   "target": "currencyservice",
+   "params": {
+    "loss": 30
+   },
+   "duration_s": 30
+  },
+  "criteria": [
+   {
+    "metric": "error_rate",
+    "op": ">",
+    "value": 0.01
+   },
+   {
+    "metric": "p95_ms",
+    "op": ">",
+    "value": 268.2787
+   }
+  ],
+  "prediction": {
+   "affected": [
+    "checkoutservice",
+    "frontend",
+    "currencyservice"
+   ],
+   "summary": "30% loss to currencyservice will cause checkoutservice to time out on price conversion, raising error_rate >0.01 and p95_ms >5\u00d7baseline."
+  },
+  "safety": {
+   "decision": "approve",
+   "reason": "Current health metrics are within acceptable bounds, no unhealthy services, and the proposed 30% network loss on currencyservice for 30\u202fs does not exceed hard limits or pose a risk beyond the target service. The experiment can proceed as planned.",
+   "experiment": {
+    "id": "v2-network-loss-currencyservice",
+    "fault": "network_loss",
+    "target": "currencyservice",
+    "params": {
+     "loss": 30
+    },
+    "duration_s": 30
+   },
+   "ramp": [
+    10.0,
+    20.0,
+    30.0
+   ],
+   "steps": [
+    {
+     "intensity": 10.0,
+     "run_dir": "runs/v2-network-loss-currencyservice-s1-20261011T015739.174627Z",
+     "observed": {
+      "error_rate": 0.0,
+      "p95_ms": 100.0,
+      "unhealthy_count": 0,
+      "breach": null,
+      "recovery_s": 1.339,
+      "service_ready_s": null,
+      "customer_recovered_s": 0.0,
+      "users": 20
+     },
+     "stopped_by": null
+    },
+    {
+     "intensity": 20.0,
+     "run_dir": "runs/v2-network-loss-currencyservice-s2-20261011T015814.481539Z",
+     "observed": {
+      "error_rate": 0.0,
+      "p95_ms": 640.0,
+      "unhealthy_count": 0,
+      "breach": null,
+      "recovery_s": 1.234,
+      "service_ready_s": null,
+      "customer_recovered_s": 0.0,
+      "users": 20
+     },
+     "stopped_by": null
+    },
+    {
+     "intensity": 30.0,
+     "run_dir": "runs/v2-network-loss-currencyservice-s3-20261011T015849.366685Z",
+     "observed": {
+      "error_rate": 0.0,
+      "p95_ms": 2800.0,
+      "unhealthy_count": 0,
+      "breach": {
+       "metric": "p95_ms",
+       "value": 1900.0,
+       "limit": 1000
+      },
+      "recovery_s": 12.989,
+      "service_ready_s": null,
+      "customer_recovered_s": 37.2,
+      "users": 20
+     },
+     "stopped_by": null
+    }
+   ],
+   "tolerated_up_to": 20.0,
+   "limit_crossed_at": 30.0,
+   "status": "approve",
+   "health_at_review": {
+    "ts": 1791683856.9358983,
+    "error_rate": 0.0,
+    "p50_ms": 18.0,
+    "p95_ms": 65.0,
+    "users": 20,
+    "rps": 4.8,
+    "requests": 65444,
+    "failures": 904,
+    "checkout_success": 0.9883103081827843,
+    "checkout_requests": 2823,
+    "checkout_failures": 33,
+    "locust_history_ts": 1791683853.0,
+    "loadgenerator_pod_uids": [
+     "62ff364f-2626-44ab-8521-9241489ef8ba"
+    ],
+    "pod_uids": {
+     "adservice": [
+      "b3e738a7-840a-4c10-bcad-6c355a45c756"
+     ],
+     "cartservice": [
+      "ac72f15e-a2d7-4f78-bd30-3b0ea624027c",
+      "bf5fa320-18f0-4919-a2fe-6a5643fe201e"
+     ],
+     "checkoutservice": [
+      "d6aad341-577f-495e-b8e8-4dbf0fe79d8a"
+     ],
+     "currencyservice": [
+      "caa813af-700d-4fa9-985b-4bc34e0d4c34"
+     ],
+     "emailservice": [
+      "793a3c99-875f-4729-91b8-6f65e55c36ea"
+     ],
+     "frontend": [
+      "0a2d1377-ada8-4b5c-936a-ece0066bde71",
+      "85a00582-7c76-4c33-9ccf-859df0597b6b"
+     ],
+     "loadgenerator": [
+      "62ff364f-2626-44ab-8521-9241489ef8ba"
+     ],
+     "paymentservice": [
+      "d51c5566-f179-4d99-8ba7-c5a80527c8b2"
+     ],
+     "productcatalogservice": [
+      "0f1a342e-4b40-448b-9078-1aab309ce537",
+      "fc38078e-e3ef-4ff9-a463-a35e4c9b6dcf"
+     ],
+     "recommendationservice": [
+      "28a150eb-7b88-4b04-ad7f-111f3ba0124a"
+     ],
+     "redis-cart": [
+      "7ab7ccde-9c10-412c-b822-16b04f925841"
+     ],
+     "shippingservice": [
+      "d2d6b37f-db07-4932-9991-30773150aa1c"
+     ]
+    },
+    "unhealthy_services": [],
+    "restarts": {
+     "adservice": 7,
+     "cartservice": 0,
+     "checkoutservice": 2,
+     "currencyservice": 0,
+     "emailservice": 0,
+     "frontend": 2,
+     "loadgenerator": 1,
+     "paymentservice": 0,
+     "productcatalogservice": 0,
+     "recommendationservice": 1,
+     "redis-cart": 0,
+     "shippingservice": 0
+    },
+    "metrics_age_s": 3.9358813762664795,
+    "source": "locust_csv_and_kubernetes"
+   }
+  },
+  "observed": {
+   "error_rate": 0.0,
+   "p95_ms": 2800.0,
+   "unhealthy_count": 0,
+   "breach": {
+    "metric": "p95_ms",
+    "value": 1900.0,
+    "limit": 1000
+   },
+   "recovery_s": 12.989,
+   "service_ready_s": null,
+   "customer_recovered_s": 37.2,
+   "users": 20,
+   "integrity_violations": 0
+  },
+  "integrity": [],
+  "verdict": "confirmed",
+  "criteria_met": [
+   {
+    "metric": "p95_ms",
+    "op": ">",
+    "value": 268.2787
+   }
+  ],
+  "score": {
+   "score": 81,
+   "breakdown": {
+    "E": 0.0,
+    "L": 13.1,
+    "R": 3.2,
+    "B": 2.7,
+    "I": 0.0
+   }
+  },
+  "blast_share": 0.273,
+  "remediation": {
+   "verdict": "no_fix",
+   "choice": {
+    "fix_id": "none",
+    "reason": "no reviewed fix for currencyservice"
+   }
+  }
+ }
+]

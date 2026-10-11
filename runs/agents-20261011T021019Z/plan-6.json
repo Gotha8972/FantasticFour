@@ -1,0 +1,53 @@
+{
+ "plan": [
+  {
+   "vulnerability": "V6",
+   "rank": 1,
+   "fault": "network_loss",
+   "target": "paymentservice",
+   "params": {
+    "loss": 20
+   },
+   "duration_s": 30,
+   "reason": "Paymentservice is a single\u2011replica critical service; a flaky network link to it should surface checkout failures and latency spikes, providing a stronger test than a simple pod kill which only shows availability loss.",
+   "prediction": {
+    "affected": [
+     "paymentservice",
+     "checkoutservice",
+     "frontend"
+    ],
+    "summary": "A 20% packet loss to paymentservice will cause checkout requests to fail or timeout, raising error_rate and p95 latency."
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.01
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 500
+    }
+   ],
+   "experiment": {
+    "id": "v6-network-loss-paymentservice",
+    "fault": "network_loss",
+    "target": "paymentservice",
+    "params": {
+     "loss": 20
+    },
+    "duration_s": 30
+   },
+   "priority": {
+    "blast_radius": 3,
+    "criticality": "high",
+    "score": 9
+   }
+  }
+ ],
+ "dropped": [],
+ "replan_note": "No prior network_loss experiment on paymentservice; this fault type distinguishes flaky dependency from outright pod failure and measures customer impact.",
+ "feedback": null,
+ "diversity": null
+}

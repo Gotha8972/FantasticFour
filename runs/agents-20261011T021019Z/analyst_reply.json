@@ -1,0 +1,67 @@
+{
+ "summary": "The chaos experiments confirmed that killing the redis-cart pod caused data loss and a spike in latency, while failures of frontend, cartservice, productcatalogservice, currencyservice, and paymentservice caused site outages or performance degradation. Root causes ranged from single\u2011replica configurations to network issues, with most faults exposing critical weaknesses that remain unaddressed except for a few replication or persistence fixes. The findings highlight the need to eliminate single points of failure and to persist state where appropriate to maintain service reliability.",
+ "findings": [
+  {
+   "experiment_id": "v1-pod-kill-redis-cart",
+   "title": "Redis Cart Pod Kill",
+   "severity": "critical",
+   "what_happened": "Killing the redis-cart pod caused cart data loss, leading to a 2800\u202fms p95 latency spike and a single integrity violation.",
+   "root_cause": "The integrity violation shows cart data was lost when the redis-cart pod was killed, indicating that Redis is using an emptyDir volume that is wiped on pod restart.",
+   "evidence": [
+    "same session, cart emptied by the fault"
+   ],
+   "fix": "redis-persistence"
+  },
+  {
+   "experiment_id": "v5-pod-failure-frontend",
+   "title": "Frontend Pod Failure",
+   "severity": "high",
+   "what_happened": "A single frontend pod failure caused the service to become unhealthy, raising error_rate to 0.1219 and p95 latency to 83\u202fms.",
+   "root_cause": "The experiment shows that a single pod failure in the frontend brings down the entire service, indicating a single point of failure.",
+   "evidence": [],
+   "fix": "frontend-replicas"
+  },
+  {
+   "experiment_id": "v3-pod-failure-cartservice",
+   "title": "Cartservice Pod Failure",
+   "severity": "high",
+   "what_happened": "Killing a cartservice pod caused a 452% error_rate spike and 2700\u202fms p95 latency, with cart operations failing.",
+   "root_cause": "The log errors show connection refused to cartservice, proving the service outage was due to the single replica.",
+   "evidence": [
+    "frontend: {\"error\":\"failed to complete the order: rpc error: code = Internal desc = cart failure: failed to get user cart during checkout: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.109.18:7070: connect: connection refused\\\"\",\"http.req.id\":\"c  (x2)\""
+   ],
+   "fix": "cartservice-replicas"
+  },
+  {
+   "experiment_id": "v2-network-partition-productcatalogservice",
+   "title": "Productcatalogservice Network Partition",
+   "severity": "high",
+   "what_happened": "Network partitioning of productcatalogservice caused a 29000\u202fms p95 latency spike, though error_rate remained 0.",
+   "root_cause": "No log errors explain the latency; the fault likely caused timeouts in downstream services.",
+   "evidence": [],
+   "fix": ""
+  },
+  {
+   "experiment_id": "v4-network-delay-currencyservice",
+   "title": "Currencyservice Network Delay",
+   "severity": "high",
+   "what_happened": "Adding 500\u202fms delay to currencyservice raised p95 latency to 3300\u202fms, with no error_rate impact.",
+   "root_cause": "The log errors show normal request completions; the delay likely caused downstream timeout handling but did not trigger errors.",
+   "evidence": [
+    "frontend: {\"http.req.id\":\"6bf5aec5-4e66-4289-b400-c4bc65e0dc5d\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/OLJCESPC7Z\",\"http.resp.bytes\":7932,\"http.resp.status\":200,\"http.resp.took_ms\":561,\"message\":\"request complete\",\"session\":\"61978733-baf1-4d20-b3a8-434e37286d64\",\"severity\":\"debug\",\"timestamp\":\"2026"
+   ],
+   "fix": ""
+  },
+  {
+   "experiment_id": "v6-network-loss-paymentservice",
+   "title": "Paymentservice Network Loss",
+   "severity": "high",
+   "what_happened": "20% packet loss to paymentservice caused a 23.2\u202fms p95 latency spike and a 0.023 error_rate, with some checkout failures.",
+   "root_cause": "Log errors show failed card charges and internal errors, indicating that packet loss caused intermittent communication failures with paymentservice.",
+   "evidence": [
+    "paymentservice: UnacceptedCreditCard [Error]: Sorry, we cannot process visa_electron credit cards. Only VISA or MasterCard is accepted."
+   ],
+   "fix": ""
+  }
+ ]
+}

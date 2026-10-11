@@ -1,0 +1,96 @@
+{
+ "plan": [
+  {
+   "vulnerability": "V3",
+   "rank": 1,
+   "fault": "network_partition",
+   "target": "paymentservice",
+   "params": {
+    "to": "checkoutservice"
+   },
+   "duration_s": 30,
+   "reason": "Paymentservice is a mandatory dependency for checkout; partitioning it from checkoutservice simulates a dependency outage and should trigger checkout failures.",
+   "prediction": {
+    "affected": [
+     "checkoutservice",
+     "frontend",
+     "paymentservice"
+    ],
+    "summary": "Network partition will make paymentservice unreachable, causing checkout failures and a spike in error_rate >0.01 and p95_ms >5\u00d7baseline."
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.01
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 268.2787,
+     "raised_from": 260
+    }
+   ],
+   "experiment": {
+    "id": "v3-network-partition-paymentservice",
+    "fault": "network_partition",
+    "target": "paymentservice",
+    "params": {
+     "to": "checkoutservice"
+    },
+    "duration_s": 30
+   },
+   "priority": {
+    "blast_radius": 3,
+    "criticality": "critical",
+    "score": 12
+   }
+  },
+  {
+   "vulnerability": "V2",
+   "rank": 2,
+   "fault": "pod_kill",
+   "target": "currencyservice",
+   "params": {},
+   "duration_s": 30,
+   "reason": "Single\u2011replica currencyservice is a critical dependency for checkout; killing it should produce a measurable error rate spike and latency increase.",
+   "prediction": {
+    "affected": [
+     "checkoutservice",
+     "frontend",
+     "currencyservice"
+    ],
+    "summary": "Currencyservice crash will cause checkout failures, raising error_rate >0.01 and p95_ms >5\u00d7baseline."
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.01
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 268.2787,
+     "raised_from": 260
+    }
+   ],
+   "experiment": {
+    "id": "v2-pod-kill-currencyservice",
+    "fault": "pod_kill",
+    "target": "currencyservice",
+    "params": {},
+    "duration_s": 30
+   },
+   "priority": {
+    "blast_radius": 3,
+    "criticality": "critical",
+    "score": 12
+   }
+  }
+ ],
+ "dropped": [],
+ "replan_note": "Previous experiments confirmed V1 and refuted V7. Remaining critical untested vulnerabilities are V2\u2013V6. We selected V2 (pod_kill on currencyservice) and V3 (network_partition between paymentservice and checkoutservice) to cover distinct fault types (stateful pod kill vs dependency outage) and to measure customer impact via error_rate and latency. These experiments target the most critical blast\u2011radius services and are expected to produce clear, measurable failures if the hypotheses hold.",
+ "feedback": null,
+ "diversity": null
+}

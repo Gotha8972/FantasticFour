@@ -1,0 +1,319 @@
+{
+ "source": "live cluster",
+ "pdb_hpa_known": true,
+ "services": {
+  "productcatalogservice": {
+   "replicas": 1,
+   "readiness_probe": true,
+   "liveness_probe": true,
+   "cpu_memory_limits": true,
+   "volumes": [],
+   "stateful_without_pvc": false,
+   "pdb": false,
+   "hpa": false,
+   "calls": [],
+   "callers": [
+    "checkoutservice",
+    "frontend",
+    "recommendationservice"
+   ],
+   "dependents": [
+    "checkoutservice",
+    "frontend",
+    "recommendationservice"
+   ],
+   "on_checkout_path": true,
+   "entrypoint": false,
+   "blast_radius": [
+    "checkoutservice",
+    "frontend",
+    "productcatalogservice",
+    "recommendationservice"
+   ],
+   "risk_score": 9
+  },
+  "redis-cart": {
+   "replicas": 1,
+   "readiness_probe": true,
+   "liveness_probe": true,
+   "cpu_memory_limits": true,
+   "volumes": [
+    "persistentVolumeClaim"
+   ],
+   "stateful_without_pvc": false,
+   "pdb": false,
+   "hpa": false,
+   "calls": [],
+   "callers": [
+    "cartservice"
+   ],
+   "dependents": [
+    "cartservice",
+    "checkoutservice",
+    "frontend"
+   ],
+   "on_checkout_path": true,
+   "entrypoint": false,
+   "blast_radius": [
+    "cartservice",
+    "checkoutservice",
+    "frontend",
+    "redis-cart"
+   ],
+   "risk_score": 9
+  },
+  "cartservice": {
+   "replicas": 1,
+   "readiness_probe": true,
+   "liveness_probe": true,
+   "cpu_memory_limits": true,
+   "volumes": [],
+   "stateful_without_pvc": false,
+   "pdb": false,
+   "hpa": false,
+   "calls": [
+    "redis-cart"
+   ],
+   "callers": [
+    "checkoutservice",
+    "frontend"
+   ],
+   "dependents": [
+    "checkoutservice",
+    "frontend"
+   ],
+   "on_checkout_path": true,
+   "entrypoint": false,
+   "blast_radius": [
+    "cartservice",
+    "checkoutservice",
+    "frontend"
+   ],
+   "risk_score": 8
+  },
+  "currencyservice": {
+   "replicas": 1,
+   "readiness_probe": true,
+   "liveness_probe": true,
+   "cpu_memory_limits": true,
+   "volumes": [],
+   "stateful_without_pvc": false,
+   "pdb": false,
+   "hpa": false,
+   "calls": [],
+   "callers": [
+    "checkoutservice",
+    "frontend"
+   ],
+   "dependents": [
+    "checkoutservice",
+    "frontend"
+   ],
+   "on_checkout_path": true,
+   "entrypoint": false,
+   "blast_radius": [
+    "checkoutservice",
+    "currencyservice",
+    "frontend"
+   ],
+   "risk_score": 8
+  },
+  "emailservice": {
+   "replicas": 1,
+   "readiness_probe": true,
+   "liveness_probe": true,
+   "cpu_memory_limits": true,
+   "volumes": [],
+   "stateful_without_pvc": false,
+   "pdb": false,
+   "hpa": false,
+   "calls": [],
+   "callers": [
+    "checkoutservice"
+   ],
+   "dependents": [
+    "checkoutservice",
+    "frontend"
+   ],
+   "on_checkout_path": true,
+   "entrypoint": false,
+   "blast_radius": [
+    "checkoutservice",
+    "emailservice",
+    "frontend"
+   ],
+   "risk_score": 8
+  },
+  "paymentservice": {
+   "replicas": 1,
+   "readiness_probe": true,
+   "liveness_probe": true,
+   "cpu_memory_limits": true,
+   "volumes": [],
+   "stateful_without_pvc": false,
+   "pdb": false,
+   "hpa": false,
+   "calls": [],
+   "callers": [
+    "checkoutservice"
+   ],
+   "dependents": [
+    "checkoutservice",
+    "frontend"
+   ],
+   "on_checkout_path": true,
+   "entrypoint": false,
+   "blast_radius": [
+    "checkoutservice",
+    "frontend",
+    "paymentservice"
+   ],
+   "risk_score": 8
+  },
+  "shippingservice": {
+   "replicas": 1,
+   "readiness_probe": true,
+   "liveness_probe": true,
+   "cpu_memory_limits": true,
+   "volumes": [],
+   "stateful_without_pvc": false,
+   "pdb": false,
+   "hpa": false,
+   "calls": [],
+   "callers": [
+    "checkoutservice",
+    "frontend"
+   ],
+   "dependents": [
+    "checkoutservice",
+    "frontend"
+   ],
+   "on_checkout_path": true,
+   "entrypoint": false,
+   "blast_radius": [
+    "checkoutservice",
+    "frontend",
+    "shippingservice"
+   ],
+   "risk_score": 8
+  },
+  "checkoutservice": {
+   "replicas": 1,
+   "readiness_probe": true,
+   "liveness_probe": true,
+   "cpu_memory_limits": true,
+   "volumes": [],
+   "stateful_without_pvc": false,
+   "pdb": false,
+   "hpa": false,
+   "calls": [
+    "cartservice",
+    "currencyservice",
+    "emailservice",
+    "paymentservice",
+    "productcatalogservice",
+    "shippingservice"
+   ],
+   "callers": [
+    "frontend"
+   ],
+   "dependents": [
+    "frontend"
+   ],
+   "on_checkout_path": true,
+   "entrypoint": false,
+   "blast_radius": [
+    "checkoutservice",
+    "frontend"
+   ],
+   "risk_score": 7
+  },
+  "adservice": {
+   "replicas": 1,
+   "readiness_probe": true,
+   "liveness_probe": true,
+   "cpu_memory_limits": true,
+   "volumes": [],
+   "stateful_without_pvc": false,
+   "pdb": false,
+   "hpa": false,
+   "calls": [],
+   "callers": [
+    "frontend"
+   ],
+   "dependents": [
+    "frontend"
+   ],
+   "on_checkout_path": false,
+   "entrypoint": false,
+   "blast_radius": [
+    "adservice",
+    "frontend"
+   ],
+   "risk_score": 5
+  },
+  "frontend": {
+   "replicas": 2,
+   "readiness_probe": true,
+   "liveness_probe": true,
+   "cpu_memory_limits": true,
+   "volumes": [],
+   "stateful_without_pvc": false,
+   "pdb": false,
+   "hpa": false,
+   "calls": [
+    "adservice",
+    "cartservice",
+    "checkoutservice",
+    "currencyservice",
+    "productcatalogservice",
+    "recommendationservice",
+    "shippingservice"
+   ],
+   "callers": [],
+   "dependents": [],
+   "on_checkout_path": false,
+   "entrypoint": true,
+   "blast_radius": [
+    "adservice",
+    "cartservice",
+    "checkoutservice",
+    "currencyservice",
+    "emailservice",
+    "frontend",
+    "paymentservice",
+    "productcatalogservice",
+    "recommendationservice",
+    "redis-cart",
+    "shippingservice"
+   ],
+   "risk_score": 5
+  },
+  "recommendationservice": {
+   "replicas": 1,
+   "readiness_probe": true,
+   "liveness_probe": true,
+   "cpu_memory_limits": true,
+   "volumes": [],
+   "stateful_without_pvc": false,
+   "pdb": false,
+   "hpa": false,
+   "calls": [
+    "productcatalogservice"
+   ],
+   "callers": [
+    "frontend"
+   ],
+   "dependents": [
+    "frontend"
+   ],
+   "on_checkout_path": false,
+   "entrypoint": false,
+   "blast_radius": [
+    "frontend",
+    "recommendationservice"
+   ],
+   "risk_score": 5
+  }
+ }
+}

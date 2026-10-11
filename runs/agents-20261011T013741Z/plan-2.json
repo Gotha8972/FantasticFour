@@ -1,0 +1,130 @@
+{
+ "plan": [
+  {
+   "vulnerability": "V2",
+   "rank": 1,
+   "fault": "pod_kill",
+   "target": "cartservice",
+   "params": {},
+   "duration_s": 30,
+   "reason": "Single replica on checkout path; pod_kill tests state loss and checkout abort.",
+   "prediction": {
+    "affected": [
+     "checkoutservice",
+     "frontend"
+    ],
+    "summary": "cartservice restart will cause checkout to fail retrieving cart data"
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.01
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 500
+    }
+   ],
+   "experiment": {
+    "id": "v2-pod-kill-cartservice",
+    "fault": "pod_kill",
+    "target": "cartservice",
+    "params": {},
+    "duration_s": 30
+   },
+   "priority": {
+    "blast_radius": 3,
+    "criticality": "critical",
+    "score": 12
+   }
+  },
+  {
+   "vulnerability": "V3",
+   "rank": 2,
+   "fault": "network_delay",
+   "target": "currencyservice",
+   "params": {
+    "latency": "500"
+   },
+   "duration_s": 30,
+   "reason": "High fan\u2011in latency propagation; delay tests checkout abort due to slow price conversion.",
+   "prediction": {
+    "affected": [
+     "checkoutservice",
+     "frontend"
+    ],
+    "summary": "currencyservice delay will inflate checkout latency and trigger error threshold"
+   },
+   "criteria": [
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 500
+    },
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.01
+    }
+   ],
+   "experiment": {
+    "id": "v3-network-delay-currencyservice",
+    "fault": "network_delay",
+    "target": "currencyservice",
+    "params": {
+     "latency": "500ms"
+    },
+    "duration_s": 30
+   },
+   "priority": {
+    "blast_radius": 3,
+    "criticality": "critical",
+    "score": 12
+   }
+  },
+  {
+   "vulnerability": "V7",
+   "rank": 3,
+   "fault": "pod_failure",
+   "target": "checkoutservice",
+   "params": {},
+   "duration_s": 30,
+   "reason": "Critical entrypoint; pod_failure simulates prolonged outage without restart to gauge revenue loss.",
+   "prediction": {
+    "affected": [
+     "frontend"
+    ],
+    "summary": "checkoutservice unavailability will block all checkout flows"
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.01
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 500
+    }
+   ],
+   "experiment": {
+    "id": "v7-pod-failure-checkoutservice",
+    "fault": "pod_failure",
+    "target": "checkoutservice",
+    "params": {},
+    "duration_s": 30
+   },
+   "priority": {
+    "blast_radius": 2,
+    "criticality": "critical",
+    "score": 8
+   }
+  }
+ ],
+ "dropped": [],
+ "replan_note": "V1 already refuted; remaining critical vulnerabilities prioritized by blast radius and severity. Experiments use distinct fault types to isolate failure modes and measure customer impact.",
+ "feedback": null
+}

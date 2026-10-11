@@ -1,0 +1,330 @@
+{
+ "plan": [
+  {
+   "vulnerability": "V2",
+   "rank": 1,
+   "fault": "network_partition",
+   "target": "productcatalogservice",
+   "params": {
+    "to": "frontend"
+   },
+   "duration_s": 30,
+   "reason": "Single replica productcatalogservice is critical; partitioning it from frontend isolates catalog data, causing site outage. Network_partition is the appropriate fault to test dependency down.",
+   "prediction": {
+    "affected": [
+     "productcatalogservice",
+     "frontend",
+     "recommendationservice"
+    ],
+    "summary": "Cutting off productcatalogservice will make catalog requests fail, leading to high error_rate and latency spikes in frontend and recommendationservice."
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.01
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 500
+    }
+   ],
+   "experiment": {
+    "id": "v2-network-partition-productcatalogservice",
+    "fault": "network_partition",
+    "target": "productcatalogservice",
+    "params": {
+     "to": "frontend"
+    },
+    "duration_s": 30
+   },
+   "priority": {
+    "blast_radius": 4,
+    "criticality": "critical",
+    "score": 16
+   }
+  },
+  {
+   "vulnerability": "V4",
+   "rank": 2,
+   "fault": "network_delay",
+   "target": "currencyservice",
+   "params": {
+    "latency": "500"
+   },
+   "duration_s": 30,
+   "reason": "currencyservice is a single replica; adding latency tests propagation of slow responses to checkout and frontend.",
+   "prediction": {
+    "affected": [
+     "currencyservice",
+     "checkoutservice",
+     "frontend"
+    ],
+    "summary": "Delaying currencyservice will increase latency for price calculations, raising p95_ms and potentially error_rate."
+   },
+   "criteria": [
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 500
+    },
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.01
+    }
+   ],
+   "experiment": {
+    "id": "v4-network-delay-currencyservice",
+    "fault": "network_delay",
+    "target": "currencyservice",
+    "params": {
+     "latency": "500ms"
+    },
+    "duration_s": 30
+   },
+   "priority": {
+    "blast_radius": 3,
+    "criticality": "critical",
+    "score": 12
+   }
+  },
+  {
+   "vulnerability": "V3",
+   "rank": 3,
+   "fault": "pod_kill",
+   "target": "cartservice",
+   "params": {},
+   "duration_s": 30,
+   "reason": "cartservice is a single\u2011replica stateful service; killing it tests data loss and downstream checkout failure.",
+   "prediction": {
+    "affected": [
+     "cartservice",
+     "checkoutservice",
+     "frontend"
+    ],
+    "summary": "Killing cartservice will cause cart operations to fail and checkout to error, increasing error_rate and p95_ms."
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.01
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 500
+    },
+    {
+     "metric": "integrity_violations",
+     "op": ">",
+     "value": 0
+    }
+   ],
+   "experiment": {
+    "id": "v3-pod-kill-cartservice",
+    "fault": "pod_kill",
+    "target": "cartservice",
+    "params": {},
+    "duration_s": 30
+   },
+   "priority": {
+    "blast_radius": 3,
+    "criticality": "critical",
+    "score": 12
+   }
+  },
+  {
+   "vulnerability": "V6",
+   "rank": 4,
+   "fault": "network_loss",
+   "target": "paymentservice",
+   "params": {
+    "loss": 20
+   },
+   "duration_s": 30,
+   "reason": "paymentservice is a single replica; 20% packet loss tests flaky dependency handling.",
+   "prediction": {
+    "affected": [
+     "paymentservice",
+     "checkoutservice",
+     "frontend"
+    ],
+    "summary": "Packet loss to paymentservice will cause payment failures, raising error_rate and p95_ms."
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.01
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 500
+    }
+   ],
+   "experiment": {
+    "id": "v6-network-loss-paymentservice",
+    "fault": "network_loss",
+    "target": "paymentservice",
+    "params": {
+     "loss": 20
+    },
+    "duration_s": 30
+   },
+   "priority": {
+    "blast_radius": 3,
+    "criticality": "high",
+    "score": 9
+   }
+  }
+ ],
+ "dropped": [
+  {
+   "item": {
+    "vulnerability": "V2",
+    "rank": 1,
+    "fault": "network_partition",
+    "target": "productcatalogservice",
+    "params": {
+     "to": "productcatalogservice"
+    },
+    "duration_s": 30,
+    "reason": "Single replica productcatalogservice is a critical fan\u2011in; partitioning it isolates all downstream services, exposing a site\u2011wide outage.",
+    "prediction": {
+     "affected": [
+      "productcatalogservice",
+      "checkoutservice",
+      "frontend",
+      "recommendationservice"
+     ],
+     "summary": "Partitioning productcatalogservice will make all services that depend on catalog data unavailable, causing high error_rate and latency spikes."
+    },
+    "criteria": [
+     {
+      "metric": "error_rate",
+      "op": ">",
+      "value": 0.01
+     },
+     {
+      "metric": "p95_ms",
+      "op": ">",
+      "value": 500
+     }
+    ]
+   },
+   "reason": "network_partition needs params.to: another service to cut the target off from"
+  },
+  {
+   "item": {
+    "vulnerability": "V3",
+    "rank": 2,
+    "fault": "pod_kill",
+    "target": "cartservice",
+    "params": {},
+    "duration_s": 30,
+    "reason": "Single replica cartservice; killing it tests stateful data loss and service outage. pod_kill is the fault for stateful services without persistence.",
+    "prediction": {
+     "affected": [
+      "cartservice",
+      "checkoutservice",
+      "frontend"
+     ],
+     "summary": "Killing cartservice will cause cart operations to fail and checkout to error, increasing error_rate and latency."
+    },
+    "criteria": [
+     {
+      "metric": "error_rate",
+      "op": ">",
+      "value": 0.01
+     },
+     {
+      "metric": "p95_ms",
+      "op": ">",
+      "value": 500
+     },
+     {
+      "metric": "integrity_violations",
+      "op": ">",
+      "value": 0
+     }
+    ]
+   },
+   "reason": "already run or planned"
+  },
+  {
+   "item": {
+    "vulnerability": "V4",
+    "rank": 3,
+    "fault": "network_delay",
+    "target": "currencyservice",
+    "params": {
+     "latency": "500"
+    },
+    "duration_s": 30,
+    "reason": "Single replica currencyservice; adding latency tests propagation of slow dependency to checkout and frontend. network_delay is the fault for high fan\u2011in latency propagation.",
+    "prediction": {
+     "affected": [
+      "currencyservice",
+      "checkoutservice",
+      "frontend"
+     ],
+     "summary": "500ms delay in currencyservice will increase latency in checkout and frontend, raising p95_ms and error_rate."
+    },
+    "criteria": [
+     {
+      "metric": "p95_ms",
+      "op": ">",
+      "value": 500
+     },
+     {
+      "metric": "error_rate",
+      "op": ">",
+      "value": 0.01
+     }
+    ]
+   },
+   "reason": "already run or planned"
+  },
+  {
+   "item": {
+    "vulnerability": "V6",
+    "rank": 4,
+    "fault": "network_loss",
+    "target": "paymentservice",
+    "params": {
+     "loss": "30"
+    },
+    "duration_s": 30,
+    "reason": "Single replica paymentservice; 30% loss tests flaky dependency causing checkout failures. network_loss is the fault for flaky dependency.",
+    "prediction": {
+     "affected": [
+      "paymentservice",
+      "checkoutservice",
+      "frontend"
+     ],
+     "summary": "30% packet loss to paymentservice will cause checkout to fail, increasing error_rate and latency."
+    },
+    "criteria": [
+     {
+      "metric": "error_rate",
+      "op": ">",
+      "value": 0.01
+     },
+     {
+      "metric": "p95_ms",
+      "op": ">",
+      "value": 500
+     }
+    ]
+   },
+   "reason": "loss must be a percentage in (0, 50]"
+  }
+ ],
+ "replan_note": "Removed the previously dropped network_partition on productcatalogservice; replaced with a partition that isolates it from frontend. Added distinct faults for cartservice (pod_kill), currencyservice (network_delay), and paymentservice (network_loss) to cover remaining critical vulnerabilities. All criteria measure customer impact and include integrity for stateful cartservice.",
+ "feedback": "network_partition on productcatalogservice was dropped: network_partition needs params.to: another service to cut the target off from. Return corrected or replacement experiments only; keep integrity criteria for stateful services.",
+ "diversity": null
+}

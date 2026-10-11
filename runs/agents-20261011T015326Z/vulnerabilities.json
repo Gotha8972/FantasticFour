@@ -1,0 +1,232 @@
+{
+ "vulnerabilities": [
+  {
+   "id": "V1",
+   "service": "productcatalogservice",
+   "severity": "critical",
+   "weakness": "Missing catalog data stops checkout and product browsing",
+   "evidence": {
+    "replicas": 1,
+    "pdb": false,
+    "hpa": false,
+    "checkout_fails_without_it": true
+   },
+   "hypothesis": "if the productcatalogservice pod is killed, checkout and product pages fail",
+   "blast_radius": [
+    "checkoutservice",
+    "frontend",
+    "productcatalogservice",
+    "recommendationservice"
+   ],
+   "unverified_evidence_dropped": {},
+   "predicted_blast_radius": [
+    "checkoutservice",
+    "frontend",
+    "productcatalogservice",
+    "recommendationservice"
+   ],
+   "risk_score": 9,
+   "status": "confirmed"
+  },
+  {
+   "id": "V2",
+   "service": "currencyservice",
+   "severity": "critical",
+   "weakness": "Currency conversion is required for checkout; its failure stops checkout",
+   "evidence": {
+    "replicas": 1,
+    "pdb": false,
+    "hpa": false,
+    "checkout_fails_without_it": true
+   },
+   "hypothesis": "if the currencyservice pod is killed, checkout aborts due to missing price conversion",
+   "blast_radius": [
+    "checkoutservice",
+    "currencyservice",
+    "frontend"
+   ],
+   "unverified_evidence_dropped": {},
+   "predicted_blast_radius": [
+    "checkoutservice",
+    "currencyservice",
+    "frontend"
+   ],
+   "risk_score": 8,
+   "status": "confirmed"
+  },
+  {
+   "id": "V3",
+   "service": "paymentservice",
+   "severity": "critical",
+   "weakness": "Payment processing is mandatory for checkout; its failure stops checkout",
+   "evidence": {
+    "replicas": 1,
+    "pdb": false,
+    "hpa": false,
+    "checkout_fails_without_it": true
+   },
+   "hypothesis": "if the paymentservice pod is killed, checkout fails and revenue is lost",
+   "blast_radius": [
+    "checkoutservice",
+    "frontend",
+    "paymentservice"
+   ],
+   "unverified_evidence_dropped": {},
+   "predicted_blast_radius": [
+    "checkoutservice",
+    "frontend",
+    "paymentservice"
+   ],
+   "risk_score": 8,
+   "status": "confirmed"
+  },
+  {
+   "id": "V4",
+   "service": "shippingservice",
+   "severity": "critical",
+   "weakness": "Shipping calculation is required for checkout; its failure stops checkout",
+   "evidence": {
+    "replicas": 1,
+    "pdb": false,
+    "hpa": false,
+    "checkout_fails_without_it": true
+   },
+   "hypothesis": "if the shippingservice pod is killed, checkout aborts due to missing shipping cost",
+   "blast_radius": [
+    "checkoutservice",
+    "frontend",
+    "shippingservice"
+   ],
+   "unverified_evidence_dropped": {},
+   "predicted_blast_radius": [
+    "checkoutservice",
+    "frontend",
+    "shippingservice"
+   ],
+   "risk_score": 8,
+   "status": "untested"
+  },
+  {
+   "id": "V5",
+   "service": "checkoutservice",
+   "severity": "critical",
+   "weakness": "All checkout calls depend on checkoutservice; its failure stops checkout",
+   "evidence": {
+    "replicas": 1,
+    "pdb": false,
+    "hpa": false,
+    "checkout_fails_without_it": true
+   },
+   "hypothesis": "if the checkoutservice pod crashes, checkout requests fail and revenue is lost",
+   "blast_radius": [
+    "checkoutservice",
+    "frontend"
+   ],
+   "unverified_evidence_dropped": {},
+   "predicted_blast_radius": [
+    "checkoutservice",
+    "frontend"
+   ],
+   "risk_score": 7,
+   "status": "untested"
+  },
+  {
+   "id": "V6",
+   "service": "cartservice",
+   "severity": "critical",
+   "weakness": "Cart service is required for checkout; its failure stops checkout",
+   "evidence": {
+    "replicas": 2,
+    "pdb": false,
+    "hpa": false,
+    "checkout_fails_without_it": true
+   },
+   "hypothesis": "if the cartservice pod is killed, checkout fails due to missing cart data",
+   "blast_radius": [
+    "cartservice",
+    "checkoutservice",
+    "frontend"
+   ],
+   "unverified_evidence_dropped": {},
+   "predicted_blast_radius": [
+    "cartservice",
+    "checkoutservice",
+    "frontend"
+   ],
+   "risk_score": 6,
+   "status": "untested"
+  },
+  {
+   "id": "V7",
+   "service": "frontend",
+   "severity": "critical",
+   "weakness": "Single replica with no PDB or HPA makes the site\u2019s entry point a single point of failure",
+   "evidence": {
+    "replicas": 2,
+    "pdb": false,
+    "hpa": false
+   },
+   "hypothesis": "if the sole frontend pod is killed, the entire site becomes unavailable",
+   "blast_radius": [
+    "adservice",
+    "cartservice",
+    "checkoutservice",
+    "currencyservice",
+    "emailservice",
+    "frontend",
+    "paymentservice",
+    "productcatalogservice",
+    "recommendationservice",
+    "redis-cart",
+    "shippingservice"
+   ],
+   "unverified_evidence_dropped": {},
+   "predicted_blast_radius": [
+    "frontend",
+    "adservice",
+    "cartservice",
+    "checkoutservice",
+    "currencyservice",
+    "emailservice",
+    "paymentservice",
+    "productcatalogservice",
+    "recommendationservice",
+    "redis-cart",
+    "shippingservice"
+   ],
+   "risk_score": 5,
+   "status": "refuted"
+  }
+ ],
+ "rejected": [
+  {
+   "id": "V4",
+   "service": "redis-cart",
+   "severity": "critical",
+   "weakness": "Cart persistence relies on a single Redis pod; failure loses cart state",
+   "evidence": {
+    "replicas": "1",
+    "volumes": [
+     "persistentVolumeClaim"
+    ],
+    "pdb": "false",
+    "hpa": "false",
+    "checkout_fails_without_it": "true"
+   },
+   "hypothesis": "if the redis-cart pod is killed, cart data is lost and checkout fails",
+   "blast_radius": [
+    "cartservice",
+    "checkoutservice",
+    "frontend",
+    "redis-cart"
+   ],
+   "rejected_because": "claims data loss, but the service mounts a persistent volume"
+  }
+ ],
+ "systemic": [
+  "All services run a single replica with no PDB or HPA, exposing the cluster to pod\u2011kill outages; all lack readiness/liveness probes that could mitigate transient failures"
+ ],
+ "blind_spots": [
+  "Facts do not reveal internal retry logic, circuit breakers, or timeout configurations; they also omit network latency or partitioning effects that could surface under chaos testing"
+ ]
+}

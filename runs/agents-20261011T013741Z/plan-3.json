@@ -1,0 +1,96 @@
+{
+ "plan": [
+  {
+   "vulnerability": "V3",
+   "rank": 1,
+   "fault": "pod_kill",
+   "target": "currencyservice",
+   "params": {},
+   "duration_s": 30,
+   "reason": "Single replica on checkout path; pod_kill directly tests availability impact on checkout flow.",
+   "prediction": {
+    "affected": [
+     "checkoutservice",
+     "frontend"
+    ],
+    "summary": "Killing currencyservice will cause checkout to fail price conversion, aborting checkout."
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.01
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 500
+    }
+   ],
+   "experiment": {
+    "id": "v3-pod-kill-currencyservice",
+    "fault": "pod_kill",
+    "target": "currencyservice",
+    "params": {},
+    "duration_s": 30
+   },
+   "priority": {
+    "blast_radius": 3,
+    "criticality": "critical",
+    "score": 12
+   }
+  },
+  {
+   "vulnerability": "V4",
+   "rank": 2,
+   "fault": "network_loss",
+   "target": "emailservice",
+   "params": {
+    "loss": 20
+   },
+   "duration_s": 30,
+   "reason": "Emailservice is a flaky dependency; 20% loss simulates intermittent network failures and tests if checkout still proceeds without email confirmation.",
+   "prediction": {
+    "affected": [
+     "checkoutservice",
+     "frontend"
+    ],
+    "summary": "Network loss to emailservice will delay or drop email sends but should not abort checkout."
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.01
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 500
+    },
+    {
+     "metric": "integrity_violations",
+     "op": ">",
+     "value": 0
+    }
+   ],
+   "experiment": {
+    "id": "v4-network-loss-emailservice",
+    "fault": "network_loss",
+    "target": "emailservice",
+    "params": {
+     "loss": 20
+    },
+    "duration_s": 30
+   },
+   "priority": {
+    "blast_radius": 3,
+    "criticality": "critical",
+    "score": 12
+   }
+  }
+ ],
+ "dropped": [],
+ "replan_note": "Prior experiments confirmed cartservice pod_kill and refuted productcatalogservice pod_kill. Remaining critical services are currencyservice, emailservice, paymentservice, shippingservice, checkoutservice. We prioritize currencyservice (single point on checkout path) first, then emailservice (flaky dependency). Subsequent experiments will target paymentservice and shippingservice with network_partition, and finally checkoutservice with pod_kill to validate single entrypoint failure. Each plan uses distinct fault types to distinguish failure modes and measure customer impact via error_rate, p95_ms, and integrity_violations where applicable.",
+ "feedback": null
+}

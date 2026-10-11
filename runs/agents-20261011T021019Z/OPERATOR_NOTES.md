@@ -1,0 +1,9 @@
+# Operator notes: showcase rehearsal
+
+Rehearsal for the re-recorded video, run with code-computed severity, fault-family planning and customer-harm criteria (commit "Stricter, code-computed severity…"). Three fixes were approved in mission control: Redis persistence 40 → 78 (cart kept), frontend replicas 17 → 96, cart replicas 30 → 78. Remediation chose no fix for the network partition, delay and packet loss: replicas don't fix a network fault.
+
+**Two marks in [FINDINGS.md](FINDINGS.md) are not the AI's fault or are already handled:**
+- *"Contradicted by the collected config: it says emptyDir, but the service mounts a persistent volume"* is **wrong**. Redis was on emptyDir when it was killed; the Redis fix approved later in this run added the PVC, and this run's `facts.json` was rewritten with the post-fix config, which the report then checked against. Fixed in the same commit: `facts.json` now stays the audited config, the post-fix config goes to `facts-current.json`, and each experiment records the config it ran against (`test_report_judges_config_claims_at_experiment_time`). This run was recorded before that fix, so its report still shows the flag; the evidence is left as recorded.
+- *"452%"* and *"23.2 ms"* are numbers the model garbled (the data says 45.2% errors for cart, and p95 150 ms with 2.3% errors for payment). The fact-check flags both, as designed.
+
+**Kill-switch blind spot seen again:** the catalog partition reached p95 29 s with 0 errors and no guard breach; requests hang during the cut and Locust only reports completed requests, so the guard can't see them until the fault is reverted. The verdict still caught it because recovery snapshots count.

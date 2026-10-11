@@ -1,0 +1,145 @@
+{
+ "plan": [
+  {
+   "vulnerability": "V1",
+   "rank": 1,
+   "fault": "pod_kill",
+   "target": "productcatalogservice",
+   "params": {},
+   "duration_s": 30,
+   "reason": "productcatalogservice is single\u2011replica, no PDB/HPA; killing it tests state loss and cascading failure to checkout and browsing.  Expected high error_rate and p95 latency in dependent services.",
+   "prediction": {
+    "affected": [
+     "checkoutservice",
+     "frontend",
+     "productcatalogservice",
+     "recommendationservice"
+    ],
+    "summary": "Pod kill will cause checkout and product pages to fail, raising error_rate >0.01 and p95_ms >5\u00d7baseline."
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.01
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 268.2787,
+     "raised_from": 250
+    }
+   ],
+   "experiment": {
+    "id": "v1-pod-kill-productcatalogservice",
+    "fault": "pod_kill",
+    "target": "productcatalogservice",
+    "params": {},
+    "duration_s": 30
+   },
+   "priority": {
+    "blast_radius": 4,
+    "criticality": "critical",
+    "score": 16
+   }
+  },
+  {
+   "vulnerability": "V2",
+   "rank": 2,
+   "fault": "network_loss",
+   "target": "currencyservice",
+   "params": {
+    "loss": 30
+   },
+   "duration_s": 30,
+   "reason": "Currencyservice is critical for checkout; 30% packet loss simulates flaky dependency and should trigger checkout failures without killing the pod.",
+   "prediction": {
+    "affected": [
+     "checkoutservice",
+     "frontend",
+     "currencyservice"
+    ],
+    "summary": "Network loss will cause checkout aborts, raising error_rate >0.01 and p95_ms >5\u00d7baseline."
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.01
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 268.2787,
+     "raised_from": 250
+    }
+   ],
+   "experiment": {
+    "id": "v2-network-loss-currencyservice",
+    "fault": "network_loss",
+    "target": "currencyservice",
+    "params": {
+     "loss": 30
+    },
+    "duration_s": 30
+   },
+   "priority": {
+    "blast_radius": 3,
+    "criticality": "critical",
+    "score": 12
+   }
+  },
+  {
+   "vulnerability": "V3",
+   "rank": 3,
+   "fault": "cpu_stress",
+   "target": "paymentservice",
+   "params": {
+    "load": 80,
+    "workers": 1
+   },
+   "duration_s": 30,
+   "reason": "paymentservice is single\u2011replica; CPU stress tests overload handling of payment requests, expecting increased latency and error_rate.",
+   "prediction": {
+    "affected": [
+     "checkoutservice",
+     "frontend",
+     "paymentservice"
+    ],
+    "summary": "CPU stress will overload payment processing, raising error_rate >0.01 and p95_ms >5\u00d7baseline."
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.01
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 268.2787,
+     "raised_from": 250
+    }
+   ],
+   "experiment": {
+    "id": "v3-cpu-stress-paymentservice",
+    "fault": "cpu_stress",
+    "target": "paymentservice",
+    "params": {
+     "load": 80,
+     "workers": 1
+    },
+    "duration_s": 30
+   },
+   "priority": {
+    "blast_radius": 3,
+    "criticality": "critical",
+    "score": 12
+   }
+  }
+ ],
+ "dropped": [],
+ "replan_note": "All three experiments use distinct fault types (pod_kill, network_loss, cpu_stress) to cover different failure modes.  V1 and V2 are highest risk_score and directly impact checkout; V3 adds a third critical service.  No repeated fault+target pairs from history.  Criteria focus on customer impact metrics (error_rate, p95_ms) as required.",
+ "feedback": null,
+ "diversity": null
+}

@@ -1,0 +1,37 @@
+{
+ "summary": "The chaos experiments exposed critical single\u2011replica weaknesses across the checkout path, causing significant error spikes and service unavailability. All affected services recovered within seconds, but the lack of PDB/HPA left them vulnerable to repeated outages. Implementing replicas for cartservice and productcatalogservice mitigated the most severe failures, while other services still require architectural changes.",
+ "findings": [
+  {
+   "experiment_id": "v1-pod-kill-productcatalogservice",
+   "title": "Productcatalogservice pod kill",
+   "severity": "high",
+   "what_happened": "Killing the sole productcatalogservice pod caused 54.5% error rate and 73\u202fms p95 latency during the fault, but the service recovered in 9.98\u202fs.",
+   "root_cause": "The service had no PDB or HPA and a single replica, so the pod kill left no fallback. Evidence: \"frontend: {\\\"error\\\":\\\"could not retrieve product: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.223.78:3550: connect: connection refused\\\"\\\"\"",
+   "fix": "Add a second replica and enable a PDB to prevent single\u2011point failures. The remediation plan for cartservice demonstrates the expected improvement."
+  },
+  {
+   "experiment_id": "v2-pod-kill-cartservice",
+   "title": "Cartservice pod kill",
+   "severity": "high",
+   "what_happened": "Killing the sole cartservice pod raised error rate to 45.2% and p95 latency to 2,300\u202fms, but the service recovered in 56.2\u202fs.",
+   "root_cause": "Single\u2011replica without PDB/HPA caused a complete outage. Evidence: \"frontend: {\\\"error\\\":\\\"could not retrieve cart: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.109.18:7070: connect: connection refused\\\"\\\"\"",
+   "fix": "Increase replicas to 2 and add a PDB. The remediation increased the score to 95 and eliminated the error spike."
+  },
+  {
+   "experiment_id": "v3-pod-kill-currencyservice",
+   "title": "Currencyservice pod kill",
+   "severity": "high",
+   "what_happened": "Killing the single currencyservice pod caused a 16.3% error rate and 120\u202fms p95 latency, recovering in 24.6\u202fs.",
+   "root_cause": "No redundancy for currencyservice left the checkout flow unable to convert prices. Evidence: \"frontend: {\\\"error\\\":\\\"could not retrieve currencies: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.54.127:7000: connect: connection refused\\\"\\\"\"",
+   "fix": "No fix was applied; a future patch should add replicas or a PDB."
+  },
+  {
+   "experiment_id": "v5-pod-kill-paymentservice",
+   "title": "Paymentservice pod kill",
+   "severity": "high",
+   "what_happened": "Killing the sole paymentservice pod raised error rate to 4.8% and kept p95 latency at 170\u202fms, recovering in 1.36\u202fs.",
+   "root_cause": "Single\u2011replica without PDB/HPA caused payment failures. Evidence: \"frontend: {\\\"error\\\":\\\"failed to complete the order: rpc error: code = Internal desc = failed to charge card: could not charge the card: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.220.189:50051: connect: connection refused\\\"\\\"\"",
+   "fix": "No fix was applied; adding replicas or a PDB would eliminate the outage."
+  }
+ ]
+}

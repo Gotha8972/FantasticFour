@@ -1,0 +1,56 @@
+{
+ "plan": [
+  {
+   "vulnerability": "V1",
+   "rank": 1,
+   "fault": "pod_kill",
+   "target": "redis-cart",
+   "params": {},
+   "duration_s": 30,
+   "reason": "Stateful data lost on pod restart; pod_kill tests data persistence and cart integrity.",
+   "prediction": {
+    "affected": [
+     "cartservice",
+     "checkoutservice",
+     "frontend",
+     "redis-cart"
+    ],
+    "summary": "Killing redis-cart will cause cart data loss, leading to checkout failures and increased error rate."
+   },
+   "criteria": [
+    {
+     "metric": "integrity_violations",
+     "op": ">",
+     "value": 0
+    },
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.01
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 268.2787,
+     "raised_from": 265
+    }
+   ],
+   "experiment": {
+    "id": "v1-pod-kill-redis-cart",
+    "fault": "pod_kill",
+    "target": "redis-cart",
+    "params": {},
+    "duration_s": 30
+   },
+   "priority": {
+    "blast_radius": 4,
+    "criticality": "critical",
+    "score": 16
+   }
+  }
+ ],
+ "dropped": [],
+ "replan_note": "No prior experiments; this is the first test for V1. Subsequent experiments will target other single\u2011replica services to assess availability impact.",
+ "feedback": null,
+ "diversity": null
+}

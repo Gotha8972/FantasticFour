@@ -1,0 +1,53 @@
+{
+ "plan": [
+  {
+   "vulnerability": "V2",
+   "rank": 1,
+   "fault": "network_loss",
+   "target": "currencyservice",
+   "params": {
+    "loss": 30
+   },
+   "duration_s": 30,
+   "reason": "Currencyservice is single\u2011replica critical dependency for checkout; a 30% packet loss will simulate flaky connectivity and reveal whether checkout aborts. Using network_loss instead of pod_kill distinguishes a transient network issue from a pod crash, providing more actionable insight.",
+   "prediction": {
+    "affected": [
+     "checkoutservice",
+     "frontend",
+     "currencyservice"
+    ],
+    "summary": "30% loss to currencyservice will cause checkoutservice to time out on price conversion, raising error_rate >0.01 and p95_ms >5\u00d7baseline."
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.01
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 268.2787
+    }
+   ],
+   "experiment": {
+    "id": "v2-network-loss-currencyservice",
+    "fault": "network_loss",
+    "target": "currencyservice",
+    "params": {
+     "loss": 30
+    },
+    "duration_s": 30
+   },
+   "priority": {
+    "blast_radius": 3,
+    "criticality": "critical",
+    "score": 12
+   }
+  }
+ ],
+ "dropped": [],
+ "replan_note": "No prior network_loss on currencyservice; this experiment will test flaky dependency hypothesis and measure customer impact.",
+ "feedback": null,
+ "diversity": null
+}

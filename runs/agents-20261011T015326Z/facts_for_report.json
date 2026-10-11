@@ -1,0 +1,541 @@
+{
+ "vulnerabilities": [
+  {
+   "id": "V1",
+   "service": "productcatalogservice",
+   "severity": "critical",
+   "weakness": "Missing catalog data stops checkout and product browsing",
+   "status": "confirmed"
+  },
+  {
+   "id": "V2",
+   "service": "currencyservice",
+   "severity": "critical",
+   "weakness": "Currency conversion is required for checkout; its failure stops checkout",
+   "status": "confirmed"
+  },
+  {
+   "id": "V3",
+   "service": "paymentservice",
+   "severity": "critical",
+   "weakness": "Payment processing is mandatory for checkout; its failure stops checkout",
+   "status": "confirmed"
+  },
+  {
+   "id": "V4",
+   "service": "shippingservice",
+   "severity": "critical",
+   "weakness": "Shipping calculation is required for checkout; its failure stops checkout",
+   "status": "untested"
+  },
+  {
+   "id": "V5",
+   "service": "checkoutservice",
+   "severity": "critical",
+   "weakness": "All checkout calls depend on checkoutservice; its failure stops checkout",
+   "status": "untested"
+  },
+  {
+   "id": "V6",
+   "service": "cartservice",
+   "severity": "critical",
+   "weakness": "Cart service is required for checkout; its failure stops checkout",
+   "status": "untested"
+  },
+  {
+   "id": "V7",
+   "service": "frontend",
+   "severity": "critical",
+   "weakness": "Single replica with no PDB or HPA makes the site\u2019s entry point a single point of failure",
+   "status": "refuted"
+  }
+ ],
+ "experiments": [
+  {
+   "experiment_id": "v7-pod-kill-frontend",
+   "vulnerability": "V7",
+   "fault": "pod_kill",
+   "target": "frontend",
+   "params": {},
+   "prediction": {
+    "affected": [
+     "frontend",
+     "adservice",
+     "cartservice",
+     "checkoutservice",
+     "currencyservice",
+     "emailservice",
+     "paymentservice",
+     "productcatalogservice",
+     "recommendationservice",
+     "redis-cart",
+     "shippingservice"
+    ],
+    "summary": "Frontend crash will make the entire site unavailable, causing high error_rate across all services."
+   },
+   "config": {
+    "replicas": 2,
+    "pdb": false,
+    "hpa": false,
+    "volumes": [],
+    "readiness_probe": true,
+    "liveness_probe": true
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.01
+    }
+   ],
+   "verdict": "refuted",
+   "safety_decision": "approve",
+   "ramp": [
+    null
+   ],
+   "tolerated_up_to": null,
+   "limit_crossed_at": null,
+   "phases": {
+    "pre": {
+     "error_rate": 0.0,
+     "p95_ms": 91.0,
+     "unhealthy": []
+    },
+    "during_worst": {
+     "error_rate": 0.0,
+     "p95_ms": 180.0,
+     "unhealthy": [
+      "frontend"
+     ]
+    },
+    "post": {
+     "error_rate": 0.0,
+     "p95_ms": 33.0,
+     "unhealthy": []
+    }
+   },
+   "observed": {
+    "error_rate": 0.0,
+    "p95_ms": 180.0,
+    "unhealthy_count": 1,
+    "breach": null,
+    "recovery_s": 1.19,
+    "service_ready_s": 12.5,
+    "customer_recovered_s": 0.0,
+    "users": 20,
+    "integrity_violations": 0
+   },
+   "criteria_met": [],
+   "recovery_s": 1.19,
+   "integrity_violations": [],
+   "score": {
+    "score": 97,
+    "breakdown": {
+     "E": 0.0,
+     "L": 2.8,
+     "R": 0.3,
+     "B": 0.0,
+     "I": 0.0
+    }
+   },
+   "remediation": null,
+   "run_dir": "runs/v7-pod-kill-frontend-s1-20261011T015401.333326Z",
+   "log_errors": []
+  },
+  {
+   "experiment_id": "v1-pod-kill-productcatalogservice",
+   "vulnerability": "V1",
+   "fault": "pod_kill",
+   "target": "productcatalogservice",
+   "params": {},
+   "prediction": {
+    "affected": [
+     "checkoutservice",
+     "frontend",
+     "productcatalogservice",
+     "recommendationservice"
+    ],
+    "summary": "Pod kill will cause checkout and product pages to fail, raising error_rate >0.01 and p95_ms >5\u00d7baseline."
+   },
+   "config": {
+    "replicas": 1,
+    "pdb": false,
+    "hpa": false,
+    "volumes": [],
+    "readiness_probe": true,
+    "liveness_probe": true
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.01
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 268.2787,
+     "raised_from": 250
+    }
+   ],
+   "verdict": "confirmed",
+   "safety_decision": "approve",
+   "ramp": [
+    null
+   ],
+   "tolerated_up_to": null,
+   "limit_crossed_at": null,
+   "phases": {
+    "pre": {
+     "error_rate": 0.0,
+     "p95_ms": 32.0,
+     "unhealthy": []
+    },
+    "during_worst": {
+     "error_rate": 0.5161290322580645,
+     "p95_ms": 60000.0,
+     "unhealthy": [
+      "productcatalogservice"
+     ]
+    },
+    "post": {
+     "error_rate": 0.0,
+     "p95_ms": 71.0,
+     "unhealthy": []
+    }
+   },
+   "observed": {
+    "error_rate": 0.5161290322580645,
+    "p95_ms": 60000.0,
+    "unhealthy_count": 1,
+    "breach": {
+     "metric": "error_rate",
+     "value": 0.5161290322580645,
+     "limit": 0.05
+    },
+    "recovery_s": 15.773,
+    "service_ready_s": 3.8,
+    "customer_recovered_s": 25.4,
+    "users": 20,
+    "integrity_violations": 0
+   },
+   "criteria_met": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.01
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 268.2787,
+     "raised_from": 250
+    }
+   ],
+   "recovery_s": 15.773,
+   "integrity_violations": [],
+   "score": {
+    "score": 27,
+    "breakdown": {
+     "E": 40.0,
+     "L": 25.0,
+     "R": 3.9,
+     "B": 3.6,
+     "I": 0.0
+    }
+   },
+   "remediation": {
+    "choice": {
+     "fix_id": "productcatalog-replicas",
+     "reason": "The experiment killed the only pod of productcatalogservice, exposing the single\u2011replica failure mode. The catalog fix increases replicas to 2, eliminating the single point of failure.",
+     "expected_effect": "On re\u2011run, error_rate should drop below the 0.05 threshold, p95 latency should be near normal, and the service will remain healthy during the fault."
+    },
+    "fix": "productcatalog-replicas",
+    "before": 27,
+    "after": 98,
+    "after_breakdown": {
+     "E": 0.0,
+     "L": 1.5,
+     "R": 0.3,
+     "B": 0.0,
+     "I": 0.0
+    },
+    "after_observed": {
+     "error_rate": 0.0,
+     "p95_ms": 90.0,
+     "unhealthy_count": 1,
+     "breach": null,
+     "recovery_s": 1.293,
+     "service_ready_s": 3.8,
+     "customer_recovered_s": 0.0,
+     "users": 20
+    },
+    "after_integrity": [],
+    "after_run_dir": "runs/v1-pod-kill-productcatalogservice-after-20261011T015559.823382Z",
+    "verdict": "improved",
+    "kept": true,
+    "after_verdict": "refuted"
+   },
+   "run_dir": "runs/v1-pod-kill-productcatalogservice-s1-20261011T015453.929802Z",
+   "log_errors": [
+    "frontend: {\"error\":\"could not retrieve product: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.223.78:3550: connect: connection refused\\\"\",\"http.req.id\":\"4adf0d04-7238-46fd-a599-08da98ff54fc\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/6E92",
+    "frontend: {\"http.req.id\":\"4adf0d04-7238-46fd-a599-08da98ff54fc\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/6E92ZMYYFZ\",\"http.resp.bytes\":5101,\"http.resp.status\":500,\"http.resp.took_ms\":2,\"message\":\"request complete\",\"session\":\"539cdca5-7f87-44b5-a193-489f65fb8d39\",\"severity\":\"debug\",\"timestamp\":\"2026-1",
+    "frontend: {\"error\":\"could not retrieve product: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.223.78:3550: connect: connection refused\\\"\",\"http.req.id\":\"906d0ed0-4ee4-491e-9a81-2c635653312d\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/1YMW",
+    "frontend: {\"http.req.id\":\"906d0ed0-4ee4-491e-9a81-2c635653312d\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/1YMWWN1N4O\",\"http.resp.bytes\":5101,\"http.resp.status\":500,\"http.resp.took_ms\":1,\"message\":\"request complete\",\"session\":\"e4166fc2-6b19-49a4-8241-6f16ec15dbbd\",\"severity\":\"debug\",\"timestamp\":\"2026-1",
+    "frontend: {\"error\":\"could not retrieve product: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.223.78:3550: connect: connection refused\\\"\",\"http.req.id\":\"006cf30d-5ff2-413f-ae09-18ecad8f126c\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/OLJC",
+    "frontend: {\"http.req.id\":\"006cf30d-5ff2-413f-ae09-18ecad8f126c\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/OLJCESPC7Z\",\"http.resp.bytes\":5101,\"http.resp.status\":500,\"http.resp.took_ms\":0,\"message\":\"request complete\",\"session\":\"61978733-baf1-4d20-b3a8-434e37286d64\",\"severity\":\"debug\",\"timestamp\":\"2026-1",
+    "frontend: {\"error\":\"could not retrieve product: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.223.78:3550: connect: connection refused\\\"\",\"http.req.id\":\"2b47c69a-79aa-4c35-a583-6a55062a0a0c\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/6E92",
+    "frontend: {\"http.req.id\":\"2b47c69a-79aa-4c35-a583-6a55062a0a0c\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/6E92ZMYYFZ\",\"http.resp.bytes\":5101,\"http.resp.status\":500,\"http.resp.took_ms\":1,\"message\":\"request complete\",\"session\":\"7cc586e3-215a-40d9-87f6-f65f92eae92c\",\"severity\":\"debug\",\"timestamp\":\"2026-1",
+    "frontend: {\"error\":\"could not retrieve products: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.223.78:3550: connect: connection refused\\\"\",\"http.req.id\":\"cef16bd9-c307-40eb-b2b8-0d512d0fb626\",\"http.req.method\":\"GET\",\"http.req.path\":\"/\",\"message\"",
+    "frontend: {\"http.req.id\":\"cef16bd9-c307-40eb-b2b8-0d512d0fb626\",\"http.req.method\":\"GET\",\"http.req.path\":\"/\",\"http.resp.bytes\":5098,\"http.resp.status\":500,\"http.resp.took_ms\":3,\"message\":\"request complete\",\"session\":\"9f95c15e-3b86-46b5-a73e-c26524a459a3\",\"severity\":\"debug\",\"timestamp\":\"2026-10-11T01:54:57.3931",
+    "frontend: {\"error\":\"could not retrieve products: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.223.78:3550: connect: connection refused\\\"\",\"http.req.id\":\"99ede18b-97b8-4fb0-80c9-49ea312cd41a\",\"http.req.method\":\"GET\",\"http.req.path\":\"/\",\"message\"",
+    "frontend: {\"http.req.id\":\"99ede18b-97b8-4fb0-80c9-49ea312cd41a\",\"http.req.method\":\"GET\",\"http.req.path\":\"/\",\"http.resp.bytes\":5098,\"http.resp.status\":500,\"http.resp.took_ms\":2,\"message\":\"request complete\",\"session\":\"7e313a25-e930-4404-b02b-b2d35acee6e8\",\"severity\":\"debug\",\"timestamp\":\"2026-10-11T01:54:57.9718",
+    "frontend: {\"error\":\"could not retrieve products: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.223.78:3550: connect: connection refused\\\"\",\"http.req.id\":\"fb61e272-3f78-4085-b17a-3991712aaadc\",\"http.req.method\":\"GET\",\"http.req.path\":\"/\",\"message\"",
+    "frontend: {\"http.req.id\":\"fb61e272-3f78-4085-b17a-3991712aaadc\",\"http.req.method\":\"GET\",\"http.req.path\":\"/\",\"http.resp.bytes\":5098,\"http.resp.status\":500,\"http.resp.took_ms\":3,\"message\":\"request complete\",\"session\":\"2601a197-d59d-48fa-8416-391908379bb4\",\"severity\":\"debug\",\"timestamp\":\"2026-10-11T01:54:58.2565",
+    "frontend: {\"error\":\"could not retrieve product: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.223.78:3550: connect: connection refused\\\"\",\"http.req.id\":\"327e9321-a791-4923-b295-58fda0e8a763\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/OLJC",
+    "frontend: {\"http.req.id\":\"327e9321-a791-4923-b295-58fda0e8a763\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/OLJCESPC7Z\",\"http.resp.bytes\":5101,\"http.resp.status\":500,\"http.resp.took_ms\":0,\"message\":\"request complete\",\"session\":\"9f95c15e-3b86-46b5-a73e-c26524a459a3\",\"severity\":\"debug\",\"timestamp\":\"2026-1",
+    "frontend: {\"error\":\"could not retrieve product: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.223.78:3550: connect: connection refused\\\"\",\"http.req.id\":\"51da5d10-4369-4456-b98f-da24f3d996ac\",\"http.req.method\":\"POST\",\"http.req.path\":\"/cart\",\"mess",
+    "frontend: {\"http.req.id\":\"51da5d10-4369-4456-b98f-da24f3d996ac\",\"http.req.method\":\"POST\",\"http.req.path\":\"/cart\",\"http.resp.bytes\":5103,\"http.resp.status\":500,\"http.resp.took_ms\":0,\"message\":\"request complete\",\"session\":\"9f95c15e-3b86-46b5-a73e-c26524a459a3\",\"severity\":\"debug\",\"timestamp\":\"2026-10-11T01:54:58",
+    "frontend: {\"error\":\"could not retrieve product: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.223.78:3550: connect: connection refused\\\"\",\"http.req.id\":\"270edadd-0554-48fb-9297-e554fc3438ae\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/0PUK",
+    "frontend: {\"http.req.id\":\"270edadd-0554-48fb-9297-e554fc3438ae\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/0PUK6V6EV0\",\"http.resp.bytes\":5101,\"http.resp.status\":500,\"http.resp.took_ms\":0,\"message\":\"request complete\",\"session\":\"b6487f4e-bb5b-47db-a728-043d71c7293d\",\"severity\":\"debug\",\"timestamp\":\"2026-1",
+    "frontend: {\"error\":\"could not retrieve product: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.223.78:3550: connect: connection refused\\\"\",\"http.req.id\":\"a0a30cca-ebf3-4274-8d4e-f47e8060ea97\",\"http.req.method\":\"POST\",\"http.req.path\":\"/cart\",\"mess",
+    "frontend: {\"http.req.id\":\"a0a30cca-ebf3-4274-8d4e-f47e8060ea97\",\"http.req.method\":\"POST\",\"http.req.path\":\"/cart\",\"http.resp.bytes\":5103,\"http.resp.status\":500,\"http.resp.took_ms\":0,\"message\":\"request complete\",\"session\":\"b6487f4e-bb5b-47db-a728-043d71c7293d\",\"severity\":\"debug\",\"timestamp\":\"2026-10-11T01:54:59",
+    "frontend: {\"error\":\"could not retrieve products: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.223.78:3550: connect: connection refused\\\"\",\"http.req.id\":\"8cbb8a96-46c6-4401-b610-f3f6976b1a16\",\"http.req.method\":\"GET\",\"http.req.path\":\"/\",\"message\"",
+    "frontend: {\"http.req.id\":\"8cbb8a96-46c6-4401-b610-f3f6976b1a16\",\"http.req.method\":\"GET\",\"http.req.path\":\"/\",\"http.resp.bytes\":5098,\"http.resp.status\":500,\"http.resp.took_ms\":3,\"message\":\"request complete\",\"session\":\"14f459d6-2c08-42cb-ab18-9defaa968486\",\"severity\":\"debug\",\"timestamp\":\"2026-10-11T01:55:00.1731",
+    "frontend: {\"error\":\"could not retrieve product: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.223.78:3550: connect: connection refused\\\"\",\"http.req.id\":\"3f83c4a5-3a2b-437d-b7d3-091591545e47\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/6E92",
+    "frontend: {\"http.req.id\":\"3f83c4a5-3a2b-437d-b7d3-091591545e47\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/6E92ZMYYFZ\",\"http.resp.bytes\":5101,\"http.resp.status\":500,\"http.resp.took_ms\":1,\"message\":\"request complete\",\"session\":\"84be83cb-ee42-4b3d-aa37-cb43bfce5e73\",\"severity\":\"debug\",\"timestamp\":\"2026-1",
+    "frontend: {\"error\":\"could not retrieve product: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.223.78:3550: connect: connection refused\\\"\",\"http.req.id\":\"784a7a3f-6ec0-47a1-bac6-f9b919147bff\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/2ZYF",
+    "frontend: {\"http.req.id\":\"784a7a3f-6ec0-47a1-bac6-f9b919147bff\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/2ZYFJ3GM2N\",\"http.resp.bytes\":5101,\"http.resp.status\":500,\"http.resp.took_ms\":1,\"message\":\"request complete\",\"session\":\"61978733-baf1-4d20-b3a8-434e37286d64\",\"severity\":\"debug\",\"timestamp\":\"2026-1",
+    "frontend: {\"error\":\"could not retrieve product: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.223.78:3550: connect: connection refused\\\"\",\"http.req.id\":\"f6ac682a-194e-4b14-859f-6ed1230b040e\",\"http.req.method\":\"POST\",\"http.req.path\":\"/cart\",\"mess",
+    "frontend: {\"http.req.id\":\"f6ac682a-194e-4b14-859f-6ed1230b040e\",\"http.req.method\":\"POST\",\"http.req.path\":\"/cart\",\"http.resp.bytes\":5103,\"http.resp.status\":500,\"http.resp.took_ms\":0,\"message\":\"request complete\",\"session\":\"61978733-baf1-4d20-b3a8-434e37286d64\",\"severity\":\"debug\",\"timestamp\":\"2026-10-11T01:55:00",
+    "frontend: {\"error\":\"could not retrieve products: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.223.78:3550: connect: connection refused\\\"\",\"http.req.id\":\"13bc9df6-9813-40b2-bf18-935bb1dba572\",\"http.req.method\":\"GET\",\"http.req.path\":\"/\",\"message\"",
+    "frontend: {\"http.req.id\":\"13bc9df6-9813-40b2-bf18-935bb1dba572\",\"http.req.method\":\"GET\",\"http.req.path\":\"/\",\"http.resp.bytes\":5098,\"http.resp.status\":500,\"http.resp.took_ms\":3,\"message\":\"request complete\",\"session\":\"e21846fc-854a-4c9e-831f-6e7757307153\",\"severity\":\"debug\",\"timestamp\":\"2026-10-11T01:55:00.9022",
+    "frontend: {\"error\":\"failed to get recommended product info (#2ZYFJ3GM2N): rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.223.78:3550: connect: connection refused\\\"\",\"http.req.id\":\"c564d341-2aad-4ca7-bec9-bc8bad9e5987\",\"http.req.method\":\"GET\",\"htt",
+    "frontend: {\"error\":\"could not retrieve product #0PUK6V6EV0: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.223.78:3550: connect: connection refused\\\"\",\"http.req.id\":\"c564d341-2aad-4ca7-bec9-bc8bad9e5987\",\"http.req.method\":\"GET\",\"http.req.path\":\"/",
+    "frontend: {\"http.req.id\":\"c564d341-2aad-4ca7-bec9-bc8bad9e5987\",\"http.req.method\":\"GET\",\"http.req.path\":\"/cart\",\"http.resp.bytes\":5114,\"http.resp.status\":500,\"http.resp.took_ms\":13,\"message\":\"request complete\",\"session\":\"539cdca5-7f87-44b5-a193-489f65fb8d39\",\"severity\":\"debug\",\"timestamp\":\"2026-10-11T01:55:01",
+    "frontend: {\"error\":\"failed to get recommended product info (#1YMWWN1N4O): rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.223.78:3550: connect: connection refused\\\"\",\"http.req.id\":\"3d076124-89f6-4c36-b9fa-a345d253302c\",\"http.req.method\":\"GET\",\"htt",
+    "frontend: {\"error\":\"could not retrieve product #2ZYFJ3GM2N: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.223.78:3550: connect: connection refused\\\"\",\"http.req.id\":\"3d076124-89f6-4c36-b9fa-a345d253302c\",\"http.req.method\":\"GET\",\"http.req.path\":\"/",
+    "frontend: {\"http.req.id\":\"3d076124-89f6-4c36-b9fa-a345d253302c\",\"http.req.method\":\"GET\",\"http.req.path\":\"/cart\",\"http.resp.bytes\":5114,\"http.resp.status\":500,\"http.resp.took_ms\":12,\"message\":\"request complete\",\"session\":\"d2f596b8-692f-42b8-acc1-f77bae6c3db9\",\"severity\":\"debug\",\"timestamp\":\"2026-10-11T01:55:01"
+   ]
+  },
+  {
+   "experiment_id": "v3-network-partition-paymentservice",
+   "vulnerability": "V3",
+   "fault": "network_partition",
+   "target": "paymentservice",
+   "params": {
+    "to": "checkoutservice"
+   },
+   "prediction": {
+    "affected": [
+     "checkoutservice",
+     "frontend",
+     "paymentservice"
+    ],
+    "summary": "Network partition will make paymentservice unreachable, causing checkout failures and a spike in error_rate >0.01 and p95_ms >5\u00d7baseline."
+   },
+   "config": {
+    "replicas": 1,
+    "pdb": false,
+    "hpa": false,
+    "volumes": [],
+    "readiness_probe": true,
+    "liveness_probe": true
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.01
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 268.2787,
+     "raised_from": 260
+    }
+   ],
+   "verdict": "confirmed",
+   "safety_decision": "approve",
+   "ramp": [
+    null
+   ],
+   "tolerated_up_to": null,
+   "limit_crossed_at": null,
+   "phases": {
+    "pre": {
+     "error_rate": 0.0,
+     "p95_ms": 61.0,
+     "unhealthy": []
+    },
+    "during_worst": {
+     "error_rate": 0.0,
+     "p95_ms": 86.0,
+     "unhealthy": []
+    },
+    "post": {
+     "error_rate": 0.0,
+     "p95_ms": 65.0,
+     "unhealthy": []
+    }
+   },
+   "observed": {
+    "error_rate": 0.0,
+    "p95_ms": 17000.0,
+    "unhealthy_count": 0,
+    "breach": null,
+    "recovery_s": 10.136,
+    "service_ready_s": null,
+    "customer_recovered_s": 39.4,
+    "users": 20,
+    "integrity_violations": 0
+   },
+   "criteria_met": [
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 268.2787,
+     "raised_from": 260
+    }
+   ],
+   "recovery_s": 10.136,
+   "integrity_violations": [],
+   "score": {
+    "score": 70,
+    "breakdown": {
+     "E": 0.0,
+     "L": 25.0,
+     "R": 2.5,
+     "B": 2.7,
+     "I": 0.0
+    }
+   },
+   "remediation": {
+    "verdict": "no_fix",
+    "choice": {
+     "fix_id": "none",
+     "reason": "no reviewed fix for paymentservice"
+    }
+   },
+   "run_dir": "runs/v3-network-partition-paymentservice-s1-20261011T015649.667099Z",
+   "log_errors": [
+    "paymentservice: {\"severity\":\"info\",\"time\":1791683848888,\"pid\":1,\"hostname\":\"paymentservice-66b7c67bd4-xj8rj\",\"name\":\"paymentservice-server\",\"message\":\"PaymentService#Charge invoked with request {\\\"amount\\\":{\\\"currency_code\\\":\\\"JPY\\\",\\\"units\\\":\\\"17543\\\",\\\"nanos\\\":939850104},\\\"credit_card\\\":{\\\"credit_card_number\\\":\\\""
+   ]
+  },
+  {
+   "experiment_id": "v2-network-loss-currencyservice",
+   "vulnerability": "V2",
+   "fault": "network_loss",
+   "target": "currencyservice",
+   "params": {
+    "loss": 30
+   },
+   "prediction": {
+    "affected": [
+     "checkoutservice",
+     "frontend",
+     "currencyservice"
+    ],
+    "summary": "30% loss to currencyservice will cause checkoutservice to time out on price conversion, raising error_rate >0.01 and p95_ms >5\u00d7baseline."
+   },
+   "config": {
+    "replicas": 1,
+    "pdb": false,
+    "hpa": false,
+    "volumes": [],
+    "readiness_probe": true,
+    "liveness_probe": true
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.01
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 268.2787
+    }
+   ],
+   "verdict": "confirmed",
+   "safety_decision": "approve",
+   "ramp": [
+    10.0,
+    20.0,
+    30.0
+   ],
+   "tolerated_up_to": 20.0,
+   "limit_crossed_at": 30.0,
+   "phases": {
+    "pre": {
+     "error_rate": 0.0,
+     "p95_ms": 230.0,
+     "unhealthy": []
+    },
+    "during_worst": {
+     "error_rate": 0.0,
+     "p95_ms": 1900.0,
+     "unhealthy": []
+    },
+    "post": {
+     "error_rate": 0.0,
+     "p95_ms": 190.0,
+     "unhealthy": []
+    }
+   },
+   "observed": {
+    "error_rate": 0.0,
+    "p95_ms": 2800.0,
+    "unhealthy_count": 0,
+    "breach": {
+     "metric": "p95_ms",
+     "value": 1900.0,
+     "limit": 1000
+    },
+    "recovery_s": 12.989,
+    "service_ready_s": null,
+    "customer_recovered_s": 37.2,
+    "users": 20,
+    "integrity_violations": 0
+   },
+   "criteria_met": [
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 268.2787
+    }
+   ],
+   "recovery_s": 12.989,
+   "integrity_violations": [],
+   "score": {
+    "score": 81,
+    "breakdown": {
+     "E": 0.0,
+     "L": 13.1,
+     "R": 3.2,
+     "B": 2.7,
+     "I": 0.0
+    }
+   },
+   "remediation": {
+    "verdict": "no_fix",
+    "choice": {
+     "fix_id": "none",
+     "reason": "no reviewed fix for currencyservice"
+    }
+   },
+   "run_dir": "runs/v2-network-loss-currencyservice-s3-20261011T015849.366685Z",
+   "log_errors": [
+    "frontend: {\"http.req.id\":\"b16b024c-9d12-431d-83ba-d1dd5102289d\",\"http.req.method\":\"GET\",\"http.req.path\":\"/cart\",\"http.resp.bytes\":19307,\"http.resp.status\":200,\"http.resp.took_ms\":504,\"message\":\"request complete\",\"session\":\"7e313a25-e930-4404-b02b-b2d35acee6e8\",\"severity\":\"debug\",\"timestamp\":\"2026-10-11T01:59:",
+    "frontend: {\"http.req.id\":\"e60f231a-a074-46a2-b125-0b7314a1c1c7\",\"http.req.method\":\"GET\",\"http.req.path\":\"/product/2ZYFJ3GM2N\",\"http.resp.bytes\":8058,\"http.resp.status\":200,\"http.resp.took_ms\":527,\"message\":\"request complete\",\"session\":\"8150c9af-4078-40f6-ae4c-d8b6f978e8f0\",\"severity\":\"debug\",\"timestamp\":\"2026"
+   ]
+  }
+ ],
+ "scorecard": {
+  "hypotheses": 4,
+  "confirmed": 3,
+  "refuted": 1,
+  "refuted_after_fix": 1
+ }
+}

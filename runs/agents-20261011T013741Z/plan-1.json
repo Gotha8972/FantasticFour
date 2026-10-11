@@ -1,0 +1,155 @@
+{
+ "plan": [
+  {
+   "vulnerability": "V1",
+   "rank": 1,
+   "fault": "pod_kill",
+   "target": "productcatalogservice",
+   "params": {},
+   "duration_s": 30,
+   "reason": "Single replica on checkout path; killing should abort checkout",
+   "prediction": {
+    "affected": [
+     "checkoutservice",
+     "frontend"
+    ],
+    "summary": "checkoutservice will fail to retrieve catalog data, causing checkout abort"
+   },
+   "criteria": [
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 500
+    }
+   ],
+   "experiment": {
+    "id": "v1-pod-kill-productcatalogservice",
+    "fault": "pod_kill",
+    "target": "productcatalogservice",
+    "params": {},
+    "duration_s": 30
+   },
+   "priority": {
+    "blast_radius": 4,
+    "criticality": "critical",
+    "score": 16
+   }
+  },
+  {
+   "vulnerability": "V2",
+   "rank": 2,
+   "fault": "pod_kill",
+   "target": "cartservice",
+   "params": {},
+   "duration_s": 30,
+   "reason": "Single replica on checkout path; killing should abort checkout",
+   "prediction": {
+    "affected": [
+     "checkoutservice",
+     "frontend"
+    ],
+    "summary": "checkoutservice cannot retrieve cart data, aborting checkout"
+   },
+   "criteria": [
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 500
+    }
+   ],
+   "experiment": {
+    "id": "v2-pod-kill-cartservice",
+    "fault": "pod_kill",
+    "target": "cartservice",
+    "params": {},
+    "duration_s": 30
+   },
+   "priority": {
+    "blast_radius": 3,
+    "criticality": "critical",
+    "score": 12
+   }
+  },
+  {
+   "vulnerability": "V3",
+   "rank": 3,
+   "fault": "network_delay",
+   "target": "currencyservice",
+   "params": {
+    "latency": "500"
+   },
+   "duration_s": 30,
+   "reason": "High fan\u2011in; delay should propagate to checkout",
+   "prediction": {
+    "affected": [
+     "checkoutservice",
+     "frontend"
+    ],
+    "summary": "checkoutservice will experience increased latency and possible timeout"
+   },
+   "criteria": [
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 500
+    }
+   ],
+   "experiment": {
+    "id": "v3-network-delay-currencyservice",
+    "fault": "network_delay",
+    "target": "currencyservice",
+    "params": {
+     "latency": "500ms"
+    },
+    "duration_s": 30
+   },
+   "priority": {
+    "blast_radius": 3,
+    "criticality": "critical",
+    "score": 12
+   }
+  },
+  {
+   "vulnerability": "V4",
+   "rank": 4,
+   "fault": "network_loss",
+   "target": "emailservice",
+   "params": {
+    "loss": 20
+   },
+   "duration_s": 30,
+   "reason": "Flaky dependency; loss should prevent email sending",
+   "prediction": {
+    "affected": [
+     "checkoutservice",
+     "frontend"
+    ],
+    "summary": "order confirmation emails will not be sent, causing customer confusion"
+   },
+   "criteria": [
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 500
+    }
+   ],
+   "experiment": {
+    "id": "v4-network-loss-emailservice",
+    "fault": "network_loss",
+    "target": "emailservice",
+    "params": {
+     "loss": 20
+    },
+    "duration_s": 30
+   },
+   "priority": {
+    "blast_radius": 3,
+    "criticality": "critical",
+    "score": 12
+   }
+  }
+ ],
+ "dropped": [],
+ "replan_note": "All four experiments use distinct fault types to cover different failure modes and measure customer impact via latency. No repeated fault+target pairs. The plan prioritizes checkout\u2011critical services first.",
+ "feedback": null
+}

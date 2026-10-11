@@ -1,0 +1,165 @@
+{
+ "plan": [
+  {
+   "vulnerability": "V7",
+   "rank": 1,
+   "fault": "pod_kill",
+   "target": "frontend",
+   "params": {},
+   "duration_s": 30,
+   "reason": "Frontend is single replica; killing it tests site-wide availability.",
+   "prediction": {
+    "affected": [
+     "frontend",
+     "adservice",
+     "cartservice",
+     "checkoutservice",
+     "currencyservice",
+     "emailservice",
+     "paymentservice",
+     "productcatalogservice",
+     "recommendationservice",
+     "redis-cart",
+     "shippingservice"
+    ],
+    "summary": "Frontend crash will make the entire site unavailable, causing high error_rate across all services."
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.01
+    }
+   ],
+   "experiment": {
+    "id": "v7-pod-kill-frontend",
+    "fault": "pod_kill",
+    "target": "frontend",
+    "params": {},
+    "duration_s": 30
+   },
+   "priority": {
+    "blast_radius": 11,
+    "criticality": "critical",
+    "score": 44
+   }
+  },
+  {
+   "vulnerability": "V1",
+   "rank": 2,
+   "fault": "pod_kill",
+   "target": "productcatalogservice",
+   "params": {},
+   "duration_s": 30,
+   "reason": "Critical service with single replica; killing it tests state loss and cascading failure to checkout and browsing.",
+   "prediction": {
+    "affected": [
+     "checkoutservice",
+     "frontend",
+     "productcatalogservice",
+     "recommendationservice"
+    ],
+    "summary": "Product catalog pod crash will cause checkout and product pages to return errors, increasing latency and error rate for dependent services."
+   },
+   "criteria": [
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 400
+    }
+   ],
+   "experiment": {
+    "id": "v1-pod-kill-productcatalogservice",
+    "fault": "pod_kill",
+    "target": "productcatalogservice",
+    "params": {},
+    "duration_s": 30
+   },
+   "priority": {
+    "blast_radius": 4,
+    "criticality": "critical",
+    "score": 16
+   }
+  },
+  {
+   "vulnerability": "V2",
+   "rank": 3,
+   "fault": "network_loss",
+   "target": "currencyservice",
+   "params": {
+    "loss": 30
+   },
+   "duration_s": 30,
+   "reason": "Currency service is a critical dependency; 30% packet loss simulates flaky network and tests if checkout aborts.",
+   "prediction": {
+    "affected": [
+     "checkoutservice",
+     "frontend",
+     "currencyservice"
+    ],
+    "summary": "High packet loss to currencyservice will cause timeouts and errors in checkout, raising error_rate and latency."
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.01
+    }
+   ],
+   "experiment": {
+    "id": "v2-network-loss-currencyservice",
+    "fault": "network_loss",
+    "target": "currencyservice",
+    "params": {
+     "loss": 30
+    },
+    "duration_s": 30
+   },
+   "priority": {
+    "blast_radius": 3,
+    "criticality": "critical",
+    "score": 12
+   }
+  },
+  {
+   "vulnerability": "V3",
+   "rank": 4,
+   "fault": "pod_failure",
+   "target": "paymentservice",
+   "params": {},
+   "duration_s": 30,
+   "reason": "Payment service is essential for checkout; killing it tests immediate failure propagation.",
+   "prediction": {
+    "affected": [
+     "checkoutservice",
+     "frontend",
+     "paymentservice"
+    ],
+    "summary": "Payment service crash will abort checkout, increasing error_rate for checkout and frontend."
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.01
+    }
+   ],
+   "experiment": {
+    "id": "v3-pod-failure-paymentservice",
+    "fault": "pod_failure",
+    "target": "paymentservice",
+    "params": {},
+    "duration_s": 30
+   },
+   "priority": {
+    "blast_radius": 3,
+    "criticality": "critical",
+    "score": 12
+   }
+  }
+ ],
+ "dropped": [],
+ "replan_note": "All selected faults are unused in history and match the weakness of each vulnerability. Experiments are ordered by blast radius and severity, with V1 first due to its critical impact on checkout and browsing. V2 and V3 follow to test flaky and crash scenarios for other checkout dependencies. V7 is last to avoid cascading failures after earlier experiments.",
+ "feedback": null,
+ "diversity": null
+}

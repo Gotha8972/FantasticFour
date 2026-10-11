@@ -1,0 +1,90 @@
+{
+ "plan": [
+  {
+   "vulnerability": "V3",
+   "rank": 1,
+   "fault": "pod_failure",
+   "target": "cartservice",
+   "params": {},
+   "duration_s": 30,
+   "reason": "Single\u2011replica cartservice is a known single point of failure; a pod failure should cause cart operations to fail and surface as increased error rate and latency.",
+   "prediction": {
+    "affected": [
+     "cartservice",
+     "checkoutservice",
+     "frontend"
+    ],
+    "summary": "Killing cartservice will make cart operations unavailable, leading to checkout failures and higher error rate."
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.01
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 500
+    }
+   ],
+   "experiment": {
+    "id": "v3-pod-failure-cartservice",
+    "fault": "pod_failure",
+    "target": "cartservice",
+    "params": {},
+    "duration_s": 30
+   },
+   "priority": {
+    "blast_radius": 3,
+    "criticality": "critical",
+    "score": 12
+   }
+  },
+  {
+   "vulnerability": "V6",
+   "rank": 2,
+   "fault": "pod_kill",
+   "target": "paymentservice",
+   "params": {},
+   "duration_s": 30,
+   "reason": "paymentservice is single\u2011replica and critical for checkout; a pod kill should stop payments and surface as high error rate and latency.",
+   "prediction": {
+    "affected": [
+     "paymentservice",
+     "checkoutservice",
+     "frontend"
+    ],
+    "summary": "Killing paymentservice will block payment processing, causing checkout failures and elevated error rate."
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.01
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 500
+    }
+   ],
+   "experiment": {
+    "id": "v6-pod-kill-paymentservice",
+    "fault": "pod_kill",
+    "target": "paymentservice",
+    "params": {},
+    "duration_s": 30
+   },
+   "priority": {
+    "blast_radius": 3,
+    "criticality": "high",
+    "score": 9
+   }
+  }
+ ],
+ "dropped": [],
+ "replan_note": "Previous experiments covered redis-cart, frontend, productcatalogservice, and currencyservice. Remaining untested single\u2011replica services are cartservice, paymentservice, shippingservice, and checkoutservice. The plan selects cartservice (pod_failure) and paymentservice (pod_kill) to test distinct failure modes (availability vs restart) and measure customer impact via error_rate and p95_ms. These faults are not yet used on their targets and target the highest risk services with the largest blast radius. The criteria are set above baseline to capture meaningful customer impact. No integrity checks are needed as these services are stateless. The plan respects the fault limits and duration constraints. The experiments will be run sequentially with safety ramping handled by the system. ",
+ "feedback": null,
+ "diversity": null
+}

@@ -1,0 +1,393 @@
+{
+ "source": "live cluster",
+ "pdb_hpa_known": true,
+ "services": {
+  "productcatalogservice": {
+   "replicas": 1,
+   "readiness_probe": true,
+   "liveness_probe": true,
+   "cpu_memory_limits": true,
+   "volumes": [],
+   "stateful_without_pvc": false,
+   "pdb": false,
+   "hpa": false,
+   "calls": [],
+   "callers": [
+    "checkoutservice",
+    "frontend",
+    "recommendationservice"
+   ],
+   "dependents": [
+    "checkoutservice",
+    "frontend",
+    "recommendationservice"
+   ],
+   "on_checkout_path": true,
+   "entrypoint": false,
+   "checkout_fails_without_it": true,
+   "site_fails_without_it": true,
+   "hard_callers": [
+    "checkoutservice",
+    "frontend",
+    "recommendationservice"
+   ],
+   "blast_radius": [
+    "checkoutservice",
+    "frontend",
+    "productcatalogservice",
+    "recommendationservice"
+   ],
+   "risk_score": 9,
+   "severity": "critical",
+   "severity_reason": "single replica that every page needs: one pod failure takes the site down"
+  },
+  "redis-cart": {
+   "replicas": 1,
+   "readiness_probe": true,
+   "liveness_probe": true,
+   "cpu_memory_limits": true,
+   "volumes": [
+    "persistentVolumeClaim"
+   ],
+   "stateful_without_pvc": false,
+   "pdb": false,
+   "hpa": false,
+   "calls": [],
+   "callers": [
+    "cartservice"
+   ],
+   "dependents": [
+    "cartservice",
+    "checkoutservice",
+    "frontend"
+   ],
+   "on_checkout_path": true,
+   "entrypoint": false,
+   "checkout_fails_without_it": true,
+   "site_fails_without_it": true,
+   "hard_callers": [
+    "cartservice"
+   ],
+   "blast_radius": [
+    "cartservice",
+    "checkoutservice",
+    "frontend",
+    "redis-cart"
+   ],
+   "risk_score": 9,
+   "severity": "critical",
+   "severity_reason": "single replica that every page needs: one pod failure takes the site down"
+  },
+  "currencyservice": {
+   "replicas": 1,
+   "readiness_probe": true,
+   "liveness_probe": true,
+   "cpu_memory_limits": true,
+   "volumes": [],
+   "stateful_without_pvc": false,
+   "pdb": false,
+   "hpa": false,
+   "calls": [],
+   "callers": [
+    "checkoutservice",
+    "frontend"
+   ],
+   "dependents": [
+    "checkoutservice",
+    "frontend"
+   ],
+   "on_checkout_path": true,
+   "entrypoint": false,
+   "checkout_fails_without_it": true,
+   "site_fails_without_it": true,
+   "hard_callers": [
+    "checkoutservice",
+    "frontend"
+   ],
+   "blast_radius": [
+    "checkoutservice",
+    "currencyservice",
+    "frontend"
+   ],
+   "risk_score": 8,
+   "severity": "critical",
+   "severity_reason": "single replica that every page needs: one pod failure takes the site down"
+  },
+  "emailservice": {
+   "replicas": 1,
+   "readiness_probe": true,
+   "liveness_probe": true,
+   "cpu_memory_limits": true,
+   "volumes": [],
+   "stateful_without_pvc": false,
+   "pdb": false,
+   "hpa": false,
+   "calls": [],
+   "callers": [
+    "checkoutservice"
+   ],
+   "dependents": [
+    "checkoutservice",
+    "frontend"
+   ],
+   "on_checkout_path": true,
+   "entrypoint": false,
+   "checkout_fails_without_it": false,
+   "site_fails_without_it": false,
+   "hard_callers": [],
+   "blast_radius": [
+    "checkoutservice",
+    "emailservice",
+    "frontend"
+   ],
+   "risk_score": 8,
+   "severity": "medium",
+   "severity_reason": "a purchase or feature step whose failure is tolerated: it fails silently"
+  },
+  "paymentservice": {
+   "replicas": 1,
+   "readiness_probe": true,
+   "liveness_probe": true,
+   "cpu_memory_limits": true,
+   "volumes": [],
+   "stateful_without_pvc": false,
+   "pdb": false,
+   "hpa": false,
+   "calls": [],
+   "callers": [
+    "checkoutservice"
+   ],
+   "dependents": [
+    "checkoutservice",
+    "frontend"
+   ],
+   "on_checkout_path": true,
+   "entrypoint": false,
+   "checkout_fails_without_it": true,
+   "site_fails_without_it": false,
+   "hard_callers": [
+    "checkoutservice"
+   ],
+   "blast_radius": [
+    "checkoutservice",
+    "frontend",
+    "paymentservice"
+   ],
+   "risk_score": 8,
+   "severity": "high",
+   "severity_reason": "single replica that every purchase needs: one pod failure stops checkout"
+  },
+  "shippingservice": {
+   "replicas": 1,
+   "readiness_probe": true,
+   "liveness_probe": true,
+   "cpu_memory_limits": true,
+   "volumes": [],
+   "stateful_without_pvc": false,
+   "pdb": false,
+   "hpa": false,
+   "calls": [],
+   "callers": [
+    "checkoutservice",
+    "frontend"
+   ],
+   "dependents": [
+    "checkoutservice",
+    "frontend"
+   ],
+   "on_checkout_path": true,
+   "entrypoint": false,
+   "checkout_fails_without_it": true,
+   "site_fails_without_it": false,
+   "hard_callers": [
+    "checkoutservice",
+    "frontend"
+   ],
+   "blast_radius": [
+    "checkoutservice",
+    "frontend",
+    "shippingservice"
+   ],
+   "risk_score": 8,
+   "severity": "high",
+   "severity_reason": "single replica that every purchase needs: one pod failure stops checkout"
+  },
+  "checkoutservice": {
+   "replicas": 1,
+   "readiness_probe": true,
+   "liveness_probe": true,
+   "cpu_memory_limits": true,
+   "volumes": [],
+   "stateful_without_pvc": false,
+   "pdb": false,
+   "hpa": false,
+   "calls": [
+    "cartservice",
+    "currencyservice",
+    "emailservice",
+    "paymentservice",
+    "productcatalogservice",
+    "shippingservice"
+   ],
+   "callers": [
+    "frontend"
+   ],
+   "dependents": [
+    "frontend"
+   ],
+   "on_checkout_path": true,
+   "entrypoint": false,
+   "checkout_fails_without_it": true,
+   "site_fails_without_it": false,
+   "hard_callers": [
+    "frontend"
+   ],
+   "blast_radius": [
+    "checkoutservice",
+    "frontend"
+   ],
+   "risk_score": 7,
+   "severity": "high",
+   "severity_reason": "single replica that every purchase needs: one pod failure stops checkout"
+  },
+  "cartservice": {
+   "replicas": 2,
+   "readiness_probe": true,
+   "liveness_probe": true,
+   "cpu_memory_limits": true,
+   "volumes": [],
+   "stateful_without_pvc": false,
+   "pdb": false,
+   "hpa": false,
+   "calls": [
+    "redis-cart"
+   ],
+   "callers": [
+    "checkoutservice",
+    "frontend"
+   ],
+   "dependents": [
+    "checkoutservice",
+    "frontend"
+   ],
+   "on_checkout_path": true,
+   "entrypoint": false,
+   "checkout_fails_without_it": true,
+   "site_fails_without_it": true,
+   "hard_callers": [
+    "checkoutservice",
+    "frontend"
+   ],
+   "blast_radius": [
+    "cartservice",
+    "checkoutservice",
+    "frontend"
+   ],
+   "risk_score": 6,
+   "severity": "medium",
+   "severity_reason": "2 replicas, so one pod failure is absorbed; every page still needs it (no PDB or HPA)"
+  },
+  "adservice": {
+   "replicas": 1,
+   "readiness_probe": true,
+   "liveness_probe": true,
+   "cpu_memory_limits": true,
+   "volumes": [],
+   "stateful_without_pvc": false,
+   "pdb": false,
+   "hpa": false,
+   "calls": [],
+   "callers": [
+    "frontend"
+   ],
+   "dependents": [
+    "frontend"
+   ],
+   "on_checkout_path": false,
+   "entrypoint": false,
+   "checkout_fails_without_it": false,
+   "site_fails_without_it": false,
+   "hard_callers": [],
+   "blast_radius": [
+    "adservice",
+    "frontend"
+   ],
+   "risk_score": 5,
+   "severity": "low",
+   "severity_reason": "optional: every caller tolerates its failure, so it should fail gracefully"
+  },
+  "frontend": {
+   "replicas": 2,
+   "readiness_probe": true,
+   "liveness_probe": true,
+   "cpu_memory_limits": true,
+   "volumes": [],
+   "stateful_without_pvc": false,
+   "pdb": false,
+   "hpa": false,
+   "calls": [
+    "adservice",
+    "cartservice",
+    "checkoutservice",
+    "currencyservice",
+    "productcatalogservice",
+    "recommendationservice",
+    "shippingservice"
+   ],
+   "callers": [],
+   "dependents": [],
+   "on_checkout_path": false,
+   "entrypoint": true,
+   "checkout_fails_without_it": true,
+   "site_fails_without_it": true,
+   "hard_callers": [],
+   "blast_radius": [
+    "adservice",
+    "cartservice",
+    "checkoutservice",
+    "currencyservice",
+    "emailservice",
+    "frontend",
+    "paymentservice",
+    "productcatalogservice",
+    "recommendationservice",
+    "redis-cart",
+    "shippingservice"
+   ],
+   "risk_score": 5,
+   "severity": "medium",
+   "severity_reason": "2 replicas, so one pod failure is absorbed; every page still needs it (no PDB or HPA)"
+  },
+  "recommendationservice": {
+   "replicas": 1,
+   "readiness_probe": true,
+   "liveness_probe": true,
+   "cpu_memory_limits": true,
+   "volumes": [],
+   "stateful_without_pvc": false,
+   "pdb": false,
+   "hpa": false,
+   "calls": [
+    "productcatalogservice"
+   ],
+   "callers": [
+    "frontend"
+   ],
+   "dependents": [
+    "frontend"
+   ],
+   "on_checkout_path": false,
+   "entrypoint": false,
+   "checkout_fails_without_it": false,
+   "site_fails_without_it": false,
+   "hard_callers": [],
+   "blast_radius": [
+    "frontend",
+    "recommendationservice"
+   ],
+   "risk_score": 5,
+   "severity": "low",
+   "severity_reason": "optional: every caller tolerates its failure, so it should fail gracefully"
+  }
+ }
+}

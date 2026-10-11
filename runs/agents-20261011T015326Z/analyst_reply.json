@@ -1,0 +1,38 @@
+{
+ "summary": "The product catalog service pod kill exposed a single\u2011replica failure that caused checkout to fail with a 51.6% error rate and 60\u202fs latency spikes. A network partition of the payment service did not raise error rates but produced a 17\u202fs p95 latency spike, indicating a slowdown rather than a service outage. A 30% packet loss to the currency service pushed p95 latency to 2.8\u202fs, again a slowdown without data loss.",
+ "findings": [
+  {
+   "experiment_id": "v1-pod-kill-productcatalogservice",
+   "title": "Product catalog pod kill causes checkout failure",
+   "severity": "high",
+   "what_happened": "Killing the sole productcatalogservice pod caused checkout and product pages to return 500 errors, raising error_rate to 0.516 and p95 latency to 60\u202f000\u202fms.",
+   "root_cause": "The service ran with replicas=1 and no PDB, so the pod kill removed the only instance, breaking all downstream calls.",
+   "evidence": [
+    "frontend: {\"error\":\"could not retrieve product: rpc error: code = Unavailable desc = connection error: desc = \\\"transport: Error while dialing: dial tcp 10.96.223.78:3550: connect: connection refused\\\"\""
+   ],
+   "fix": "Increase productcatalogservice replicas to 2 (productcatalog-replicas)."
+  },
+  {
+   "experiment_id": "v3-network-partition-paymentservice",
+   "title": "Payment service network partition causes latency spike",
+   "severity": "medium",
+   "what_happened": "A network partition between paymentservice and checkoutservice caused checkout to experience a 17\u202fs p95 latency spike, though error_rate remained 0.0.",
+   "root_cause": "The fault isolated paymentservice from checkoutservice, delaying payment processing but not causing errors.",
+   "evidence": [
+    "paymentservice: {\"severity\":\"info\",\"time\":1791683848888,\"pid\":1,\"hostname\":\"paymentservice-66b7c67bd4-xj8rj\",\"name\":\"paymentservice-server\",\"message\":\"PaymentService#Charge invoked with request {\\\"amount\\\":{\\\"currency_code\\\":\\\"JPY\\\",\\\"units\\\":\\\"17543\\\",\\\"nanos\\\":939850104},\\\"credit_card\\\":{\\\"credit_card_number\\\":\\\"\"}"
+   ],
+   "fix": "No fix applied; consider adding a retry or circuit breaker for paymentservice calls."
+  },
+  {
+   "experiment_id": "v2-network-loss-currencyservice",
+   "title": "Currency service 30% packet loss causes latency spike",
+   "severity": "low",
+   "what_happened": "A 30% packet loss to currencyservice increased checkout p95 latency to 2.8\u202fs, exceeding the 1\u202fs baseline, but error_rate stayed at 0.0.",
+   "root_cause": "Network loss degraded communication with currencyservice, slowing price conversion calls.",
+   "evidence": [
+    "frontend: {\"http.req.id\":\"b16b024c-9d12-431d-83ba-d1dd5102289d\",\"http.req.method\":\"GET\",\"http.req.path\":\"/cart\",\"http.resp.bytes\":19307,\"http.resp.status\":200,\"http.resp.took_ms\":504,\"message\":\"request complete\",\"session\":\"7e313a25-e930-4404-b02b-b2d35acee6e8\",\"severity\":\"debug\",\"timestamp\":\"2026-10-11T01:59:"
+   ],
+   "fix": "No fix applied; consider improving network reliability or adding retries for currencyservice calls."
+  }
+ ]
+}

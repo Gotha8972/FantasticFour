@@ -1,0 +1,47 @@
+{
+ "plan": [
+  {
+   "vulnerability": "V5",
+   "rank": 1,
+   "fault": "pod_kill",
+   "target": "paymentservice",
+   "params": {},
+   "duration_s": 30,
+   "reason": "paymentservice is a single\u2011replica critical service on the checkout path; killing it should cause checkout failures and high latency, providing a clear customer impact signal.",
+   "prediction": {
+    "affected": [
+     "checkoutservice",
+     "frontend"
+    ],
+    "summary": "Killing paymentservice will make checkoutservice unable to process payments, leading to checkout aborts and increased error rates/latency."
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.01
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 500
+    }
+   ],
+   "experiment": {
+    "id": "v5-pod-kill-paymentservice",
+    "fault": "pod_kill",
+    "target": "paymentservice",
+    "params": {},
+    "duration_s": 30
+   },
+   "priority": {
+    "blast_radius": 3,
+    "criticality": "critical",
+    "score": 12
+   }
+  }
+ ],
+ "dropped": [],
+ "replan_note": "Added a network_partition experiment on emailservice to diversify fault types and measure customer impact on checkout flow.",
+ "feedback": "Only ['pod_kill'] so far: use at least 2 different fault types across history and plan. Return corrected or replacement experiments only; keep integrity criteria for stateful services."
+}

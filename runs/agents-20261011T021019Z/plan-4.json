@@ -1,0 +1,139 @@
+{
+ "plan": [
+  {
+   "vulnerability": "V4",
+   "rank": 1,
+   "fault": "network_delay",
+   "target": "currencyservice",
+   "params": {
+    "latency": "500"
+   },
+   "duration_s": 30,
+   "reason": "currencyservice has a single replica and is a high fan\u2011in dependency; adding 500\u202fms latency tests latency propagation and its effect on checkout and frontend.",
+   "prediction": {
+    "affected": [
+     "currencyservice",
+     "checkoutservice",
+     "frontend"
+    ],
+    "summary": "A 500\u202fms delay will increase overall latency and may raise error_rate if timeouts occur."
+   },
+   "criteria": [
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 500
+    },
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.01
+    }
+   ],
+   "experiment": {
+    "id": "v4-network-delay-currencyservice",
+    "fault": "network_delay",
+    "target": "currencyservice",
+    "params": {
+     "latency": "500ms"
+    },
+    "duration_s": 30
+   },
+   "priority": {
+    "blast_radius": 3,
+    "criticality": "critical",
+    "score": 12
+   }
+  },
+  {
+   "vulnerability": "V3",
+   "rank": 2,
+   "fault": "pod_kill",
+   "target": "cartservice",
+   "params": {},
+   "duration_s": 30,
+   "reason": "cartservice is a single\u2011replica stateless service; killing it tests the single\u2011point\u2011failure hypothesis and measures customer impact via error_rate and p95_ms.",
+   "prediction": {
+    "affected": [
+     "cartservice",
+     "checkoutservice",
+     "frontend"
+    ],
+    "summary": "A pod kill will make cart operations fail, causing checkout failures and a spike in error rate and latency."
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.01
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 500
+    }
+   ],
+   "experiment": {
+    "id": "v3-pod-kill-cartservice",
+    "fault": "pod_kill",
+    "target": "cartservice",
+    "params": {},
+    "duration_s": 30
+   },
+   "priority": {
+    "blast_radius": 3,
+    "criticality": "critical",
+    "score": 12
+   }
+  },
+  {
+   "vulnerability": "V6",
+   "rank": 3,
+   "fault": "network_loss",
+   "target": "paymentservice",
+   "params": {
+    "loss": 10
+   },
+   "duration_s": 30,
+   "reason": "paymentservice is a single\u2011replica critical dependency; 10\u202f% packet loss tests flaky dependency impact on checkout success and error_rate.",
+   "prediction": {
+    "affected": [
+     "paymentservice",
+     "checkoutservice",
+     "frontend"
+    ],
+    "summary": "Packet loss will cause payment failures, raising error_rate and potentially increasing latency."
+   },
+   "criteria": [
+    {
+     "metric": "error_rate",
+     "op": ">",
+     "value": 0.01
+    },
+    {
+     "metric": "p95_ms",
+     "op": ">",
+     "value": 500
+    }
+   ],
+   "experiment": {
+    "id": "v6-network-loss-paymentservice",
+    "fault": "network_loss",
+    "target": "paymentservice",
+    "params": {
+     "loss": 10
+    },
+    "duration_s": 30
+   },
+   "priority": {
+    "blast_radius": 3,
+    "criticality": "high",
+    "score": 9
+   }
+  }
+ ],
+ "dropped": [],
+ "replan_note": "All selected faults have not been used for their target yet. The plan prioritises the highest risk vulnerabilities (V3, V4, V6) and uses distinct fault types to differentiate failure modes while measuring customer\u2011impact metrics.",
+ "feedback": null,
+ "diversity": null
+}
