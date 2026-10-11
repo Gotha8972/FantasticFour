@@ -130,6 +130,7 @@ const secs = x => x == null ? '–' : (+x).toFixed(1) + ' s';
 const base = p => String(p || '').split('/').pop();
 let S = {run: null, data: null, sel: null, tab: 0, pinned: false, timer: null, evTimer: null};
 let incidentRecords = [], caseRequest = 0;
+let pollingStarted = false;
 const query = new URLSearchParams(location.search);
 S.sel = query.get('experiment');
 S.pinned = query.has('run');
@@ -153,11 +154,17 @@ async function init() {
   }
   if (query.has('experiment') || query.has('target') || query.has('evidence')) { await openCase(location.href, false); $('#incident').scrollIntoView(); }
   scores(); outcomes(); liveKPIs();
-  setInterval(outcomes, 5000); setInterval(liveKPIs, 10000); setInterval(scores, 15000);
   $('#failure-filter').onchange = failureTable;
+  if (pollingStarted) return;
+  pollingStarted = true;
+  setInterval(outcomes, 5000); setInterval(liveKPIs, 10000); setInterval(scores, 15000);
   setInterval(async () => {  // follow a new live run automatically unless the viewer picked one
-    const r = (await api('/api/runs').catch(() => [])).find(x => x.live);
-    if (r && !S.pinned && r.name !== S.run) { if (![...$('#runs').options].some(o => o.value === r.name)) init(); else { $('#runs').value = r.name; S.sel = null; load(r.name); } }
+    const runs = await api('/api/runs').catch(() => null);
+    if (!runs) return;
+    $('#runs').innerHTML = runs.length ? runs.map(r => `<option value="${esc(r.name)}">${esc(r.name.replace('agents-', ''))} · ${r.live ? 'LIVE' : r.dry_run ? 'dry run' : r.experiments + ' experiments'}</option>`).join('') : '<option>No runs yet</option>';
+    if (S.run) $('#runs').value = S.run;
+    const r = runs.find(x => x.live);
+    if (r && !S.pinned && r.name !== S.run) { $('#runs').value = r.name; S.sel = null; load(r.name); }
   }, 5000);
 }
 

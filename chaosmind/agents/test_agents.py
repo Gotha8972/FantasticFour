@@ -73,6 +73,24 @@ class AgentTests(unittest.TestCase):
         with patch.object(llm, 'ask', return_value=wrong):  # original emptyDir Redis: the same prediction is true
             self.assertEqual(len(strategist.plan(vulns, {}, allowed_faults={'pod_kill'})['plan']), 1)
 
+    def test_strategist_tries_another_target_after_repeated_invalid_predictions(self):
+        vulns = [{'id': 'V1', 'service': 'redis-cart'}, {'id': 'V2', 'service': 'cartservice'}]
+        wrong = {'plan': [{'vulnerability': 'V1', 'fault': 'pod_kill', 'target': 'redis-cart',
+                          'duration_s': 30, 'criteria': [{'metric': 'integrity_violations', 'op': '>', 'value': 0}],
+                          'prediction': {'summary': 'Cart data loss'}}]}
+        right = {'plan': [{'vulnerability': 'V2', 'fault': 'pod_failure', 'target': 'cartservice',
+                          'duration_s': 30, 'prediction': {'summary': 'Checkout errors'}}]}
+        with patch.object(llm, 'ask', side_effect=[wrong, wrong, right]) as ask:
+            out = strategist.plan(vulns, {}, persistent=['redis-cart'])
+        self.assertEqual(ask.call_count, 3)
+        self.assertEqual(ask.call_args.args[1]['vulnerabilities'], [vulns[1]])
+        self.assertEqual(out['plan'][0]['experiment']['target'], 'cartservice')
+        self.assertEqual(len(out['dropped']), 2)
+        with patch.object(llm, 'ask', side_effect=[wrong, wrong, wrong]) as ask:
+            out = strategist.plan(vulns, {}, persistent=['redis-cart'])
+        self.assertEqual(ask.call_count, 3)
+        self.assertEqual(out['plan'], [])  # validation stays mandatory; retries stay bounded
+
     def test_strategist_reads_bare_delay_numbers_as_ms_but_keeps_the_cap(self):
         vulns = [{'id': 'V1', 'service': 'checkoutservice'}]
         crit = [{'metric': 'p95_ms', 'op': '>', 'value': 5000}]

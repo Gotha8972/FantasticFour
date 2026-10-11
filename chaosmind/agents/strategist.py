@@ -190,6 +190,19 @@ def plan(vulnerabilities, baseline, history=(), budget=5, allowed_faults=None, p
         more, rejected = check(retry, by_id, planned, allowed, persistent, baseline)
         items, dropped = items + more, dropped + rejected
         reply = {**reply, 'replan_note': retry.get('replan_note') or reply.get('replan_note', '')}
+    if not items and dropped and budget > 0:
+        # A correction can repeat the same invalid hypothesis. Ask once for another
+        # audited target, while keeping every validation and safety bound intact.
+        rejected_targets = {d['item'].get('target') for d in dropped if isinstance(d['item'], dict)}
+        alternatives = [v for v in vulnerabilities if v['service'] not in rejected_targets]
+        if alternatives:
+            replacement = llm.ask(SYSTEM, {**request, 'vulnerabilities': alternatives,
+                'feedback': feedback([], dropped, history, allowed) +
+                            ' Previous corrections were also rejected. Choose a different supplied target.'})
+            items, rejected = check(replacement, {v['id']: v for v in alternatives},
+                                    done, allowed, persistent, baseline)
+            dropped += rejected
+            reply = {**reply, 'replan_note': replacement.get('replan_note') or reply.get('replan_note', '')}
     items = [{**i, 'priority': priority(i, by_id)} for i in items]
     # Only the top item runs each round. Among equal scores, a fault family (then a fault type) the run hasn't
     # tried yet goes first; the model's rank breaks what's left. Without this, ties always went to pod faults.
