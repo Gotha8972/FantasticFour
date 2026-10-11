@@ -183,6 +183,21 @@ class Day2Tests(unittest.TestCase):
         self.assertEqual((summary['valid_trials'], summary['invalid_trials'], summary['breaches']), (2, 1, 0))
         self.assertEqual(summary['evidence'], 'insufficient (<3 valid trials)')
 
+    def test_report_judges_config_claims_at_experiment_time(self):
+        # Live run 2026-10-11: Redis was on emptyDir when killed, then the approved fix added a PVC. Checking the
+        # Analyst's (true) "emptyDir" root cause against the post-fix config flagged it as contradicted.
+        exp = {'id': 'v1-pod-kill-redis-cart', 'fault': 'pod_kill', 'target': 'redis-cart'}
+        before = {'replicas': 1, 'pdb': False, 'hpa': False, 'volumes': ['emptyDir'], 'readiness_probe': True,
+                  'liveness_probe': True}
+        with tempfile.TemporaryDirectory() as d:
+            Path(d, 'history.json').write_text(json.dumps([{'experiment': exp, 'config': before, 'verdict': 'confirmed',
+                                                            'criteria': [], 'integrity': [{'check': 'cart_persistence'}]}]))
+            Path(d, 'vulnerabilities.json').write_text(json.dumps({'vulnerabilities': []}))
+            Path(d, 'facts.json').write_text(json.dumps({'services': {'redis-cart': {**before, 'volumes': ['persistentVolumeClaim']}}}))
+            e = analyst.fact_sheet(d)['experiments'][0]
+        self.assertEqual(e['config']['volumes'], ['emptyDir'])
+        self.assertEqual(analyst.contradictions('Redis uses an emptyDir volume, wiped on restart', e), [])
+
     def test_full_live_loop_with_everything_faked(self):
         workloads = str(sorted(Path('runs').glob('baseline-study-*/workloads-initial.json'))[0])
         replies = iter([

@@ -52,7 +52,8 @@ class AgentTests(unittest.TestCase):
         with patch.object(llm, 'ask', side_effect=lambda system, user: next(replies)):
             out = strategist.plan([{'id':'V2','service':'productcatalogservice'}, {'id':'V1','service':'redis-cart'}], {}, history, allowed_faults={'network_delay', 'pod_kill'})
         self.assertEqual([i['experiment']['target'] for i in out['plan']], ['productcatalogservice'])
-        self.assertEqual(out['plan'][0]['criteria'], [{'metric': 'p95_ms', 'op': '>', 'value': 500}])
+        self.assertEqual(out['plan'][0]['criteria'], [{'metric': 'p95_ms', 'op': '>', 'value': 500},  # 'vibes' dropped
+                                                      {'metric': 'error_rate', 'op': '>', 'value': 0.05, 'added_by_code': 'customer harm'}])
         self.assertEqual(len(out['dropped']), 2)
         self.assertIn('already run', out['feedback'])
 
@@ -98,6 +99,73 @@ class AgentTests(unittest.TestCase):
         self.assertEqual(len(seen), 2)
         self.assertIn('at least 2 different fault types', seen[1]['feedback'])
         self.assertEqual([i['fault'] for i in out['plan']], ['pod_kill', 'pod_kill', 'network_delay'])  # repeat dropped
+
+    def test_tie_goes_to_a_fault_family_not_yet_run(self):
+        # Live run 2026-10-11, round 2: cart pod kill and currency delay tied at 12; the pod kill always won.
+        vulns = [{'id': 'V2', 'service': 'cartservice', 'severity': 'critical', 'blast_radius': ['a', 'b', 'c']},
+                 {'id': 'V3', 'service': 'currencyservice', 'severity': 'critical', 'blast_radius': ['a', 'b', 'c']}]
+        crit = [{'metric': 'error_rate', 'op': '>', 'value': 0.05}]
+        reply = {'plan': [{'vulnerability': 'V2', 'rank': 1, 'fault': 'pod_kill', 'target': 'cartservice', 'duration_s': 30, 'criteria': crit},
+                          {'vulnerability': 'V3', 'rank': 2, 'fault': 'network_delay', 'target': 'currencyservice', 'duration_s': 30,
+                           'params': {'latency': '500ms'}, 'criteria': crit}]}
+        history = [{'experiment': {'fault': 'pod_kill', 'target': 'productcatalogservice'}}]
+        with patch.object(llm, 'ask', return_value=reply):
+            out = strategist.plan(vulns, {}, history, budget=3, allowed_faults={'pod_kill', 'network_delay'})
+        self.assertEqual([i['experiment']['fault'] for i in out['plan']], ['network_delay', 'pod_kill'])
+        with patch.object(llm, 'ask', return_value=reply):  # a higher score still wins over novelty
+            vulns[0]['severity'] = 'critical'; vulns[1]['severity'] = 'high'
+            out = strategist.plan(vulns, {}, history, budget=3, allowed_faults={'pod_kill', 'network_delay'})
+        self.assertEqual(out['plan'][0]['experiment']['fault'], 'pod_kill')
+
+    def test_last_slot_goes_to_another_fault_family(self):
+        # Live run 2026-10-11, last round: 3 pod kills ran, the partition the model added lost the tie and was trimmed.
+        vulns = [{'id': 'V5', 'service': 'paymentservice', 'severity': 'critical', 'blast_radius': ['a', 'b', 'c']},
+                 {'id': 'V4', 'service': 'emailservice', 'severity': 'high', 'blast_radius': ['a', 'b', 'c']}]
+        crit = [{'metric': 'error_rate', 'op': '>', 'value': 0.05}]
+        reply = {'plan': [{'vulnerability': 'V5', 'rank': 1, 'fault': 'pod_kill', 'target': 'paymentservice', 'duration_s': 30, 'criteria': crit},
+                          {'vulnerability': 'V4', 'rank': 2, 'fault': 'network_partition', 'target': 'emailservice', 'duration_s': 30,
+                           'params': {'to': 'checkoutservice'}, 'criteria': crit}]}
+        history = [{'experiment': {'fault': f, 'target': t}} for f, t in
+                   (('pod_kill', 'productcatalogservice'), ('pod_failure', 'cartservice'), ('pod_kill', 'currencyservice'))]
+        allowed = {'pod_kill', 'pod_failure', 'network_partition'}
+        with patch.object(llm, 'ask', return_value=reply):
+            out = strategist.plan(vulns, {}, history, budget=1, allowed_faults=allowed)
+        self.assertEqual([i['experiment']['fault'] for i in out['plan']], ['network_partition'])
+        self.assertIn('last slot', out['diversity'])
+        with patch.object(llm, 'ask', return_value=reply):  # not the last slot: the score decides
+            out = strategist.plan(vulns, {}, history, budget=2, allowed_faults=allowed)
+        self.assertEqual(out['plan'][0]['experiment']['fault'], 'pod_kill')
+
+    def test_pod_kill_and_pod_failure_are_one_fault_family(self):
+        crit = [{'metric': 'error_rate', 'op': '>', 'value': 0.05}]
+        items = [{'experiment': {'fault': 'pod_failure', 'target': 'cartservice'}, 'criteria': crit}]
+        history = [{'experiment': {'fault': 'pod_kill', 'target': 'productcatalogservice'}}]
+        note = strategist.feedback(items, [], history, {'pod_kill', 'pod_failure', 'network_delay'})
+        self.assertIn("add one of ['network_delay']", note)
+        self.assertIsNone(strategist.feedback(items, [], history, {'pod_kill', 'pod_failure'}))  # nothing else allowed
+
+    def test_checkout_dependency_facts_and_severity_ceiling(self):
+        s = FACTS['services']
+        self.assertEqual({n for n in s if s[n]['checkout_fails_without_it']},
+                         {'frontend', 'checkoutservice', 'cartservice', 'redis-cart', 'productcatalogservice',
+                          'currencyservice', 'shippingservice', 'paymentservice'})
+        self.assertTrue(s['emailservice']['on_checkout_path'])  # checkout calls it, but only logs a failure
+        reply = {'vulnerabilities': [
+            {'service': 'emailservice', 'severity': 'critical', 'weakness': 'single replica', 'evidence': {'replicas': 1}},
+            {'service': 'paymentservice', 'severity': 'critical', 'weakness': 'single replica', 'evidence': {'replicas': 1}}]}
+        out = {v['service']: v for v in cartographer.verify(reply, FACTS)['vulnerabilities']}
+        self.assertEqual((out['emailservice']['severity'], out['paymentservice']['severity']), ('medium', 'high'))
+        self.assertIn('critical → medium', out['emailservice']['severity_lowered_by_code'])
+        self.assertEqual(out['paymentservice']['model_severity'], 'critical')
+
+    def test_code_severity_uses_all_four_levels(self):
+        sev = {n: s['severity'] for n, s in FACTS['services'].items()}  # the original config: every service 1 replica
+        self.assertEqual({k: sorted(n for n in sev if sev[n] == k) for k in ('critical', 'high', 'medium', 'low')}, {
+            'critical': ['cartservice', 'currencyservice', 'frontend', 'productcatalogservice', 'redis-cart'],
+            'high': ['checkoutservice', 'paymentservice', 'shippingservice'],
+            'medium': ['emailservice'], 'low': ['adservice', 'recommendationservice']})
+        two = {**FACTS['services']['productcatalogservice'], 'replicas': 2}  # after the replica fix
+        self.assertEqual(facts.severity(two)[0], 'medium')
 
     def test_experiments_ranked_by_blast_radius_times_criticality(self):
         s = FACTS['services']
@@ -181,8 +249,9 @@ class AgentTests(unittest.TestCase):
         self.assertEqual([r['service'] for r in out['rejected']], ['cartservice'])
 
     def test_cartographer_rejects_data_loss_claim_when_persisted(self):
-        persisted = {**FACTS, 'services': {**FACTS['services'], 'redis-cart': {
-            **FACTS['services']['redis-cart'], 'volumes': ['persistentVolumeClaim'], 'stateful_without_pvc': False}}}
+        redis = {**FACTS['services']['redis-cart'], 'volumes': ['persistentVolumeClaim'], 'stateful_without_pvc': False}
+        redis['severity'], redis['severity_reason'] = facts.severity(redis)
+        persisted = {**FACTS, 'services': {**FACTS['services'], 'redis-cart': redis}}
         reply = {'vulnerabilities': [
             {'service': 'redis-cart', 'severity': 'critical', 'weakness': 'single replica',
              'evidence': {'replicas': 1}, 'hypothesis': 'a pod kill wipes all carts'},
@@ -190,7 +259,9 @@ class AgentTests(unittest.TestCase):
              'evidence': {'replicas': 1}, 'hypothesis': 'a pod kill makes cartservice lose connection; cart page errors'}]}
         with patch.object(llm, 'ask', return_value=reply):
             out = cartographer.audit(persisted)
-        self.assertEqual([v['severity'] for v in out['vulnerabilities']], ['high'])  # availability claim kept
+        # availability claim kept; with a PVC but one replica every page still needs it, so code rates it critical
+        self.assertEqual([v['severity'] for v in out['vulnerabilities']], ['critical'])
+        self.assertIn('high → critical', out['vulnerabilities'][0]['severity_raised_by_code'])
         self.assertIn('persistent volume', out['rejected'][0]['rejected_because'])
         with patch.object(llm, 'ask', return_value=reply):  # same claim, no PVC (original emptyDir): kept
             self.assertEqual(len(cartographer.audit(FACTS)['vulnerabilities']), 2)

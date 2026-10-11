@@ -83,7 +83,7 @@ def run(name):
         if dirs:
             current = {'id': exp_id, 'dir': max(dirs, key=lambda p: p.stat().st_mtime).name}
     return {'name': name, 'live': live, 'stage': stage(d, plans, history, pending, live), 'pending': pending,
-            'facts': read(d / 'facts.json', {}), 'audit': read(d / 'vulnerabilities.json', {}), 'plans': plans,
+            'facts': read(d / 'facts-current.json') or read(d / 'facts.json', {}),  # map shows fixes as they land 'audit': read(d / 'vulnerabilities.json', {}), 'plans': plans,
             'history': history, 'current': current, 'findings': (d / 'FINDINGS.md').exists()}
 
 

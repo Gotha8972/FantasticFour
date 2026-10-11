@@ -113,7 +113,9 @@ def judge(state):
     print(f"Safety Checker: {result['decision']} ({result['reason']}); ramp={result.get('ramp')}; "
           f"tolerated up to={result.get('tolerated_up_to')}, guard limit crossed at={result.get('limit_crossed_at')}; "
           f"integrity violations={len(violations)} → {verdict}" + (f", score {s['score']}" if s else ''))
-    entry = {'vulnerability': item.get('vulnerability'), 'experiment': item['experiment'], 'criteria': item['criteria'],
+    target_facts = state['facts']['services'].get(item['experiment']['target'], {})
+    entry = {'config': {k: target_facts.get(k) for k in analyst.CONFIG},  # the config this experiment ran against
+             'vulnerability': item.get('vulnerability'), 'experiment': item['experiment'], 'criteria': item['criteria'],
              'prediction': item.get('prediction'), 'safety': result, 'observed': obs, 'integrity': violations,
              'verdict': verdict, 'criteria_met': met, 'score': s, 'blast_share': share}
     audit = {**state['audit'], 'vulnerabilities': [
@@ -145,7 +147,20 @@ def apply_fix(state):
         r = {'verdict': 'error', 'reason': str(error), 'choice': state['fix_choice']}
     history[-1] = {**entry, 'remediation': r}
     save(state, 'history.json', history)
-    return {'history': history, 'fix_choice': None}
+    out = {'history': history, 'fix_choice': None}
+    if r.get('kept') and not state.get('workloads'):
+        # The fix changed the live config (e.g. 2 replicas): re-read it, so severities and the next plan reflect it.
+        f = facts_mod.collect()
+        target = entry['experiment']['target']
+        new = f['services'].get(target, {})
+        audit = {**state['audit'], 'vulnerabilities': [
+            {**v, 'severity': new['severity'], 'severity_after_fix': f"{v['severity']} → {new['severity']} ({new['severity_reason']})"}
+            if v.get('service') == target and new.get('severity') and new['severity'] != v.get('severity') else v
+            for v in state['audit']['vulnerabilities']]}
+        save(state, 'facts-current.json', f)  # facts.json stays the config as audited
+        save(state, 'vulnerabilities.json', audit)
+        out.update(facts=f, audit=audit)
+    return out
 
 
 def skip_fix(state, reason):

@@ -19,9 +19,11 @@ You get per-service facts and a code-computed risk_score. Find the most dangerou
 
 Rules:
 - Use ONLY the facts given. In "evidence", copy fact keys and values EXACTLY from that service's facts.
-- Rank by real impact on users and revenue. Rubric: critical = can lose data, or takes down checkout or the
-  whole site (the single entrypoint, e.g. frontend, is critical); high = slows or partly breaks the checkout path;
-  medium = degrades a secondary feature; low = optional feature expected to fail gracefully.
+- Each service's facts include "severity" and "severity_reason": the rubric already applied by code. Use them; code
+  decides severity. Rubric: critical = can lose data, or a single replica that every page needs
+  (site_fails_without_it); high = a single replica that every purchase needs (checkout_fails_without_it);
+  medium = redundant but still needed, or a step whose failure is tolerated; low = optional, fails gracefully.
+  on_checkout_path alone only means checkout calls it.
 - Don't list every single-replica service as critical. Put issues shared by all services in "systemic".
 - Include services you expect to FAIL GRACEFULLY as severity "low", with a hypothesis saying so.
 - Each hypothesis must be testable by injecting one fault (pod kill/failure, network delay/loss, CPU stress).
@@ -87,15 +89,16 @@ def verify(reply, facts):
         if 'persistentVolumeClaim' in s['volumes'] and claims_data_loss(f"{v.get('weakness', '')} {v.get('hypothesis', '')}"):
             rejected.append({**v, 'rejected_because': 'claims data loss, but the service mounts a persistent volume'})
             continue
-        severity = v.get('severity') if v.get('severity') in SEVERITIES else 'medium'
-        # The rubric, applied from facts: these two are critical whatever the model rated them.
-        floor = ('stateful without a persistent volume: a restart loses data' if s['stateful_without_pvc'] else
-                 'single entrypoint: its failure takes down the whole site' if s['entrypoint'] else None)
-        if floor and severity != 'critical':
-            v = {**v, 'severity_raised_by_code': f'{severity} → critical ({floor})'}
-            severity = 'critical'
+        model = v.get('severity') if v.get('severity') in SEVERITIES else None
+        # Severity is the rubric applied by code from facts (facts.severity): the model rated every single-replica
+        # service critical, and its ratings changed between runs. Its own rating is kept, and a disagreement is shown.
+        severity, reason = (s['severity'], s['severity_reason']) if s.get('severity') else (model or 'medium', None)
+        if model and model != severity and reason:
+            change = f'{model} → {severity} ({reason})'
+            v = {**v, ('severity_raised_by_code' if SEVERITIES.index(severity) < SEVERITIES.index(model)
+                       else 'severity_lowered_by_code'): change}
         kept.append({**v, 'evidence': good, 'unverified_evidence_dropped': bad,
-                     'severity': severity,
+                     'severity': severity, 'model_severity': model, 'severity_reason': reason,
                      'blast_radius': s['blast_radius'],  # computed from the dependency map, not guessed
                      'predicted_blast_radius': [b for b in v.get('blast_radius', []) if b in services],
                      'risk_score': s['risk_score'], 'status': 'untested'})

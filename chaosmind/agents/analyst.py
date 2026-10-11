@@ -28,6 +28,7 @@ Rules:
 - Order findings by severity: data loss first, then checkout/site outage, then slowdowns, then graceful cases.
 - Claim data loss ONLY for an experiment whose integrity_violations list is non-empty; otherwise data was kept.
 - Use "observed" for an experiment's worst numbers: it covers the fault and the recovery after it.
+- Say a fix was applied ONLY for an experiment whose "remediation" has a "fix"; every other weakness is still open.
 - Describe a service's configuration (replicas, PodDisruptionBudget, volumes) ONLY from its "config".
 Return JSON: {"summary": "3 sentences for a judge", "findings": [{"experiment_id": "...", "title": "...",
  "severity": "critical|high|medium|low", "what_happened": "...", "root_cause": "...", "evidence": ["exact line"],
@@ -131,7 +132,8 @@ def fact_sheet(run_dir):
             'experiment_id': h['experiment']['id'], 'vulnerability': h.get('vulnerability'),
             'fault': h['experiment']['fault'], 'target': h['experiment']['target'],
             'params': h['experiment'].get('params', {}), 'prediction': h.get('prediction'),
-            'config': {k: services.get(h['experiment']['target'], {}).get(k) for k in CONFIG},
+            # the config at the time of the experiment: a fix applied later in the run changes the live config
+            'config': h.get('config') or {k: services.get(h['experiment']['target'], {}).get(k) for k in CONFIG},
             'criteria': h.get('criteria'), 'verdict': h.get('verdict'),
             'safety_decision': h.get('safety', {}).get('decision'),
             'ramp': [s.get('intensity') for s in steps],
@@ -160,7 +162,19 @@ def fact_check(prose, facts):
     """Numbers the AI wrote that don't exist anywhere in the fact sheet (allowing % and rounding)."""
     known = numbers(json.dumps(facts))
     known |= {round(k * 100, 1) for k in known if k <= 1} | {round(k) for k in known} | {round(k, 1) for k in known}
+    known |= {v for k in known if k >= 1000 for v in (round(k / 1000), round(k / 1000, 1))}  # 17000 ms written as 17 s
     return sorted(n for n in numbers(prose) if n not in known and round(n, 1) not in known)
+
+
+def fixes_line(facts):
+    """Which fixes were really applied, written by code next to the AI's summary (the model has claimed fixes that
+    were never applied)."""
+    done = [f"`{e['remediation']['fix']}` on {e['target']} (score {e['remediation'].get('before')} → "
+            f"{e['remediation'].get('after')})" for e in facts['experiments'] if (e.get('remediation') or {}).get('fix')]
+    still = sorted({e['target'] for e in facts['experiments'] if e['verdict'] == 'confirmed'
+                    and not (e.get('remediation') or {}).get('fix')})
+    return (f"**Fixes applied (from the data):** {', '.join(done) or 'none'}. "
+            f"**Confirmed weaknesses still open:** {', '.join(still) or 'none'}.")
 
 
 def render(facts, reply):
@@ -174,7 +188,7 @@ def render(facts, reply):
              f"**AI hypotheses:** {facts['scorecard']['hypotheses']} tested, {facts['scorecard']['confirmed']} confirmed, "
              f"{facts['scorecard']['refuted']} refuted; **{facts['scorecard']['refuted_after_fix']} refuted after their fix** "
              "(same criteria, re-run after the approved fix). Verdicts are decided by code against criteria written before "
-             "each run.", '',
+             "each run.", '', fixes_line(facts), '',
              '| Experiment | Fault | Verdict | Criteria met | Worst error rate | Worst p95 | Recovery | Integrity | Score |',
              '|---|---|---|---|---|---|---|---|---|']
     for e in facts['experiments']:

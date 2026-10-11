@@ -170,7 +170,9 @@ function map(d, list, sel) {
   const ncol = Object.keys(cols).length, W = 640, H = 330, pos = {};
   Object.entries(cols).forEach(([c, ns], ci) => ns.sort().forEach((n, i) => pos[n] = {x: 70 + ci * (W - 140) / Math.max(1, ncol - 1), y: (i + 1) * H / (ns.length + 1)}));
   const sevOf = {}, rank = {critical: 4, high: 3, medium: 2, low: 1};
-  ((d.audit || {}).vulnerabilities || []).forEach(v => { if ((rank[v.severity] || 0) > (rank[sevOf[v.service]] || 0)) sevOf[v.service] = v.severity; });
+  // Every service gets code's severity from facts (critical/high/medium/low); runs recorded before that fall back to the audit.
+  Object.entries((d.facts || {}).services || {}).forEach(([n, s]) => { if (s.severity) sevOf[n] = s.severity; });
+  ((d.audit || {}).vulnerabilities || []).forEach(v => { if (!(((d.facts || {}).services || {})[v.service] || {}).severity && (rank[v.severity] || 0) > (rank[sevOf[v.service]] || 0)) sevOf[v.service] = v.severity; });
   const mark = {};
   list.forEach(e => { const t = e.experiment.target; if (e.state === 'confirmed') mark[t] = '✕'; if (e.state === 'refuted') mark[t] = mark[t] || '✓';
     if (e.remediation && e.remediation.kept) mark[t] = '🔧'; });
@@ -190,7 +192,7 @@ function vulns(d) {
   const a = d.audit || {}, vs = a.vulnerabilities || [];
   $('#vulns').innerHTML = vs.map(v => `<li class="v"><span class="sev" style="background:${SEV[v.severity] || '#2b3446'}">${esc(v.severity)}</span><div>
     <b>${esc(v.service)}</b>${esc(v.weakness)}<br><small>${Object.entries(v.evidence || {}).map(([k, x]) => `<span class="tag">${esc(k)} = ${esc(JSON.stringify(x))}</span>`).join('')}
-    ${v.severity_raised_by_code ? '<span class="tag code">severity raised by code</span>' : ''}${v.status && v.status !== 'untested' ? `<span class="tag">${esc(v.status)}</span>` : ''}</small></div></li>`).join('')
+    ${v.severity_raised_by_code ? '<span class="tag code">severity raised by code</span>' : ''}${v.severity_lowered_by_code ? '<span class="tag code">severity lowered by code</span>' : ''}${v.status && v.status !== 'untested' ? `<span class="tag">${esc(v.status)}</span>` : ''}</small></div></li>`).join('')
     + `<li class="v muted" style="font-size:12px">${(a.rejected || []).length} claim(s) rejected because they didn't match the real config · ${(a.systemic || []).length} cluster-wide issue(s)</li>`;
 }
 
@@ -274,10 +276,13 @@ function trust(d) {
   const out = [], a = d.audit || {};
   (a.rejected || []).forEach(v => out.push(`<b>Claim rejected</b> · ${esc(v.service)}: ${esc(v.rejected_because)}`));
   (a.vulnerabilities || []).filter(v => v.severity_raised_by_code).forEach(v => out.push(`<b>Severity raised</b> · ${esc(v.service)}: ${esc(v.severity_raised_by_code)}`));
+  (a.vulnerabilities || []).filter(v => v.severity_lowered_by_code).forEach(v => out.push(`<b>Severity lowered</b> · ${esc(v.service)}: AI said ${esc(v.severity_lowered_by_code)}`));
   d.plans.forEach(p => (p.dropped || []).forEach(x => out.push(`<b>Experiment dropped</b> · ${esc((x.item || {}).fault)} on ${esc((x.item || {}).target)}: ${esc(x.reason)}`)));
   d.plans.filter(p => p.feedback).forEach(() => out.push('<b>Sent back to the AI</b> · dropped proposals returned with code’s reasons; corrected ones added'));
   [...d.history, ...((d.plans[d.plans.length - 1] || {}).plan || [])].forEach(e => (e.criteria || []).filter(c => c.raised_from != null).forEach(c =>
     out.push(`<b>Threshold raised</b> · ${esc(e.experiment.target)}: AI wrote ${esc(c.metric)} > ${esc(c.raised_from)}; code requires > ${c.metric === 'error_rate' ? pct(c.value) : ms(c.value)} (above baseline noise)`)));
+  [...d.history, ...((d.plans[d.plans.length - 1] || {}).plan || [])].forEach(e => (e.criteria || []).filter(c => c.added_by_code).forEach(c =>
+    out.push(`<b>Criterion added</b> · ${esc(e.experiment.target)}: customer harm also judged (${esc(c.metric)} > ${c.metric === 'error_rate' ? pct(c.value) : ms(c.value)}, the guard’s limit)`)));
   d.history.forEach(h => { const s = h.safety || {}, r = (h.remediation || {}).choice || {};
     if ((s.reason || '').includes('[code:')) out.push(`<b>Safety bound enforced</b> · ${esc(h.experiment.target)}: ${esc(s.decision)} to 500 ms / 30 s`);
     if (s.decision === 'reject' && /baseline/.test(s.reason || '')) out.push(`<b>Experiment blocked</b> · baseline unsuitable`);

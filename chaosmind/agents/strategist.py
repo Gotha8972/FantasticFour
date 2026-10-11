@@ -6,12 +6,15 @@ Code validates the experiment and decides confirmed/refuted against those criter
 import json
 import re
 
-from chaosmind import inject
+from chaosmind import guard, inject
 from chaosmind.agents import llm
 from chaosmind.agents.cartographer import claims_data_loss
 
 METRICS = ('error_rate', 'p95_ms', 'unhealthy_count', 'integrity_violations')
 CRITICALITY = {'critical': 4, 'high': 3, 'medium': 2, 'low': 1}
+# Fault families: a pod kill and a pod failure test the same thing (a pod goes away), so they don't count as diverse.
+FAMILY = {'pod_failure': 'pod', 'pod_kill': 'pod', 'network_delay': 'network', 'network_loss': 'network',
+          'network_partition': 'network', 'cpu_stress': 'resource', 'disk_full': 'resource'}
 
 SYSTEM = f"""You design chaos experiments that PROVE or REFUTE suspected vulnerabilities.
 
@@ -104,6 +107,16 @@ def with_units(fault, params):
     return fixed
 
 
+def with_customer_harm(criteria):
+    """Every hypothesis is also judged on customer harm, with the guard's own limits. A live catalog pod kill caused
+    54% errors but the model had only written a latency criterion, so a real outage was recorded as refuted."""
+    out = list(criteria)
+    for metric in ('error_rate', 'p95_ms'):
+        if not any(c['metric'] == metric and c['op'] == '>' for c in out):
+            out.append({'metric': metric, 'op': '>', 'value': guard.LIMITS[metric], 'added_by_code': 'customer harm'})
+    return out
+
+
 def check(reply, by_id, done, allowed, persistent, baseline=None):
     """Code validation of one strategist reply: what is kept, what is dropped and why."""
     items, dropped, done = [], [], set(done)
@@ -125,7 +138,7 @@ def check(reply, by_id, done, allowed, persistent, baseline=None):
         if (exp['fault'], exp['target']) in done:
             dropped.append({'item': item, 'reason': 'already run or planned'})
             continue
-        criteria = valid_criteria(item.get('criteria', []), exp['fault'], baseline)
+        criteria = with_customer_harm(valid_criteria(item.get('criteria', []), exp['fault'], baseline))
         if exp['target'] == 'redis-cart' and not any(c['metric'] == 'integrity_violations' for c in criteria):
             dropped.append({'item': item, 'reason': 'Stateful target requires an integrity criterion'})
             continue
@@ -142,8 +155,11 @@ def feedback(items, dropped, history, allowed):
     notes = [f"{d['item'].get('fault')} on {d['item'].get('target')} was dropped: {d['reason']}."
              if isinstance(d['item'], dict) else f"A malformed proposal was dropped: {d['reason']}." for d in dropped]
     faults = {h['experiment']['fault'] for h in history} | {i['experiment']['fault'] for i in items}
-    if len(allowed) > 1 and len(history) + len(items) >= 2 and len(faults) < 2:
-        notes.append(f'Only {sorted(faults)} so far: use at least 2 different fault types across history and plan.')
+    families = {FAMILY[f] for f in faults}
+    if len({FAMILY[f] for f in allowed}) > 1 and len(history) + len(items) >= 2 and len(families) < 2:
+        others = sorted(f for f in allowed if FAMILY[f] not in families)
+        notes.append(f'Only {sorted(faults)} so far ({"/".join(sorted(families))} faults): use at least 2 different '
+                     f'fault types across history and plan, from different families; add one of {others}.')
     return ' '.join(notes + ['Return corrected or replacement experiments only; keep integrity criteria for '
                              'stateful services.']) if notes else None
 
@@ -175,11 +191,26 @@ def plan(vulnerabilities, baseline, history=(), budget=5, allowed_faults=None, p
         items, dropped = items + more, dropped + rejected
         reply = {**reply, 'replan_note': retry.get('replan_note') or reply.get('replan_note', '')}
     items = [{**i, 'priority': priority(i, by_id)} for i in items]
-    items.sort(key=lambda i: (-i['priority']['score'], i.get('rank', 99)))  # model's rank only breaks ties
+    # Only the top item runs each round. Among equal scores, a fault family (then a fault type) the run hasn't
+    # tried yet goes first; the model's rank breaks what's left. Without this, ties always went to pod faults.
+    used = {h['experiment']['fault'] for h in history}
+    used_families = {FAMILY[f] for f in used}
+    items.sort(key=lambda i: (-i['priority']['score'], FAMILY[i['experiment']['fault']] in used_families,
+                              i['experiment']['fault'] in used, i.get('rank', 99)))
+    diversity = None
+    if budget == 1 and len(used_families) == 1 and len({FAMILY[f] for f in allowed}) > 1:
+        # Last slot and only one family has run: it goes to another family if the model proposed one.
+        other = next((i for i in items if FAMILY[i['experiment']['fault']] not in used_families), None)
+        if other is None:
+            diversity = f'last slot, but no {"/".join(sorted(used_families))}-free experiment was proposed'
+        elif other is not items[0]:
+            items.remove(other)
+            items.insert(0, other)
+            diversity = f"last slot given to {other['experiment']['fault']}: only {'/'.join(used_families)} faults have run"
     for n, i in enumerate(items, 1):
         i['rank'] = n
     return {'plan': items[:budget], 'dropped': dropped, 'replan_note': reply.get('replan_note', ''),
-            'feedback': note}
+            'feedback': note, 'diversity': diversity}
 
 
 def evaluate(criteria, observed):
