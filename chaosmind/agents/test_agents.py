@@ -72,6 +72,19 @@ class AgentTests(unittest.TestCase):
         with patch.object(llm, 'ask', return_value=wrong):  # original emptyDir Redis: the same prediction is true
             self.assertEqual(len(strategist.plan(vulns, {}, allowed_faults={'pod_kill'})['plan']), 1)
 
+    def test_strategist_reads_bare_delay_numbers_as_ms_but_keeps_the_cap(self):
+        vulns = [{'id': 'V1', 'service': 'checkoutservice'}]
+        crit = [{'metric': 'p95_ms', 'op': '>', 'value': 5000}]
+        item = {'vulnerability': 'V1', 'fault': 'network_delay', 'target': 'checkoutservice', 'duration_s': 30, 'criteria': crit}
+        for latency, expected in (('1000', '1000ms'), (500, '500ms'), ('250.5', '250.5ms'), ('800ms', '800ms')):
+            with patch.object(llm, 'ask', return_value={'plan': [{**item, 'params': {'latency': latency}}]}):
+                out = strategist.plan(vulns, {}, allowed_faults={'network_delay'})
+            self.assertEqual(out['plan'][0]['experiment']['params']['latency'], expected)
+        with patch.object(llm, 'ask', return_value={'plan': [{**item, 'params': {'latency': '5000'}}]}):
+            out = strategist.plan(vulns, {}, allowed_faults={'network_delay'})
+        self.assertEqual(out['plan'], [])  # the 2000 ms cap still applies after the unit is added
+        self.assertIn('2000ms', out['dropped'][0]['reason'])
+
     def test_strategist_asks_once_for_fault_diversity(self):
         vulns = [{'id': 'V1', 'service': 'cartservice'}, {'id': 'V2', 'service': 'productcatalogservice'}]
         crit = [{'metric': 'error_rate', 'op': '>', 'value': 0.05}]

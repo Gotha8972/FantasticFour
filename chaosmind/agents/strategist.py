@@ -91,13 +91,27 @@ def valid_criteria(criteria, fault=None, baseline=None):
     return out
 
 
+def with_units(fault, params):
+    """Delays written as bare numbers ("1000", 1000) mean milliseconds. Without this, 10 of the AI's delay proposals
+    were dropped for the unit alone; inject.validate() still enforces the format and the 2000 ms cap."""
+    if fault != 'network_delay' or not isinstance(params, dict):
+        return params
+    fixed = dict(params)
+    for key in ('latency', 'jitter'):
+        value = fixed.get(key)
+        if type(value) in (int, float) or isinstance(value, str) and re.fullmatch(r'\d+(?:\.\d+)?', value.strip()):
+            fixed[key] = f'{float(value):g}ms'
+    return fixed
+
+
 def check(reply, by_id, done, allowed, persistent, baseline=None):
     """Code validation of one strategist reply: what is kept, what is dropped and why."""
     items, dropped, done = [], [], set(done)
     for item in reply.get('plan', []):
         try:
             exp = {'id': experiment_id(item), 'fault': item['fault'], 'target': item['target'],
-                   'params': item.get('params') or {}, 'duration_s': int(item.get('duration_s', 30))}
+                   'params': with_units(item['fault'], item.get('params') or {}),
+                   'duration_s': int(item.get('duration_s', 30))}
             inject.validate(exp)
             vulnerability = by_id.get(item.get('vulnerability'))
             if vulnerability is None or vulnerability.get('service') != exp['target']:

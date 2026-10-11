@@ -24,7 +24,7 @@ Model: NVIDIA-hosted `openai/gpt-oss-20b` (open weights; 21B total, 3.6B active)
 | Workflow | `chaosmind/graph.py` (LangGraph) · `agents/steps.py` · fallback `agents/__main__.py` | audit → plan → [execute → judge → optional fix (human-approved) → re-plan] → Analyst. Diagram: [WORKFLOW.md](WORKFLOW.md). The fallback runs the same steps without LangGraph |
 | Injector + kill switch | `inject.py`, `guard.py` | Validation, Chaos Mesh resources, 2-second polling, auto-revert, recovery confirmation |
 
-**Fault types** (`inject.py`): `pod_failure`, `pod_kill`, `network_delay`, `network_loss`, `network_partition`, `cpu_stress`, `disk_full`. Proven live so far: `pod_failure`, `network_delay` (`inject.LIVE_VERIFIED`). Add each one there after its first successful live guarded run.
+**Fault types** (`inject.py`): `pod_failure`, `pod_kill`, `network_delay`, `network_loss`, `network_partition`, `cpu_stress`, `disk_full`. Proven live so far: `pod_failure`, `pod_kill`, `network_delay`, `network_loss`, `network_partition`, `cpu_stress` (`inject.LIVE_VERIFIED`); `disk_full` can't inject on Online Boutique's read-only containers. Add each one there after its first successful live guarded run.
 
 **Run it:** see [RUNNING.md](RUNNING.md#let-the-agents-choose-and-run-experiments).
 **Tests:**

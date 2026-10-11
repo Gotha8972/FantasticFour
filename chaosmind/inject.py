@@ -19,7 +19,10 @@ DNS = r'[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?'
 OWNER = 'chaosmind'
 # Faults that have actually run live through the guard on our cluster. The AI only plans these unless
 # --allow-unverified is passed. Add a fault here once a live guarded run has succeeded.
-LIVE_VERIFIED = {'pod_failure', 'network_delay', 'pod_kill'}  # pod_kill: Chaos Mesh kill proven live (runs/grafana-pod-kill-*)
+LIVE_VERIFIED = {'pod_failure', 'network_delay', 'pod_kill',  # pod_kill: Chaos Mesh kill proven live (runs/grafana-pod-kill-*)
+                 'network_loss', 'network_partition', 'cpu_stress'}  # runs/catalog-loss-*, cart-redis-partition-*, redis-cpu-*
+# disk_full is not here: Chaos Mesh's IOChaos helper (toda) can't start in Online Boutique's containers, which all set
+# readOnlyRootFilesystem (runs/redis-disk-full-20261011T013212.812294Z: "Read-only file system", nothing injected).
 
 
 def kubectl(*args, stdin=None, timeout=40):
@@ -95,7 +98,7 @@ def manifest(exp):
         path = params.get('path', '/data')
         spec.update(action='fault', errno=28, percent=params.get('percent', 100), volumePath=path, path=f'{path}/**')
     elif exp['fault'] == 'pod_kill':
-        spec['action'] = 'pod-kill'  # ponytail: not yet verified live; one-shot kill, guard still watches recovery
+        spec['action'] = 'pod-kill'  # one-shot kill (proven live); the guard watches recovery
     else:
         spec['action'] = 'pod-failure'
     metadata = {'name': exp['id'], 'namespace': NS,

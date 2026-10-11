@@ -8,7 +8,7 @@
 **Feature-complete and frozen.** One entry point: `.venv/bin/python -m chaosmind.graph` ([quick start](#quick-start)). 82 automated tests, no cluster or API key needed (the [quick start](#quick-start) command runs 65; the portable prototype's other 17 also need `.venv/bin/pip install -r requirements-portable.txt`). **Mission control** web UI: `python3 -m chaosmind.ui`.
 
 - **Proven live:** the kill switch (all three triggers, crash fail-safe, manual abort), and **four full AI runs end to end** ([run 1](runs/agents-20261010T185909Z), [run 2](runs/agents-20261010T192511Z), [run 3](runs/agents-20261010T200021Z), [run 4](runs/agents-20261010T215020Z), recorded for the video with approvals in mission control). The AI chose 12 experiments, ranked by blast radius × criticality. Code judged them against criteria written before each run, with thresholds above baseline noise: **11 confirmed, 1 refuted** (a checkout pod kill caused no measurable harm). In the Redis kill with the fix already in place, only the latency criterion held; the data-loss criterion failed, meaning the fix worked. The AI proposed **6 fixes; a human approved each on screen; each was applied and the same experiment re-run. All 6 scored higher, and 3 hypotheses were refuted after their fix.** The Analyst wrote a report for each run; code marks the claims in it that the measurements or the config contradict.
-- **Fault types proven live:** pod failure, pod kill, network delay. **Defined and validated, not yet run live:** packet loss, network partition, CPU stress, full disk.
+- **Fault types proven live (6 of 7):** pod failure, pod kill, network delay, packet loss, network partition, CPU stress. **Not runnable here:** full disk, because Chaos Mesh's disk-fault helper can't start in Online Boutique's read-only containers ([attempt](runs/redis-disk-full-20261011T013212.812294Z)).
 - **Model:** open-weight `gpt-oss-20b`, hosted by NVIDIA. A dry run (audit + plan + safety review) takes 25–45 s; a live experiment takes 4–6 minutes.
 - **Not done yet:** the clean install from scratch on a second laptop.
 
@@ -57,8 +57,8 @@ graph TD;
 | **Chosen by measurement:** two independent agent implementations, 12 real dry runs on frozen identical inputs, scored by one script | ✅ This one won ([bake-off](docs/team/log/BAKEOFF_RESULT.md)): 0 hallucinated facts, 100% valid experiments, 3 fault types per plan, integrity checks on every Redis test. *The bake-off chose the design and ran on `gpt-5.6-luna`, before the switch to `gpt-oss-20b`; the shipped model was validated separately in the three live runs.* |
 | Injector + kill switch (`inject.py`, `guard.py`) | ✅ Proven live |
 | Grafana dashboard | ✅ Running |
-| Fault types: **proven live** | Pod failure · pod kill · network delay |
-| Fault types: defined and validated, awaiting first live run | Packet loss · network partition · CPU stress · full disk |
+| Fault types: **proven live** | Pod failure · pod kill · network delay · packet loss · network partition · CPU stress |
+| Fault types: defined, not runnable on this app | Full disk (Online Boutique's containers are read-only, so Chaos Mesh's IOChaos can't inject) |
 
 ## Target application and dependency map
 
