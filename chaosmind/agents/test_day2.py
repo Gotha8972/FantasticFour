@@ -73,6 +73,15 @@ class Day2Tests(unittest.TestCase):
         revert.assert_called_once()
         self.assertEqual((out['verdict'], out['kept']), ('worse', False))
 
+    def test_redis_fix_restarts_cartservice_after_the_rollout(self):
+        fix = next(f for f in remediation.CATALOG if f['id'] == 'redis-persistence')
+        with patch.object(remediation.inject, 'kubectl') as kubectl:
+            remediation.apply(fix)
+        calls = [c.args[:3] for c in kubectl.call_args_list]
+        self.assertLess(calls.index(('rollout', 'status', 'deployment/redis-cart')),
+                        calls.index(('rollout', 'restart', 'deployment/cartservice')))
+        self.assertEqual(calls[-1], ('rollout', 'status', 'deployment/cartservice'))
+
     def test_remediation_waits_for_customers_to_settle_after_a_fix(self):
         calm, rollout = ({'error_rate': 0.0, 'p95_ms': 23, 'unhealthy_services': []},
                          {'error_rate': 0.0, 'p95_ms': 5500, 'unhealthy_services': []})  # the Redis fix's own rollout

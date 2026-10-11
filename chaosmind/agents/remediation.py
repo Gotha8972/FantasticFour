@@ -60,14 +60,24 @@ def _patch(target, patch_file):
     inject.kubectl('rollout', 'status', f'deployment/{target}', '-n', inject.NS, '--timeout=180s', timeout=200)
 
 
+def _restart(deployments):
+    # cartservice can keep a dead connection to the replaced Redis pod, adding ~400 ms to every page until it restarts
+    # (runs/agents-20261011T080030Z: customers never settled, so the re-run was skipped).
+    for d in deployments:
+        inject.kubectl('rollout', 'restart', f'deployment/{d}', '-n', inject.NS)
+        inject.kubectl('rollout', 'status', f'deployment/{d}', '-n', inject.NS, '--timeout=180s', timeout=200)
+
+
 def apply(fix):
     _kubectl_files('apply', fix.get('apply_files', []))
     _patch(fix['target'], fix['patch'])
+    _restart(fix.get('restart_after', []))
 
 
 def revert(fix):
     _patch(fix['target'], fix['revert_patch'])
     _kubectl_files('delete', fix.get('delete_on_revert', []))
+    _restart(fix.get('restart_after', []))
 
 
 SETTLE_QUIET_S, SETTLE_TIMEOUT_S = 30, 300

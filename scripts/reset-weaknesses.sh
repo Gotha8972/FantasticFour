@@ -10,6 +10,8 @@ K=(kubectl --kubeconfig .runtime/kubeconfig --context kind-online-boutique -n on
 if "${K[@]}" get deploy redis-cart -o jsonpath='{.spec.template.spec.volumes[0].persistentVolumeClaim.claimName}' | grep -q .; then
   echo 'Redis persistence fix is applied: reverting it (empties current carts once).'
   bash scripts/redis-fix.sh revert >/dev/null
+  # cartservice can keep a dead connection to the replaced Redis pod (~400 ms on every page) until it restarts.
+  "${K[@]}" rollout restart deploy/cartservice >/dev/null
 else
   echo 'Redis already on emptyDir.'
 fi
