@@ -17,6 +17,7 @@ from chaosmind.agents import facts as facts_mod, safety, score, steps, trials
 R2, R3, R4 = 'runs/agents-20261010T185909Z', 'runs/agents-20261010T192511Z', 'runs/agents-20261010T200021Z'
 R5 = 'runs/agents-20261010T215020Z'  # recorded for the demo video, fixes approved in mission control
 R6, R7, R8 = 'runs/agents-20261011T013741Z', 'runs/agents-20261011T015326Z', 'runs/agents-20261011T021019Z'
+VIDEO_RUN = 'runs/agents-20261011T034630Z'  # latest recorded demo run
 FIXED = 'after the fix, approved by a human'
 
 
@@ -59,6 +60,11 @@ EVIDENCE = [
     (9, '30% packet loss on currency, AI run 7', 'no fix', 'agent', f'{R7}#currencyservice'),
     (11, 'ads unavailable (manual)', 'no fix needed', 'guard', 'runs/c-ad-health-13973e53bd-20261010T070523.440196Z'),
     (11, 'Redis under CPU stress (manual)', 'no fix needed', 'guard', 'runs/redis-cpu-20261011T013116.326478Z'),
+    *pair(1, 'Redis pod kill, latest video run', VIDEO_RUN, 'redis-cart', 'before fix'),
+    *pair(2, 'frontend pod kill, latest video run', VIDEO_RUN, 'frontend'),
+    *pair(5, 'catalog pod failure, latest video run', VIDEO_RUN, 'productcatalogservice'),
+    *pair(7, 'payment pod kill, latest video run', VIDEO_RUN, 'paymentservice'),
+    (9, '+delay on currency, latest video run', 'no fix', 'agent', f'{VIDEO_RUN}#currencyservice'),
 ]
 
 
@@ -147,13 +153,13 @@ def render(table):
 
 
 def ai_runs(root='runs'):
-    """Every live AI run (a run with at least one measured experiment), counted from its history: the README's run
-    counts come from here, so they can't drift from the evidence."""
+    """Every completed live AI run (at least one measured experiment and a report), counted from its history: the
+    README's run counts come from here, so they can't drift from the evidence."""
     from chaosmind.agents import analyst
     out = []
     for path in sorted(Path(root).glob('agents-*/history.json')):
         ran = [h for h in json.loads(path.read_text()) if h.get('observed') is not None]
-        if not ran:
+        if not ran or not (path.parent / 'FINDINGS.md').exists():  # completed runs only (aborted takes have no report)
             continue
         fixes = [h['remediation'] for h in ran if (h.get('remediation') or {}).get('fix')]
         out.append({'run': path.parent.name, 'experiments': len(ran),
