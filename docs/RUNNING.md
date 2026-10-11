@@ -47,7 +47,13 @@ That's 20 simulated shoppers, starting at 2 per second. Check that traffic is fl
 bash scripts/load.sh measure 5 30
 ```
 
-### 6. Check everything without breaking anything
+### 6. Measure normal on this machine (≈ 6 min)
+```bash
+bash scripts/baseline.sh --duration 300
+```
+Every verdict, threshold and score is relative to this baseline, so take it on the machine that runs the experiments (the `baseline.json` in the repository was measured on ours) and again after changing the configuration. It must end with `baseline suitable: True`; if it doesn't, free memory (stop Docker, pause software updates) and repeat. Live agent runs refuse to start on an unsuitable baseline.
+
+### 7. Check everything without breaking anything
 ```bash
 python3 -m chaosmind.test_guard
 ```
@@ -155,16 +161,20 @@ Live: up to 3 experiments. Each one is set up with an integrity check, ramped th
 ```bash
 .venv/bin/python -m chaosmind.graph --budget 3
 ```
-Also let Remediation apply a reviewed fix to each confirmed weakness and re-run the identical experiment (changes the cluster):
+Also let Remediation apply a reviewed fix to each confirmed weakness and re-run the identical experiment (changes the cluster). With `--ui`, approve each fix in **mission control** (`python3 -m chaosmind.ui`, then http://127.0.0.1:8090) instead of the terminal:
 ```bash
-.venv/bin/python -m chaosmind.graph --budget 3 --remediate
+.venv/bin/python -m chaosmind.graph --budget 6 --remediate --ui
 ```
-By default the AI may only use fault types already proven live (`inject.LIVE_VERIFIED`); add `--allow-unverified` to use all 7.
+Approved fixes stay applied. To give the AI the original weaknesses again (for example before a recorded run), then re-take the baseline:
+```bash
+bash scripts/reset-weaknesses.sh
+```
+By default the AI may only use fault types already proven live (`inject.LIVE_VERIFIED`: pod failure, pod kill, network delay, packet loss, network partition, CPU stress); `--allow-unverified` adds full disk, which can't inject on Online Boutique's read-only containers.
 A live run takes roughly 4–6 minutes per experiment (ramp steps + recovery), so pre-record it for the demo.
 
 Offline tests (no cluster, no API key):
 ```bash
-python3 -m unittest chaosmind.agents.test_agents chaosmind.agents.test_day2
+python3 -m chaosmind.test_guard && python3 -m unittest chaosmind.agents.test_agents chaosmind.agents.test_day2 chaosmind.test_c_tests && .venv/bin/python -m unittest chaosmind.test_graph chaosmind.test_ui
 ```
 Everything is saved to `runs/agents-<time>/`: facts, vulnerabilities, every plan, the full history with verdicts and scores, and `FINDINGS.md` (written even if the model fails, then without the AI narrative). To regenerate the report for a run: `python3 -m chaosmind.agents.analyst runs/agents-<time>`.
 

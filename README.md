@@ -152,33 +152,52 @@ Raw guard events per trial: [1 replica](runs/trials-catalog-podkill-20261010T182
 Full evidence: [`docs/evidence/`](docs/evidence) and the `runs/` directory (CSV + JSONL for every run).
 
 ## Quick start
-Full guide: [docs/RUNNING.md](docs/RUNNING.md). **Requires Linux with rootless Podman and systemd** (tested on Fedora); Docker Desktop and macOS aren't supported by the setup scripts yet.
+Full guide: [docs/RUNNING.md](docs/RUNNING.md). Every step below is a command you can copy; run them from the repository root, in order.
+
+**You need:** Linux with **rootless Podman** and systemd (tested on Fedora; Docker Desktop and macOS aren't supported by the setup scripts yet), [`kind`](https://kind.sigs.k8s.io/docs/user/quick-start/#installation), Python 3.10+, `git`, `curl`, `rg` (ripgrep), about 4 free CPU cores and 8 GB free RAM, and an `NVIDIA_API_KEY` (free at build.nvidia.com). `scripts/install-kubectl.sh` installs a checksum-verified `kubectl` (x86-64, uses `sudo`); Helm is downloaded automatically.
+
+**1. Cluster, app, chaos engine, shoppers** (first run downloads images; allow 10–15 min):
 ```bash
+bash scripts/install-kubectl.sh   # skip if you already have kubectl
 bash scripts/deploy-local.sh && bash scripts/install-chaos.sh && bash scripts/load.sh start 20 2
 ```
-Run one experiment under the kill switch:
+**2. Kernel modules for network faults** (delay, packet loss, partition; the AI uses them; needed again after a reboot):
+```bash
+sudo modprobe -a ip_tables iptable_filter iptable_mangle ip_set ip_set_hash_ip xt_set sch_netem
+```
+**3. Python environment and model key:**
+```bash
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+cp .env.example .env   # then put your NVIDIA_API_KEY in .env
+python3 -m chaosmind.agents.llm --ping
+```
+**4. Measure normal on your machine** (≈ 6 min). Every verdict, threshold and score is relative to this baseline, so it must be taken on the machine that runs the experiments; the `baseline.json` in the repo was measured on ours. It must end with `baseline suitable: True`; if not, free some memory and repeat:
+```bash
+bash scripts/baseline.sh --duration 300
+```
+**5. Check the safety net:** one experiment under the kill switch (it must trip on latency and revert within a second):
 ```bash
 python3 -m chaosmind.guard experiments/test-delay.json
 ```
-One-time: install LangGraph into a local virtual environment:
-```bash
-python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
-```
-Let the AI audit, plan and review (copy `.env.example` to `.env` and add your `NVIDIA_API_KEY`; check it with `python3 -m chaosmind.agents.llm --ping`):
+**6. Let the AI audit, plan and review** (injects nothing; 25–45 s):
 ```bash
 .venv/bin/python -m chaosmind.graph --dry-run
+```
+**7. The full AI workflow, live.** Start **mission control** in one terminal and open http://127.0.0.1:8090 (architecture map, the AI's weak spots and ranked experiments, live customer-impact charts with the kill-switch limits, verdicts, scores and fix approval in the browser):
+```bash
+python3 -m chaosmind.ui
+```
+In a second terminal (≈ 15–20 min; click **Approve fix** in the browser when it asks; without `--ui`, approve in the terminal; `--resume runs/agents-…` continues an interrupted run):
+```bash
+.venv/bin/python -m chaosmind.graph --budget 6 --remediate --ui
+```
+**Before a recorded run:** approved fixes stay applied, so after any practice run put the original weaknesses back, then take a fresh baseline (step 4). Stop Docker and pause software updates (GNOME Software / PackageKit) first: background CPU load raises latency, and the kill switch then refuses to inject into a system that already looks unhealthy.
+```bash
+bash scripts/reset-weaknesses.sh
 ```
 Repeat one experiment to measure how often customers are hurt (with a 95% interval):
 ```bash
 python3 -m chaosmind.agents.trials run experiments/catalog-podkill.json --repeat 5
-```
-Open **mission control**, the web UI: architecture map, the AI's weak spots and ranked experiments, live customer-impact charts with the kill-switch limits, verdicts, scores, and fix approval in the browser. Then open http://127.0.0.1:8090:
-```bash
-python3 -m chaosmind.ui
-```
-Run the full AI workflow, approving fixes in the UI (without `--ui`, approve in the terminal; `--resume runs/agents-…` continues an interrupted run):
-```bash
-.venv/bin/python -m chaosmind.graph --budget 3 --remediate --ui
 ```
 Tests (no cluster or API key needed):
 ```bash
